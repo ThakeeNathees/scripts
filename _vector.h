@@ -48,6 +48,8 @@ struct Vect2
 	Vect2(const T* p_arr) : x(p_arr[0]), y(p_arr[1]) {}
 	template<typename T2>
 	Vect2(const Vect2<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
+	template<typename T2>
+	Vect2(const T2& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
 
 	float get_length() const {
 		return sqrtf(x * x + y * y);
@@ -184,5 +186,8 @@ typedef Vect2<float> Vect2f;
 typedef Vect2<int> Vect2i;
 typedef Vect3<float> Vect3f;
 typedef Vect3<int> Vect3i;
+
+typedef Vect2f Size;
+typedef Vect2f Point;
 
 #endif //VECTOR_H

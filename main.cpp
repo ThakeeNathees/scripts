@@ -10,10 +10,21 @@
 
 #define print(x) std::cout << x << std::endl;
 
+class Test
+{
+public:
+	int x, y;
+};
+
+
 int main()
 {
 	var x = 1;
-	x = "hello var";
-	print(x);
+	x = "hey var";
+	x = Test();
+	print(x); // Object : class Test
+	Test* t = x.as<Test>();
+	var is_vec = x.is<Vect2f>();
+	print(is_vec); // false
 	return 0;
 }

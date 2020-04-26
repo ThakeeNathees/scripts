@@ -1,6 +1,8 @@
 
 #include "_var.h"
 
+#define D_VEC(m_vect, m_dim, m_t) STR_CAT3(m_vect, m_dim, m_t)
+
 std::ostream& operator<<(std::ostream& p_ostream, const var& p_var) {
 	p_ostream << p_var.operator std::string();
 	return p_ostream;
@@ -27,39 +29,51 @@ void var::clear() {
 
 /* constructors */
 var::var() {
-	data._bool = false;
+	_data._bool = false;
 	type = _NULL;
 }
 
 var::var(bool p_bool) {
 	type = BOOL;
-	data._bool = p_bool;
+	_data._bool = p_bool;
 }
 
 var::var(int p_int) {
 	type = INT;
-	data._int = p_int;
+	_data._int = p_int;
 }
 
 var::var(float p_float) {
 	type = FLOAT;
-	data._float = p_float;
+	_data._float = p_float;
 }
 
 var::var(double p_double) {
 	type = FLOAT;
-	data._float = p_double;
+	_data._float = p_double;
 }
 
 var::var(const char* p_cstring) {
 	type = STD_STRING;
-	data_std_string = std::string(p_cstring);
+	_data_std_string = std::string(p_cstring);
 }
 
 var::var(const std::string& p_std_string) {
 	type = STD_STRING;
-	data_std_string = std::string(p_std_string);
+	_data_std_string = std::string(p_std_string);
 }
+
+#define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)        \
+var::var(const D_VEC(Vect, m_dim, m_t)& p_vect) {    \
+	type = D_VEC(VECT, m_dim, m_T);                  \
+	memcpy(_data._mem, &p_vect, sizeof(_data._mem)); \
+}
+VAR_VECT_CONSTRUCTOR(2, f, F)
+VAR_VECT_CONSTRUCTOR(2, i, I)
+VAR_VECT_CONSTRUCTOR(3, f, F)
+VAR_VECT_CONSTRUCTOR(3, i, I)
+#undef VAR_VECT_CONSTRUCTOR
+
 
 var::var(const Array& p_array) {
 	type = ARRAY;
@@ -75,8 +89,8 @@ var::~var() {
 #define VAR_OP_PRE_INCR_DECR(m_op)             \
 var var::operator m_op () {                    \
 	switch (type) {                            \
-		case INT:  return m_op data._int;      \
-		case FLOAT: return m_op data._float;   \
+		case INT:  return m_op _data._int;     \
+		case FLOAT: return m_op _data._float;  \
 		default: VAR_ERR("invalid casting");   \
 	}                                          \
 	return var();                              \
@@ -85,8 +99,8 @@ var var::operator m_op () {                    \
 #define VAR_OP_POST_INCR_DECR(m_op)            \
 var var::operator m_op(int) {                  \
 	switch (type) {                            \
-		case INT: return data._int m_op;       \
-		case FLOAT: return data._float m_op;   \
+		case INT: return _data._int m_op;      \
+		case FLOAT: return _data._float m_op;  \
 		default: VAR_ERR("invalid casting");   \
 	}                                          \
 	return var();                              \
@@ -95,22 +109,24 @@ VAR_OP_PRE_INCR_DECR(++)
 VAR_OP_PRE_INCR_DECR(--)
 VAR_OP_POST_INCR_DECR(++)
 VAR_OP_POST_INCR_DECR(--)
-
+#undef VAR_OP_PRE_INCR_DECR
+#undef VAR_OP_POST_INCR_DECR
 
 /* casting */
 var::operator bool() const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL: return data._bool;
-		case INT: return data._int != 0;
-		case FLOAT: return data._float != 0;
-		case STD_STRING: return data_std_string.size() != 0;
+		case BOOL: return _data._bool;
+		case INT: return _data._int != 0;
+		case FLOAT: return _data._float != 0;
+		case STD_STRING: return _data_std_string.size() != 0;
 
 		case VECT2F: return *DATA_PTR(Vect2f) == Vect2f();
 		case VECT2I: return *DATA_PTR(Vect2i) == Vect2i();
 		case VECT3F: return *DATA_PTR(Vect3f) == Vect3f();
 		case VECT3I: return *DATA_PTR(Vect3f) == Vect3f();
 		case ARRAY: return _data_arr.empty();
+		case OBJ_PTR: return _data_obj._ptr == nullptr;
 			break; // TODO:
 
 	}
@@ -120,10 +136,10 @@ var::operator bool() const {
 
 var::operator int() const {
 	switch (type) {
-		case BOOL: return data._bool;
-		case INT: return data._int;
-		case FLOAT: return (int)data._float;
-		case STD_STRING: return  std::stoi(data_std_string);
+		case BOOL: return _data._bool;
+		case INT: return _data._int;
+		case FLOAT: return (int)_data._float;
+		case STD_STRING: return  std::stoi(_data_std_string);
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -131,10 +147,10 @@ var::operator int() const {
 
 var::operator double() const {
 	switch (type) {
-		case BOOL: return data._bool;
-		case INT: return data._int;
-		case FLOAT: return data._float;
-		case STD_STRING: return  std::stod(data_std_string);
+		case BOOL: return _data._bool;
+		case INT: return _data._int;
+		case FLOAT: return _data._float;
+		case STD_STRING: return  std::stod(_data_std_string);
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -143,23 +159,23 @@ var::operator double() const {
 var::operator std::string() const {
 	switch (type) {
 		case _NULL: return "None";
-		case BOOL: return (data._bool) ? "true" : "false";
-		case INT: return std::to_string(data._int);
-		case FLOAT: return std::to_string(data._float);
-		case STD_STRING: return data_std_string;
+		case BOOL: return (_data._bool) ? "true" : "false";
+		case INT: return std::to_string(_data._int);
+		case FLOAT: return std::to_string(_data._float);
+		case STD_STRING: return _data_std_string;
 		case VECT2F: return *DATA_PTR(Vect2f);
 		case VECT2I: return *DATA_PTR(Vect2i);
 		case VECT3F: return *DATA_PTR(Vect3f);
 		case VECT3I: return *DATA_PTR(Vect3i);
 		case ARRAY:
 			break;
+		case OBJ_PTR: return std::string("Object(").append(_data_obj.name).append(")");
 	}
 	VAR_ERR("invalid casting");
 	return "TODO";
 }
 
 
-#define D_VEC(m_vect, m_dim, m_t) STR_CAT3(m_vect, m_dim, m_t)
 #define VAR_VECT_CAST(m_dim, m_t)                                                 \
 var::operator D_VEC(Vect, m_dim, m_t)() const {                                   \
 	switch (type) {                                                               \
@@ -173,6 +189,7 @@ VAR_VECT_CAST(2, f)
 VAR_VECT_CAST(2, i)
 VAR_VECT_CAST(3, f)
 VAR_VECT_CAST(3, i)
+#undef VAR_VECT_CAST
 
 var::operator Array() const {
 	switch (type) {
