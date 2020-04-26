@@ -32,30 +32,30 @@ class Array
 {
 private:
 	friend class var;
-	Ref<std::vector<var>> _data_arr;
+	Ref<std::vector<var>> _data;
 public:
 	/* constructors */
 	Array() {
 		//type = ARRAY;
-		_data_arr = newref(std::vector<var>);
+		_data = newref(std::vector<var>);
 	}
 	Array(const Ref<std::vector<var>>& p_data) {
 		//type = ARRAY;
-		_data_arr = p_data;
+		_data = p_data;
 	}
 	Array(const Array& p_copy) {
 		//type = ARRAY;
-		_data_arr = p_copy._data_arr;
+		_data = p_copy._data;
 	}
 
 	std::vector<var>* get_data() {
-		return _data_arr.operator->();
+		return _data.operator->();
 	}
 
 	/* wrappers */
-	bool empty() const { return _data_arr->empty(); }
-	void push_back(const var& p_var) { _data_arr->push_back(p_var); }
-	var& operator[](size_t p_pos) { return _data_arr->operator[](p_pos); }
+	bool empty() const { return _data->empty(); }
+	void push_back(const var& p_var) { _data->push_back(p_var); }
+	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
 
 	/* cast operators */
 	operator bool() { return empty(); }

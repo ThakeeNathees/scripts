@@ -65,3 +65,4 @@ gen = LICENSE + gen.replace(LICENSE, '')
             
 with open('var.h', 'w') as f:
     f.write(gen)
+print('var.h generated')

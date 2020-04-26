@@ -1,5 +1,5 @@
 
-#define TEST_AUTO_GENERATED 0
+#define TEST_AUTO_GENERATED 1
 
 #if (TEST_AUTO_GENERATED)
 #define VAR_IMPLEMENTATION
@@ -8,7 +8,7 @@
 #include "_var.h"
 #endif
 
-#define print(x) std::cout << x << std::endl;
+#define print(x) std::cout << (x) << std::endl;
 
 class Test
 {
@@ -19,6 +19,9 @@ public:
 
 int main()
 {
+	var a = "asdf";
+	a == Test();
+
 	var x = 1;
 	x = "hey var";
 	x = Test();

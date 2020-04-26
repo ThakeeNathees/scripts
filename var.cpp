@@ -77,7 +77,7 @@ VAR_VECT_CONSTRUCTOR(3, i, I)
 
 var::var(const Array& p_array) {
 	type = ARRAY;
-	_data_arr = p_array._data_arr;
+	_data_arr = p_array._data;
 }
 
 var::~var() {
@@ -199,3 +199,51 @@ var::operator Array() const {
 	return Array();
 }
 
+/* operator overloading */
+		/* comparison */
+#define VAR_RET_EQUAL(m_data1, m_type, m_data2, m_cast) \
+	case m_type: return (m_cast)_data.m_data1 == p_other._data.m_data2
+#define VAR_SWITCH_PRIME_TYPES(m_data)                 \
+	switch (p_other.type) {                            \
+		VAR_RET_EQUAL(m_data, BOOL, _bool, bool);      \
+		VAR_RET_EQUAL(m_data, INT, _int, int);         \
+		VAR_RET_EQUAL(m_data, FLOAT, _float, float);   \
+	}
+#define VAR_SWITCH_VECT(m_dim, m_t)                                                                                  \
+switch (p_other.type) {                                                                                              \
+	case D_VEC(VECT, m_dim, F): return *DATA_PTR(D_VEC(Vect, m_dim, m_t)) == *DATA_PTR_OTHER(D_VEC(Vect, m_dim, f)); \
+	case D_VEC(VECT, m_dim, I): return *DATA_PTR(D_VEC(Vect, m_dim, m_t)) == *DATA_PTR_OTHER(D_VEC(Vect, m_dim, i)); \
+}                                                                                                                    \
+break;
+
+bool var::operator==(const var& p_other) const {
+	switch (type) {
+		case _NULL: return false;
+		case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool) }
+		case INT: { VAR_SWITCH_PRIME_TYPES(_int) }
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float) }
+		case STD_STRING: {
+			if (p_other.type == STD_STRING)
+				return _data_std_string._Equal(p_other._data_std_string);
+			break;
+		}
+		case VECT2F: { VAR_SWITCH_VECT(2, f) }
+		case VECT2I: { VAR_SWITCH_VECT(2, i) }
+		case VECT3F: { VAR_SWITCH_VECT(3, f) }
+		case VECT3I: { VAR_SWITCH_VECT(3, i) }
+		case ARRAY: {
+			if (p_other.type == ARRAY)
+				return _data_arr._data == p_other._data_arr._data;
+			break;
+		}
+		case OBJ_PTR: {
+			if (p_other.type == OBJ_PTR)
+				return _data_obj._ptr == p_other._data_obj._ptr;
+			break;
+		}
+	}
+	return false;
+}
+#undef VAR_RET_EQUAL
+#undef VAR_SWITCH_PRIME_TYPES
+#undef VAR_SWITCH_VECT

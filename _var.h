@@ -30,6 +30,7 @@
 #include "_vector.h"
 
 #define DATA_PTR(T) reinterpret_cast<const T *>(_data._mem)
+#define DATA_PTR_OTHER(T) reinterpret_cast<const T *>(p_other._data._mem)
 // TODO: var fn = &func; fn(); operator(){}
 
 class var
@@ -56,10 +57,8 @@ public:
 		TYPE_MAX,
 	};
 
-protected:
-	Type type = _NULL;
-
 private:
+	Type type;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
 
 	struct _DataObj
@@ -148,15 +147,22 @@ public:
 			case VECT3I: return typeid(*DATA_PTR(Vect3i)) == typeid(T);
 			case ARRAY: return typeid(_data_arr) == typeid(T);
 			case OBJ_PTR: return _data_obj.hash_code == typeid(T).hash_code();
-				break;
 		}
 		VAR_ERR("invalid var type");
 		return false;
 	}
 
-	///* operator overloading */
-	//	/* comparison */
-	//bool operator==(const var& p_other) const;
+	/* operator overloading */
+		/* comparison */
+#define VAR_OP_CMP_DECL(m_op)                                                                  \
+	bool operator m_op (bool p_other) const        { return operator m_op (var(p_other)); }    \
+	bool operator m_op (int p_other) const         { return operator m_op (var(p_other)); }    \
+	bool operator m_op (float p_other) const       { return operator m_op (var(p_other)); }    \
+	bool operator m_op (double p_other) const      { return operator m_op (var(p_other)); }    \
+	bool operator m_op (const char* p_other) const { return operator m_op (var(p_other)); }    \
+	bool operator m_op (const var& p_other) const
+
+	VAR_OP_CMP_DECL(==);
 	//bool operator!=(const var& p_other) const;
 	//bool operator<=(const var& p_other) const;
 	//bool operator>=(const var& p_other) const;
