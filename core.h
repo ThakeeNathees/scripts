@@ -32,6 +32,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <vector>
+#include <sstream>
 
 #define STR_CAT2(m_a, m_b) m_a##m_b
 #define STR_CAT3(m_a, m_b, m_c) m_a##m_b##m_c

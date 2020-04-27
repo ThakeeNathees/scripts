@@ -51,8 +51,8 @@ struct Vect2
 	template<typename T2>
 	Vect2(const T2& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
 
-	float get_length() const {
-		return sqrtf(x * x + y * y);
+	real_t get_length() const {
+		return (real_t)sqrtf((real_t)(x * x + y * y));
 	}
 	float get_angle() const {
 		if (x == 0) return (float)M_PI_2;
@@ -70,6 +70,8 @@ struct Vect2
 		return Vect2<T>(x * p_other.x, y * p_other.y);
 	}
 	Vect2<T> operator/(const Vect2<T>& p_other) const {
+		if (p_other.x == 0 || p_other.y == 0)
+			VAR_ERR("zero division error");
 		return Vect2<T>(x / p_other.x, y / p_other.y);
 	}
 
@@ -97,6 +99,8 @@ struct Vect2
 		return *this;
 	}
 	Vect2<T>& operator/=(const Vect2<T>& p_other) {
+		if (p_other.x == 0 || p_other.y == 0)
+			VAR_ERR("zero division error");
 		x /= p_other.x; y /= p_other.y;
 		return *this;
 	}
@@ -125,8 +129,8 @@ struct Vect3
 	template<typename T2>
 	Vect3(const Vect3<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y), z((T)p_copy.z) {}
 
-	float get_length() const {
-		return sqrtf(x * x + y * y + z * z);
+	real_t get_length() const {
+		return (real_t)sqrtf((real_t)(x * x + y * y + z * z));
 	}
 
 	Vect3<T> operator+(const Vect3<T>& p_other) const {
@@ -139,6 +143,8 @@ struct Vect3
 		return Vect3<T>(x * p_other.x, y * p_other.y, z * p_other.z);
 	}
 	Vect3<T> operator/(const Vect3<T>& p_other) const {
+		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
+			VAR_ERR("zero division error");
 		return Vect3<T>(x / p_other.x, y / p_other.y, z / p_other.z);
 	}
 
@@ -166,6 +172,8 @@ struct Vect3
 		return *this;
 	}
 	Vect3<T>& operator/=(const Vect3<T>& p_other) {
+		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
+			VAR_ERR("zero division error");
 		x /= p_other.x; y /= p_other.y; z /= p_other.z;
 		return *this;
 	}

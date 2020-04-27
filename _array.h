@@ -28,11 +28,14 @@
 
 #include "core.h"
 
+class var;
+
 class Array
 {
 private:
 	friend class var;
 	Ref<std::vector<var>> _data;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
 public:
 	/* constructors */
 	Array() {
@@ -51,14 +54,24 @@ public:
 	std::vector<var>* get_data() {
 		return _data.operator->();
 	}
+	std::vector<var>* get_data() const {
+		return _data.operator->();
+	}
+
+	Array copy(bool p_deep = true) const;
 
 	/* wrappers */
+	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
 	void push_back(const var& p_var) { _data->push_back(p_var); }
+	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
 	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
 
 	/* cast operators */
-	operator bool() { return empty(); }
+	operator bool() const { return empty(); }
+	operator std::string() const;
+	bool operator ==(const Array& p_other) const;
+	Array operator+(const Array& p_other) const;
 };
 
 #endif // ARRAY_H

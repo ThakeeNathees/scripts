@@ -60,6 +60,8 @@ public:
 private:
 	Type type;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
+	template <typename T>
+	friend bool _isinstance(const var& p_other);
 
 	struct _DataObj
 	{
@@ -87,7 +89,9 @@ private:
 public:
 	/* public api */
 	inline Type get_type() const { return type; }
+	std::string to_string() const { return operator std::string(); }
 	void clear();
+	var copy() const;
 
 	/* constructors */
 	var();
@@ -132,21 +136,21 @@ public:
 		VAR_ASSERT(type == OBJ_PTR, "invalid casting");
 		return (T*)_data_obj._ptr;
 	}
-	template<typename T>
-	bool is() const {
+
+	bool is(const var& p_other) {
 		switch (type) {
-			case _NULL:
+			case _NULL: return false;
 			case BOOL:
 			case INT:
 			case FLOAT:
-				return false;
-			case STD_STRING: return typeid(_data_std_string) == typeid(T);
-			case VECT2F: return typeid(*DATA_PTR(Vect2f)) == typeid(T);
-			case VECT2I: return typeid(*DATA_PTR(Vect2i)) == typeid(T);
-			case VECT3F: return typeid(*DATA_PTR(Vect3f)) == typeid(T);
-			case VECT3I: return typeid(*DATA_PTR(Vect3i)) == typeid(T);
-			case ARRAY: return typeid(_data_arr) == typeid(T);
-			case OBJ_PTR: return _data_obj.hash_code == typeid(T).hash_code();
+			case STD_STRING:
+			case VECT2F:
+			case VECT2I:
+			case VECT3F:
+			case VECT3I:
+				return operator ==(p_other);
+			case ARRAY: return _data_arr._data == p_other._data_arr._data;
+			case OBJ_PTR: return _data_obj._ptr == p_other._data_obj._ptr;
 		}
 		VAR_ERR("invalid var type");
 		return false;
@@ -154,20 +158,20 @@ public:
 
 	/* operator overloading */
 		/* comparison */
-#define VAR_OP_CMP_DECL(m_op)                                                                  \
-	bool operator m_op (bool p_other) const        { return operator m_op (var(p_other)); }    \
-	bool operator m_op (int p_other) const         { return operator m_op (var(p_other)); }    \
-	bool operator m_op (float p_other) const       { return operator m_op (var(p_other)); }    \
-	bool operator m_op (double p_other) const      { return operator m_op (var(p_other)); }    \
-	bool operator m_op (const char* p_other) const { return operator m_op (var(p_other)); }    \
-	bool operator m_op (const var& p_other) const
+#define VAR_OP_DECL(m_ret, m_op)                                                                \
+	m_ret operator m_op (bool p_other) const        { return operator m_op (var(p_other)); }    \
+	m_ret operator m_op (int p_other) const         { return operator m_op (var(p_other)); }    \
+	m_ret operator m_op (float p_other) const       { return operator m_op (var(p_other)); }    \
+	m_ret operator m_op (double p_other) const      { return operator m_op (var(p_other)); }    \
+	m_ret operator m_op (const char* p_other) const { return operator m_op (var(p_other)); }    \
+	m_ret operator m_op (const var& p_other) const
 
-	VAR_OP_CMP_DECL(==);
-	//bool operator!=(const var& p_other) const;
-	//bool operator<=(const var& p_other) const;
-	//bool operator>=(const var& p_other) const;
-	//bool operator<(const var& p_other) const;
-	//bool operator>(const var& p_other) const;
+	VAR_OP_DECL(bool, ==);
+	VAR_OP_DECL(bool, !=);
+	VAR_OP_DECL(bool, <);
+	VAR_OP_DECL(bool, >);
+	VAR_OP_DECL(bool, <=);
+	VAR_OP_DECL(bool, >=);
 
 	//	/* unaray */
 	var operator++();
@@ -177,11 +181,11 @@ public:
 	bool operator !() const { return !operator bool(); }
 
 	//	/* binary */
-	//var operator+(const var& p_other) const;
-	//var operator-(const var& p_other) const;
-	//var operator*(const var& p_other) const;
-	//var operator/(const var& p_other) const;
-	//var operator%(const var& p_other) const;
+	VAR_OP_DECL(var, +);
+	VAR_OP_DECL(var, -);
+	VAR_OP_DECL(var, *);
+	VAR_OP_DECL(var, /);
+	VAR_OP_DECL(var, %);
 
 	//	/* assignments */
 	var& operator=(const var& p_other) = default;
@@ -194,5 +198,26 @@ public:
 	~var();
 
 };
+
+#define isinstance(p_var, T) _isinstance<T>(p_var)
+template<typename T>
+bool _isinstance(const var& p_other) {
+	switch (p_other.type) {
+		case var::_NULL:
+		case var::BOOL:
+		case var::INT:
+		case var::FLOAT:
+			return false;
+		case var::STD_STRING: return typeid(p_other._data_std_string) == typeid(T);
+		case var::VECT2F: return typeid(*DATA_PTR_OTHER(Vect2f)) == typeid(T);
+		case var::VECT2I: return typeid(*DATA_PTR_OTHER(Vect2i)) == typeid(T);
+		case var::VECT3F: return typeid(*DATA_PTR_OTHER(Vect3f)) == typeid(T);
+		case var::VECT3I: return typeid(*DATA_PTR_OTHER(Vect3i)) == typeid(T);
+		case var::ARRAY: return typeid(p_other._data_arr) == typeid(T);
+		case var::OBJ_PTR: return p_other._data_obj.hash_code == typeid(T).hash_code();
+	}
+	VAR_ERR("invalid var type");
+	return false;
+}
 
 #endif // _VAR_H
