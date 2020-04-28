@@ -66,12 +66,21 @@ public:
 	void push_back(const var& p_var) { _data->push_back(p_var); }
 	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
 	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
+	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
+	std::vector<var>::const_iterator end() const { return (*_data).end(); }
+	void clear() { (*_data).clear(); }
+	var& at(size_t p_pos) { return (*_data).at(p_pos); }
+	// TODO: 
 
 	/* cast operators */
 	operator bool() const { return empty(); }
 	operator std::string() const;
+	operator const char* () const {
+		return operator std::string().c_str();
+	}
 	bool operator ==(const Array& p_other) const;
 	Array operator+(const Array& p_other) const;
+	Array& operator+=(const Array& p_other);
 };
 
 #endif // ARRAY_H

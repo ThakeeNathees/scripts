@@ -22,6 +22,11 @@ int main()
 	var y = 1;
 	print(y + 1);
 
+
+	Vect2f v1(2, 3);
+	Vect2f v2(2, 2);
+	std::cout << v1 * v2 << std::endl;
+
 	var x = 1;
 	x = "hey var";
 	x = Test();

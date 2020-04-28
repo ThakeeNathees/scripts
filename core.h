@@ -38,6 +38,11 @@
 #define STR_CAT3(m_a, m_b, m_c) m_a##m_b##m_c
 #define STR_CAT4(m_a, m_b, m_c, m_d) m_a##m_b##m_c##m_d
 
+#define STR(m_mac) #m_mac
+#define STRINGIFY(m_mac) STR(m_mac)
+
+#define M_PLACE_HOLDER
+
 #define newref(T, ...) std::make_shared<T>(__VA_ARGS__);
 template<typename T>
 using Ref = std::shared_ptr<T>;

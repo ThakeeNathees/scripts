@@ -29,8 +29,11 @@
 #include "_array.h"
 #include "_vector.h"
 
-#define DATA_PTR(T) reinterpret_cast<const T *>(_data._mem)
-#define DATA_PTR_OTHER(T) reinterpret_cast<const T *>(p_other._data._mem)
+#define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
+#define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
+
+#define DATA_PTR(T) reinterpret_cast<T *>(_data._mem)
+#define DATA_PTR_OTHER(T) reinterpret_cast<T *>(p_other._data._mem)
 // TODO: var fn = &func; fn(); operator(){}
 
 class var
@@ -58,6 +61,7 @@ public:
 	};
 
 private:
+	static var tmp;
 	Type type;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
 	template <typename T>
@@ -91,7 +95,7 @@ public:
 	inline Type get_type() const { return type; }
 	std::string to_string() const { return operator std::string(); }
 	void clear();
-	var copy() const;
+	var copy(bool p_deep = false) const;
 
 	/* constructors */
 	var();
@@ -125,6 +129,7 @@ public:
 	operator float() const { return (float)operator double(); }
 	operator double() const;
 	operator std::string() const;
+	operator const char* () const;
 	operator Vect2f() const;
 	operator Vect2i() const;
 	operator Vect3f() const;
@@ -158,20 +163,21 @@ public:
 
 	/* operator overloading */
 		/* comparison */
-#define VAR_OP_DECL(m_ret, m_op)                                                                \
-	m_ret operator m_op (bool p_other) const        { return operator m_op (var(p_other)); }    \
-	m_ret operator m_op (int p_other) const         { return operator m_op (var(p_other)); }    \
-	m_ret operator m_op (float p_other) const       { return operator m_op (var(p_other)); }    \
-	m_ret operator m_op (double p_other) const      { return operator m_op (var(p_other)); }    \
-	m_ret operator m_op (const char* p_other) const { return operator m_op (var(p_other)); }    \
-	m_ret operator m_op (const var& p_other) const
+#define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
+	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
+	m_ret operator m_op (int p_other) m_access { return operator m_op (var(p_other)); }            \
+	m_ret operator m_op (float p_other) m_access { return operator m_op (var(p_other)); }          \
+	m_ret operator m_op (double p_other) m_access { return operator m_op (var(p_other)); }         \
+	m_ret operator m_op (const char* p_other) m_access { return operator m_op (var(p_other)); }    \
+	m_ret operator m_op (const var& p_other) m_access
+#define VAR_OP_DECL(m_ret, m_op, m_access) _VAR_OP_DECL(m_ret, m_op, m_access)
 
-	VAR_OP_DECL(bool, ==);
-	VAR_OP_DECL(bool, !=);
-	VAR_OP_DECL(bool, <);
-	VAR_OP_DECL(bool, >);
-	VAR_OP_DECL(bool, <=);
-	VAR_OP_DECL(bool, >=);
+	VAR_OP_DECL(bool, ==, const);
+	VAR_OP_DECL(bool, !=, const);
+	VAR_OP_DECL(bool, < , const);
+	VAR_OP_DECL(bool, > , const);
+	VAR_OP_DECL(bool, <=, const);
+	VAR_OP_DECL(bool, >=, const);
 
 	//	/* unaray */
 	var operator++();
@@ -179,21 +185,23 @@ public:
 	var operator--();
 	var operator--(int);
 	bool operator !() const { return !operator bool(); }
+	var& operator[](size_t index);
+	var& operator[](size_t index) const;
 
 	//	/* binary */
-	VAR_OP_DECL(var, +);
-	VAR_OP_DECL(var, -);
-	VAR_OP_DECL(var, *);
-	VAR_OP_DECL(var, /);
-	VAR_OP_DECL(var, %);
+	VAR_OP_DECL(var, +, const);
+	VAR_OP_DECL(var, -, const);
+	VAR_OP_DECL(var, *, const);
+	VAR_OP_DECL(var, /, const);
+	VAR_OP_DECL(var, %, const);
 
 	//	/* assignments */
 	var& operator=(const var& p_other) = default;
-	//var& operator+=(const var& p_other);
-	//var& operator-=(const var& p_other);
-	//var& operator*=(const var& p_other);
-	//var& operator/=(const var& p_other);
-	//var& operator%=(const var& p_other);
+	VAR_OP_DECL(var&, +=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, -=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, *=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, /=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, %=, M_PLACE_HOLDER);
 
 	~var();
 
@@ -209,10 +217,10 @@ bool _isinstance(const var& p_other) {
 		case var::FLOAT:
 			return false;
 		case var::STD_STRING: return typeid(p_other._data_std_string) == typeid(T);
-		case var::VECT2F: return typeid(*DATA_PTR_OTHER(Vect2f)) == typeid(T);
-		case var::VECT2I: return typeid(*DATA_PTR_OTHER(Vect2i)) == typeid(T);
-		case var::VECT3F: return typeid(*DATA_PTR_OTHER(Vect3f)) == typeid(T);
-		case var::VECT3I: return typeid(*DATA_PTR_OTHER(Vect3i)) == typeid(T);
+		case var::VECT2F: return typeid(*DATA_PTR_OTHER_CONST(Vect2f)) == typeid(T);
+		case var::VECT2I: return typeid(*DATA_PTR_OTHER_CONST(Vect2i)) == typeid(T);
+		case var::VECT3F: return typeid(*DATA_PTR_OTHER_CONST(Vect3f)) == typeid(T);
+		case var::VECT3I: return typeid(*DATA_PTR_OTHER_CONST(Vect3i)) == typeid(T);
 		case var::ARRAY: return typeid(p_other._data_arr) == typeid(T);
 		case var::OBJ_PTR: return p_other._data_obj.hash_code == typeid(T).hash_code();
 	}

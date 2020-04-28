@@ -46,6 +46,11 @@
 #define STR_CAT3(m_a, m_b, m_c) m_a##m_b##m_c
 #define STR_CAT4(m_a, m_b, m_c, m_d) m_a##m_b##m_c##m_d
 
+#define STR(m_mac) #m_mac
+#define STRINGIFY(m_mac) STR(m_mac)
+
+#define M_PLACE_HOLDER
+
 #define newref(T, ...) std::make_shared<T>(__VA_ARGS__);
 template<typename T>
 using Ref = std::shared_ptr<T>;
@@ -119,12 +124,21 @@ public:
 	void push_back(const var& p_var) { _data->push_back(p_var); }
 	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
 	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
+	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
+	std::vector<var>::const_iterator end() const { return (*_data).end(); }
+	void clear() { (*_data).clear(); }
+	var& at(size_t p_pos) { return (*_data).at(p_pos); }
+	// TODO: 
 
 	/* cast operators */
 	operator bool() const { return empty(); }
 	operator std::string() const;
+	operator const char* () const {
+		return operator std::string().c_str();
+	}
 	bool operator ==(const Array& p_other) const;
 	Array operator+(const Array& p_other) const;
+	Array& operator+=(const Array& p_other);
 };
 
 #endif // ARRAY_H
@@ -175,6 +189,10 @@ struct Vect2
 	Vect2<T> operator*(const Vect2<T>& p_other) const {
 		return Vect2<T>(x * p_other.x, y * p_other.y);
 	}
+	template <typename T2>
+	Vect2<T> operator*(T2 p_val) const {
+		return Vect2<T>(x * p_val, y * p_val);
+	}
 	Vect2<T> operator/(const Vect2<T>& p_other) const {
 		if (p_other.x == 0 || p_other.y == 0)
 			VAR_ERR("zero division error");
@@ -204,6 +222,15 @@ struct Vect2
 		x *= p_other.x; y *= p_other.y;
 		return *this;
 	}
+#define M_OP_TEMPLATE(T2)                    \
+	Vect2<T>& operator*=(T2 p_val) const {   \
+		x *= p_val; y*= p_val;               \
+		return *this;                        \
+	}
+	M_OP_TEMPLATE(float)
+	M_OP_TEMPLATE(int)
+#undef M_OP_TEMPLATE
+
 	Vect2<T>& operator/=(const Vect2<T>& p_other) {
 		if (p_other.x == 0 || p_other.y == 0)
 			VAR_ERR("zero division error");
@@ -218,7 +245,9 @@ struct Vect2
 			.append(std::to_string(x)).append(", ")
 			.append(std::to_string(y)).append(")");
 	}
-
+	operator const char* () const {
+		return operator std::string().c_str();
+	}
 };
 
 
@@ -247,6 +276,10 @@ struct Vect3
 	}
 	Vect3<T> operator*(const Vect3<T>& p_other) const {
 		return Vect3<T>(x * p_other.x, y * p_other.y, z * p_other.z);
+	}
+	template <typename T2>
+	Vect3<T> operator*(T2 p_val) const {
+		return Vect3<T>(x * p_val, y * p_val, z * p_val);
 	}
 	Vect3<T> operator/(const Vect3<T>& p_other) const {
 		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
@@ -277,10 +310,20 @@ struct Vect3
 		x *= p_other.x; y *= p_other.y; z *= p_other.z;
 		return *this;
 	}
-	Vect3<T>& operator/=(const Vect3<T>& p_other) {
+#define M_OP_TEMPLATE(T2)                    \
+	Vect3<T>& operator*=(T2 p_val) const {   \
+		x *= p_val; y *= p_val; z *= p_val;  \
+		return *this;                        \
+	}
+	M_OP_TEMPLATE(float)
+	M_OP_TEMPLATE(int)
+#undef M_OP_TEMPLATE
+
+	template<typename T2>
+	Vect3<T>& operator/=(const Vect3<T2>& p_other) {
 		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
 			VAR_ERR("zero division error");
-		x /= p_other.x; y /= p_other.y; z /= p_other.z;
+		x /= (T)p_other.x; y /= (T)p_other.y; z /= (T)p_other.z;
 		return *this;
 	}
 
@@ -294,6 +337,16 @@ struct Vect3
 	}
 };
 
+template<typename T>
+std::ostream& operator<<(std::ostream& p_ostream, const Vect2<T>& p_vect) {
+	p_ostream << p_vect.operator std::string();
+	return p_ostream;
+}
+template<typename T>
+std::ostream& operator<<(std::ostream& p_ostream, const Vect3<T>& p_vect) {
+	p_ostream << p_vect.operator std::string();
+	return p_ostream;
+}
 
 /* typedefs */
 typedef Vect2<float> Vect2f;
@@ -306,8 +359,11 @@ typedef Vect2f Point;
 
 #endif //VECTOR_H
 
-#define DATA_PTR(T) reinterpret_cast<const T *>(_data._mem)
-#define DATA_PTR_OTHER(T) reinterpret_cast<const T *>(p_other._data._mem)
+#define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
+#define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
+
+#define DATA_PTR(T) reinterpret_cast<T *>(_data._mem)
+#define DATA_PTR_OTHER(T) reinterpret_cast<T *>(p_other._data._mem)
 // TODO: var fn = &func; fn(); operator(){}
 
 class var
@@ -335,6 +391,7 @@ public:
 	};
 
 private:
+	static var tmp;
 	Type type;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
 	template <typename T>
@@ -368,7 +425,7 @@ public:
 	inline Type get_type() const { return type; }
 	std::string to_string() const { return operator std::string(); }
 	void clear();
-	var copy() const;
+	var copy(bool p_deep = false) const;
 
 	/* constructors */
 	var();
@@ -402,6 +459,7 @@ public:
 	operator float() const { return (float)operator double(); }
 	operator double() const;
 	operator std::string() const;
+	operator const char* () const;
 	operator Vect2f() const;
 	operator Vect2i() const;
 	operator Vect3f() const;
@@ -435,20 +493,21 @@ public:
 
 	/* operator overloading */
 		/* comparison */
-#define VAR_OP_CMP_DECL(m_op)                                                                  \
-	bool operator m_op (bool p_other) const        { return operator m_op (var(p_other)); }    \
-	bool operator m_op (int p_other) const         { return operator m_op (var(p_other)); }    \
-	bool operator m_op (float p_other) const       { return operator m_op (var(p_other)); }    \
-	bool operator m_op (double p_other) const      { return operator m_op (var(p_other)); }    \
-	bool operator m_op (const char* p_other) const { return operator m_op (var(p_other)); }    \
-	bool operator m_op (const var& p_other) const
+#define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
+	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
+	m_ret operator m_op (int p_other) m_access { return operator m_op (var(p_other)); }            \
+	m_ret operator m_op (float p_other) m_access { return operator m_op (var(p_other)); }          \
+	m_ret operator m_op (double p_other) m_access { return operator m_op (var(p_other)); }         \
+	m_ret operator m_op (const char* p_other) m_access { return operator m_op (var(p_other)); }    \
+	m_ret operator m_op (const var& p_other) m_access
+#define VAR_OP_DECL(m_ret, m_op, m_access) _VAR_OP_DECL(m_ret, m_op, m_access)
 
-	VAR_OP_CMP_DECL(==);
-	VAR_OP_CMP_DECL(!=);
-	VAR_OP_CMP_DECL(<);
-	VAR_OP_CMP_DECL(>);
-	VAR_OP_CMP_DECL(<=);
-	VAR_OP_CMP_DECL(>=);
+	VAR_OP_DECL(bool, ==, const);
+	VAR_OP_DECL(bool, !=, const);
+	VAR_OP_DECL(bool, < , const);
+	VAR_OP_DECL(bool, > , const);
+	VAR_OP_DECL(bool, <=, const);
+	VAR_OP_DECL(bool, >=, const);
 
 	//	/* unaray */
 	var operator++();
@@ -456,21 +515,23 @@ public:
 	var operator--();
 	var operator--(int);
 	bool operator !() const { return !operator bool(); }
+	var& operator[](size_t index);
+	var& operator[](size_t index) const;
 
 	//	/* binary */
-	var operator+(const var& p_other) const;
-	var operator-(const var& p_other) const;
-	var operator*(const var& p_other) const;
-	var operator/(const var& p_other) const;
-	var operator%(const var& p_other) const;
+	VAR_OP_DECL(var, +, const);
+	VAR_OP_DECL(var, -, const);
+	VAR_OP_DECL(var, *, const);
+	VAR_OP_DECL(var, /, const);
+	VAR_OP_DECL(var, %, const);
 
 	//	/* assignments */
 	var& operator=(const var& p_other) = default;
-	//var& operator+=(const var& p_other);
-	//var& operator-=(const var& p_other);
-	//var& operator*=(const var& p_other);
-	//var& operator/=(const var& p_other);
-	//var& operator%=(const var& p_other);
+	VAR_OP_DECL(var&, +=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, -=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, *=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, /=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, %=, M_PLACE_HOLDER);
 
 	~var();
 
@@ -486,10 +547,10 @@ bool _isinstance(const var& p_other) {
 		case var::FLOAT:
 			return false;
 		case var::STD_STRING: return typeid(p_other._data_std_string) == typeid(T);
-		case var::VECT2F: return typeid(*DATA_PTR_OTHER(Vect2f)) == typeid(T);
-		case var::VECT2I: return typeid(*DATA_PTR_OTHER(Vect2i)) == typeid(T);
-		case var::VECT3F: return typeid(*DATA_PTR_OTHER(Vect3f)) == typeid(T);
-		case var::VECT3I: return typeid(*DATA_PTR_OTHER(Vect3i)) == typeid(T);
+		case var::VECT2F: return typeid(*DATA_PTR_OTHER_CONST(Vect2f)) == typeid(T);
+		case var::VECT2I: return typeid(*DATA_PTR_OTHER_CONST(Vect2i)) == typeid(T);
+		case var::VECT3F: return typeid(*DATA_PTR_OTHER_CONST(Vect3f)) == typeid(T);
+		case var::VECT3I: return typeid(*DATA_PTR_OTHER_CONST(Vect3i)) == typeid(T);
 		case var::ARRAY: return typeid(p_other._data_arr) == typeid(T);
 		case var::OBJ_PTR: return p_other._data_obj.hash_code == typeid(T).hash_code();
 	}
@@ -507,6 +568,8 @@ bool _isinstance(const var& p_other) {
 
 #define D_VEC(m_vect, m_dim, m_t) STR_CAT3(m_vect, m_dim, m_t)
 
+var var::tmp;
+
 std::ostream& operator<<(std::ostream& p_ostream, const var& p_var) {
 	p_ostream << p_var.operator std::string();
 	return p_ostream;
@@ -515,7 +578,6 @@ std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr) {
 	p_ostream << p_arr.operator std::string();
 	return p_ostream;
 }
-
 
 // FIXME
 static void var_err_callback(const char* p_msg, const char* p_func, const char* p_file, int p_line) {
@@ -573,13 +635,19 @@ Array Array::operator+(const Array& p_other) const {
 	return ret;
 }
 
+Array& Array::operator+=(const Array& p_other) {
+	for (size_t i = 0; i < p_other.size(); i++) {
+		push_back(p_other[i].copy());
+	}
+	return *this;
+}
 // var -----------------------------------------------
 
 void var::clear() {
 	type = _NULL;
 }
 
-var var::copy() const {
+var var::copy(bool p_deep) const {
 	switch (type) {
 		case _NULL:
 		case BOOL:
@@ -591,7 +659,7 @@ var var::copy() const {
 		case VECT3F:
 		case VECT3I:
 			return *this;
-		case ARRAY: return _data_arr.copy();
+		case ARRAY: return _data_arr.copy(p_deep);
 		case OBJ_PTR:
 			VAR_ERR("user defined objects are non copyable");
 	}
@@ -683,6 +751,25 @@ VAR_OP_POST_INCR_DECR(--)
 #undef VAR_OP_PRE_INCR_DECR
 #undef VAR_OP_POST_INCR_DECR
 
+var& var::operator[](size_t index) {
+	switch (type) {
+		case ARRAY:
+			return _data_arr[index];
+		// case DICTIONARY:
+	}
+	VAR_ERR("invalid operator[]");
+	return var::tmp;
+}
+var& var::operator[](size_t index) const {
+	switch (type) {
+		case ARRAY:
+			return _data_arr[index];
+			// case DICTIONARY:
+	}
+	VAR_ERR("invalid operator[]");
+	return var::tmp;
+}
+
 /* casting */
 var::operator bool() const {
 	switch (type) {
@@ -692,10 +779,10 @@ var::operator bool() const {
 		case FLOAT: return _data._float != 0;
 		case STD_STRING: return _data_std_string.size() != 0;
 
-		case VECT2F: return *DATA_PTR(Vect2f) == Vect2f();
-		case VECT2I: return *DATA_PTR(Vect2i) == Vect2i();
-		case VECT3F: return *DATA_PTR(Vect3f) == Vect3f();
-		case VECT3I: return *DATA_PTR(Vect3f) == Vect3f();
+		case VECT2F: return *DATA_PTR_CONST(Vect2f) == Vect2f();
+		case VECT2I: return *DATA_PTR_CONST(Vect2i) == Vect2i();
+		case VECT3F: return *DATA_PTR_CONST(Vect3f) == Vect3f();
+		case VECT3I: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case ARRAY: return _data_arr.empty();
 		case OBJ_PTR: return _data_obj._ptr == nullptr;
 	}
@@ -732,10 +819,10 @@ var::operator std::string() const {
 		case INT: return std::to_string(_data._int);
 		case FLOAT: return std::to_string(_data._float);
 		case STD_STRING: return _data_std_string;
-		case VECT2F: return *DATA_PTR(Vect2f);
-		case VECT2I: return *DATA_PTR(Vect2i);
-		case VECT3F: return *DATA_PTR(Vect3f);
-		case VECT3I: return *DATA_PTR(Vect3i);
+		case VECT2F: return *DATA_PTR_CONST(Vect2f);
+		case VECT2I: return *DATA_PTR_CONST(Vect2i);
+		case VECT3F: return *DATA_PTR_CONST(Vect3f);
+		case VECT3I: return *DATA_PTR_CONST(Vect3i);
 		case ARRAY: return _data_arr.operator std::string();
 		case OBJ_PTR: return std::string("Object(").append(_data_obj.name).append(")");
 	}
@@ -743,15 +830,19 @@ var::operator std::string() const {
 	return "TODO";
 }
 
+var::operator const char* () const {
+	return operator std::string().c_str();
+}
 
-#define VAR_VECT_CAST(m_dim, m_t)                                                 \
-var::operator D_VEC(Vect, m_dim, m_t)() const {                                   \
-	switch (type) {                                                               \
-		case D_VEC(VECT, m_dim, F): return *DATA_PTR(D_VEC(Vect, m_dim, f));      \
-		case D_VEC(VECT, m_dim, I): return *DATA_PTR(D_VEC(Vect, m_dim, i));      \
-		default: VAR_ERR("invalid casting");                                      \
-	}                                                                             \
-	return D_VEC(Vect, m_dim, m_t)();                                             \
+
+#define VAR_VECT_CAST(m_dim, m_t)                                                       \
+var::operator D_VEC(Vect, m_dim, m_t)() const {                                         \
+	switch (type) {                                                                     \
+		case D_VEC(VECT, m_dim, F): return *DATA_PTR_CONST(D_VEC(Vect, m_dim, f));      \
+		case D_VEC(VECT, m_dim, I): return *DATA_PTR_CONST(D_VEC(Vect, m_dim, i));      \
+		default: VAR_ERR("invalid casting");                                            \
+	}                                                                                   \
+	return D_VEC(Vect, m_dim, m_t)();                                                   \
 }
 VAR_VECT_CAST(2, f)
 VAR_VECT_CAST(2, i)
@@ -771,17 +862,17 @@ var::operator Array() const {
 		/* comparison */
 #define VAR_RET_OP(m_op, m_data1, m_type, m_data2, m_cast) \
 	case m_type: return (m_cast)_data.m_data1 m_op p_other._data.m_data2
-#define VAR_SWITCH_PRIME_TYPES(m_data, m_op)                 \
-	switch (p_other.type) {                                  \
-		VAR_RET_OP(m_op, m_data, BOOL, _bool, bool);      \
-		VAR_RET_OP(m_op, m_data, INT, _int, int);         \
-		VAR_RET_OP(m_op, m_data, FLOAT, _float, float);   \
+#define VAR_SWITCH_PRIME_TYPES(m_data, m_op)                              \
+	switch (p_other.type) {                                               \
+		VAR_RET_OP(m_op, m_data, BOOL, _bool, bool);                      \
+		VAR_RET_OP(m_op, m_data, INT, _int, int);                         \
+		VAR_RET_OP(m_op, m_data, FLOAT, _float, float);                   \
 	}
-#define VAR_SWITCH_VECT(m_dim, m_t, m_op)                                                                               \
-switch (p_other.type) {                                                                                                 \
-	case D_VEC(VECT, m_dim, F): return *DATA_PTR(D_VEC(Vect, m_dim, m_t)) m_op *DATA_PTR_OTHER(D_VEC(Vect, m_dim, f));  \
-	case D_VEC(VECT, m_dim, I): return *DATA_PTR(D_VEC(Vect, m_dim, m_t)) m_op *DATA_PTR_OTHER(D_VEC(Vect, m_dim, i));  \
-}                                                                                                                       \
+#define VAR_SWITCH_VECT(m_dim, m_t, m_op)                                                                                           \
+switch (p_other.type) {                                                                                                             \
+	case D_VEC(VECT, m_dim, F): return *DATA_PTR_CONST(D_VEC(Vect, m_dim, m_t)) m_op *DATA_PTR_OTHER_CONST(D_VEC(Vect, m_dim, f));  \
+	case D_VEC(VECT, m_dim, I): return *DATA_PTR_CONST(D_VEC(Vect, m_dim, m_t)) m_op *DATA_PTR_OTHER_CONST(D_VEC(Vect, m_dim, i));  \
+}                                                                                                                                   \
 break;
 
 bool var::operator==(const var& p_other) const {
@@ -989,6 +1080,8 @@ var var::operator /(const var& p_other) const {
 	VAR_ERR("unsupported operator /");
 	return false;
 }
+#undef SWITCH_DIV_TYPES
+#undef CASE_DIV_DATA
 
 var var::operator %(const var& p_other) const {
 	switch (type) {
@@ -1009,16 +1102,154 @@ var var::operator %(const var& p_other) const {
 	VAR_ERR("unsupported operator %");
 	return false;
 }
-
-
 #undef VAR_RET_EQUAL
 #undef VAR_SWITCH_PRIME_TYPES
 #undef VAR_SWITCH_VECT
+#undef SWITCH_DIV_TYPES
+#undef CASE_DIV_DATA
 
 
+#define VAR_CASE_OP(m_op, m_data1, m_type, m_data2, m_cast) \
+	case m_type: _data.m_data1 m_op (m_cast)p_other._data.m_data2; return *this
+#define VAR_SWITCH_PRIME_TYPES(m_data, m_cast, m_op)                               \
+	switch (p_other.type) {                                                        \
+		VAR_CASE_OP(m_op, m_data, BOOL, _bool , m_cast);                           \
+		VAR_CASE_OP(m_op, m_data, INT, _int, m_cast);                              \
+		VAR_CASE_OP(m_op, m_data, FLOAT, _float, m_cast);                          \
+	}
+#define VAR_SWITCH_VECT(m_dim, m_t, m_op)                                                                                               \
+switch (p_other.type) {                                                                                                                 \
+	case D_VEC(VECT, m_dim, F): *DATA_PTR(D_VEC(Vect, m_dim, m_t)) m_op *DATA_PTR_OTHER_CONST(D_VEC(Vect, m_dim, f)); return *this;     \
+	case D_VEC(VECT, m_dim, I): *DATA_PTR(D_VEC(Vect, m_dim, m_t)) m_op *DATA_PTR_OTHER_CONST(D_VEC(Vect, m_dim, i)); return *this;     \
+}                                                                                                                                       \
+break;
+var& var::operator+=(const var& p_other) {
+	switch (type) {
+		case _NULL: break;
+		//case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, int, +=) }
+		case INT: { VAR_SWITCH_PRIME_TYPES(_int, int, +=) }
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, +=) }
+		case STD_STRING: {
+			if (p_other.type == STD_STRING) {
+				_data_std_string += p_other._data_std_string;
+				return *this;
+			}
+			break;
+		}
+		case VECT2F: { VAR_SWITCH_VECT(2, f, +=) }
+		case VECT2I: { VAR_SWITCH_VECT(2, i, +=) }
+		case VECT3F: { VAR_SWITCH_VECT(3, f, +=) }
+		case VECT3I: { VAR_SWITCH_VECT(3, i, +=) }
+		case ARRAY: {
+			if (p_other.type == ARRAY) {
+				_data_arr += p_other._data_arr;
+				return *this;
+			}
+			break;
+		}
+		case OBJ_PTR:
+			break;
+	}
+	VAR_ERR("unsupported operator +=");
+	return *this;
+}
+
+var& var::operator-=(const var& p_other) {
+	switch (type) {
+		case _NULL: break;
+		//case BOOL : { VAR_SWITCH_PRIME_TYPES(_bool, int, -=) }
+		case INT: { VAR_SWITCH_PRIME_TYPES(_int, int, -=) }
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, -=) }
+		case STD_STRING:
+			break;
+		case VECT2F: { VAR_SWITCH_VECT(2, f, -=) }
+		case VECT2I: { VAR_SWITCH_VECT(2, i, -=) }
+		case VECT3F: { VAR_SWITCH_VECT(3, f, -=) }
+		case VECT3I: { VAR_SWITCH_VECT(3, i, -=) }
+		case ARRAY:
+		case OBJ_PTR:
+			break;
+	}
+	VAR_ERR("unsupported operator -=");
+	return *this;
+}
 
 
+var& var::operator*=(const var& p_other) {
+	switch (type) {
+		case _NULL: break;
+		//case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, int, *=) }
+		case INT: { VAR_SWITCH_PRIME_TYPES(_int, int, *=) }
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, *=) }
+		case STD_STRING:
+			break;
+		case VECT2F: { VAR_SWITCH_VECT(2, f, *=) }
+		case VECT2I: { VAR_SWITCH_VECT(2, i, *=) }
+		case VECT3F: { VAR_SWITCH_VECT(3, f, *=) }
+		case VECT3I: { VAR_SWITCH_VECT(3, i, *=) }
+		case ARRAY:
+		case OBJ_PTR:
+			break;
+	}
+	VAR_ERR("unsupported operator *=");
+	return *this;
+}
 
+#define CASE_DIV_DATA(m_data1, m_data2)                                   \
+{                                                                         \
+if (m_data2 == 0)                                                         \
+	VAR_ERR("zero division error");                                       \
+m_data1 /= m_data2;                                                       \
+return *this;                                                             \
+}
 
+#define SWITCH_DIV_TYPES(m_data, m_cast)                                  \
+switch (p_other.type) {                                                   \
+	case BOOL:                                                            \
+		CASE_DIV_DATA(_data.m_data, (int)p_other._data._bool)             \
+	case INT:                                                             \
+		CASE_DIV_DATA(_data.m_data, (m_cast)p_other._data._int)           \
+	case FLOAT:                                                           \
+		CASE_DIV_DATA(_data.m_data, (m_cast)p_other._data._float)         \
+}
+var& var::operator/=(const var& p_other) {
+	switch (type) {
+		case _NULL: break;
+		//case BOOL: { SWITCH_DIV_TYPES(_bool, bool) }
+		case INT: { SWITCH_DIV_TYPES(_int, int) }
+		case FLOAT: { SWITCH_DIV_TYPES(_float, float) }
+		case STD_STRING:
+			break;
+		case VECT2F: { VAR_SWITCH_VECT(2, f, /=) }
+		case VECT2I: { VAR_SWITCH_VECT(2, i, /=) }
+		case VECT3F: { VAR_SWITCH_VECT(3, f, /=) }
+		case VECT3I: { VAR_SWITCH_VECT(3, i, /=) }
+		case ARRAY:
+		case OBJ_PTR:
+			break;
+	}
+	VAR_ERR("unsupported operator /=");
+	return *this;
+}
 
+var& var::operator %=(const var& p_other) {
+	switch (type) {
+		case _NULL: break;
+		//case BOOL: break;
+		case INT: {
+			switch (p_other.type) {
+				//case BOOL: _data._int %= (int)(p_other._data._bool); return *this;
+				case INT: _data._int %= p_other._data._int; return *this;
+			}
+		}
+	}
+	VAR_ERR("unsupported operator %=");
+	return *this;
+}
+
+#undef VAR_CASE_OP
+#undef VAR_SWITCH_PRIME_TYPES
+#undef VAR_SWITCH_VECT
+#undef CASE_DIV_DATA
+#undef SWITCH_DIV_TYPES
 #endif // VAR_IMPLEMENTATION

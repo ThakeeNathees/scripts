@@ -69,6 +69,10 @@ struct Vect2
 	Vect2<T> operator*(const Vect2<T>& p_other) const {
 		return Vect2<T>(x * p_other.x, y * p_other.y);
 	}
+	template <typename T2>
+	Vect2<T> operator*(T2 p_val) const {
+		return Vect2<T>(x * p_val, y * p_val);
+	}
 	Vect2<T> operator/(const Vect2<T>& p_other) const {
 		if (p_other.x == 0 || p_other.y == 0)
 			VAR_ERR("zero division error");
@@ -98,6 +102,15 @@ struct Vect2
 		x *= p_other.x; y *= p_other.y;
 		return *this;
 	}
+#define M_OP_TEMPLATE(T2)                    \
+	Vect2<T>& operator*=(T2 p_val) const {   \
+		x *= p_val; y*= p_val;               \
+		return *this;                        \
+	}
+	M_OP_TEMPLATE(float)
+	M_OP_TEMPLATE(int)
+#undef M_OP_TEMPLATE
+
 	Vect2<T>& operator/=(const Vect2<T>& p_other) {
 		if (p_other.x == 0 || p_other.y == 0)
 			VAR_ERR("zero division error");
@@ -112,7 +125,9 @@ struct Vect2
 			.append(std::to_string(x)).append(", ")
 			.append(std::to_string(y)).append(")");
 	}
-
+	operator const char* () const {
+		return operator std::string().c_str();
+	}
 };
 
 
@@ -141,6 +156,10 @@ struct Vect3
 	}
 	Vect3<T> operator*(const Vect3<T>& p_other) const {
 		return Vect3<T>(x * p_other.x, y * p_other.y, z * p_other.z);
+	}
+	template <typename T2>
+	Vect3<T> operator*(T2 p_val) const {
+		return Vect3<T>(x * p_val, y * p_val, z * p_val);
 	}
 	Vect3<T> operator/(const Vect3<T>& p_other) const {
 		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
@@ -171,10 +190,20 @@ struct Vect3
 		x *= p_other.x; y *= p_other.y; z *= p_other.z;
 		return *this;
 	}
-	Vect3<T>& operator/=(const Vect3<T>& p_other) {
+#define M_OP_TEMPLATE(T2)                    \
+	Vect3<T>& operator*=(T2 p_val) const {   \
+		x *= p_val; y *= p_val; z *= p_val;  \
+		return *this;                        \
+	}
+	M_OP_TEMPLATE(float)
+	M_OP_TEMPLATE(int)
+#undef M_OP_TEMPLATE
+
+	template<typename T2>
+	Vect3<T>& operator/=(const Vect3<T2>& p_other) {
 		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
 			VAR_ERR("zero division error");
-		x /= p_other.x; y /= p_other.y; z /= p_other.z;
+		x /= (T)p_other.x; y /= (T)p_other.y; z /= (T)p_other.z;
 		return *this;
 	}
 
@@ -188,6 +217,16 @@ struct Vect3
 	}
 };
 
+template<typename T>
+std::ostream& operator<<(std::ostream& p_ostream, const Vect2<T>& p_vect) {
+	p_ostream << p_vect.operator std::string();
+	return p_ostream;
+}
+template<typename T>
+std::ostream& operator<<(std::ostream& p_ostream, const Vect3<T>& p_vect) {
+	p_ostream << p_vect.operator std::string();
+	return p_ostream;
+}
 
 /* typedefs */
 typedef Vect2<float> Vect2f;
