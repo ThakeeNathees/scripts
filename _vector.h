@@ -48,8 +48,6 @@ struct Vect2
 	Vect2(const T* p_arr) : x(p_arr[0]), y(p_arr[1]) {}
 	template<typename T2>
 	Vect2(const Vect2<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
-	template<typename T2>
-	Vect2(const T2& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
 
 	real_t get_length() const {
 		return (real_t)sqrtf((real_t)(x * x + y * y));
@@ -98,18 +96,11 @@ struct Vect2
 		x -= p_other.x; y -= p_other.y;
 		return *this;
 	}
+
 	Vect2<T>& operator*=(const Vect2<T>& p_other) {
 		x *= p_other.x; y *= p_other.y;
 		return *this;
 	}
-#define M_OP_TEMPLATE(T2)                    \
-	Vect2<T>& operator*=(T2 p_val) const {   \
-		x *= p_val; y*= p_val;               \
-		return *this;                        \
-	}
-	M_OP_TEMPLATE(float)
-	M_OP_TEMPLATE(int)
-#undef M_OP_TEMPLATE
 
 	Vect2<T>& operator/=(const Vect2<T>& p_other) {
 		if (p_other.x == 0 || p_other.y == 0)
@@ -156,10 +147,6 @@ struct Vect3
 	}
 	Vect3<T> operator*(const Vect3<T>& p_other) const {
 		return Vect3<T>(x * p_other.x, y * p_other.y, z * p_other.z);
-	}
-	template <typename T2>
-	Vect3<T> operator*(T2 p_val) const {
-		return Vect3<T>(x * p_val, y * p_val, z * p_val);
 	}
 	Vect3<T> operator/(const Vect3<T>& p_other) const {
 		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
