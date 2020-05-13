@@ -28,6 +28,7 @@
 
 #include "_array.h"
 #include "_vector.h"
+#include "_dictionary.h"
 
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
 #define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
@@ -55,6 +56,7 @@ public:
 
 		// misc types
 		ARRAY,
+		DICTIONARY,
 		OBJ_PTR,
 
 		TYPE_MAX,
@@ -82,6 +84,7 @@ private:
 
 	std::string _data_std_string;
 	Array _data_arr;
+	Dictionary _data_dict;
 	_DataObj _data_obj;
 	union {
 		bool _bool;
@@ -111,6 +114,7 @@ public:
 	var(const Vect3f& p_vect3f);
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
+	//var(const Dictionary& p_dict);
 	template<typename T> var(const T& p_obj) {
 		type = OBJ_PTR;
 		const void * _ptr = (const void *)&p_obj;

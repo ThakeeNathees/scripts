@@ -23,63 +23,63 @@
 // SOFTWARE.
 //------------------------------------------------------------------------------
 
-#ifndef  ARRAY_H
-#define  ARRAY_H
+#ifndef  DICTIONARY_H
+#define  DICTIONARY_H
 
 #include "core.h"
 
 class var;
 
-class Array
+class Dictionary
 {
 private:
 	friend class var;
-	Ref<std::vector<var>> _data;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
+	Ref<std::map<var, var>> _data;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
 public:
 	/* constructors */
-	Array() {
-		_data = newref_t1(std::vector<var>);
+	Dictionary() {
+		_data = newref_t2(std::map<var, var>);
 	}
-	Array(const Ref<std::vector<var>>& p_data) {
+	Dictionary(const Ref<std::map<var, var>>& p_data) {
 		_data = p_data;
 	}
-	Array(const Array& p_copy) {
+	Dictionary(const Dictionary& p_copy) {
 		_data = p_copy._data;
 	}
 
-	std::vector<var>* get_data() {
+	std::map<var, var>* get_data() {
 		return _data.operator->();
 	}
-	std::vector<var>* get_data() const {
+	std::map<var, var>* get_data() const {
 		return _data.operator->();
 	}
 
-	Array copy(bool p_deep = true) const;
-
-	/* wrappers */
+	Dictionary copy(bool p_deep = true) const;
+	// 
+	// /* wrappers */
 	size_t size() const { return _data->size(); }
-	bool empty() const { return _data->empty(); }
-	void push_back(const var& p_var) { _data->push_back(p_var); }
-	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
-	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
-	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
-	std::vector<var>::const_iterator end() const { return (*_data).end(); }
-	void clear() { (*_data).clear(); }
-	var& at(size_t p_pos) { return (*_data).at(p_pos); }
-	var& back() { return (*_data).back(); }
-	var& front() { return (*_data).front(); }
-	// TODO: 
-
-	/* cast operators */
-	operator bool() const { return empty(); }
+	// bool empty() const { return _data->empty(); }
+	// void push_back(const var& p_var) { _data->push_back(p_var); }
+	var& operator[](const var& p_key) const { return (*_data)[p_key]; }
+	var& operator[](const var& p_key) { return (*_data)[p_key]; }
+	// std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
+	// std::vector<var>::const_iterator end() const { return (*_data).end(); }
+	// void clear() { (*_data).clear(); }
+	// var& at(size_t p_pos) { return (*_data).at(p_pos); }
+	// var& back() { return (*_data).back(); }
+	// var& front() { return (*_data).front(); }
+	// // TODO: 
+	// 
+	// /* cast operators */
+	// operator bool() const { return empty(); }
 	operator std::string() const;
 	operator const char* () const {
 		return operator std::string().c_str();
 	}
-	bool operator ==(const Array& p_other) const;
-	Array operator+(const Array& p_other) const;
-	Array& operator+=(const Array& p_other);
+	// bool operator ==(const Array& p_other) const;
+	// Array operator+(const Array& p_other) const;
+	// Array& operator+=(const Array& p_other);
 };
 
-#endif // ARRAY_H
+#endif // DICTIONARY_H

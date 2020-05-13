@@ -13,6 +13,10 @@ std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr) {
 	p_ostream << p_arr.operator std::string();
 	return p_ostream;
 }
+std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict) {
+	p_ostream << p_dict.operator std::string();
+	return p_ostream;
+}
 
 // FIXME
 static void var_err_callback(const char* p_msg, const char* p_func, const char* p_file, int p_line) {
@@ -55,7 +59,7 @@ Array Array::copy(bool p_deep) const {
 	Array ret;
 	for (size_t i = 0; i < size(); i++) {
 		if (p_deep)
-			ret.push_back(operator[](i).copy());
+			ret.push_back(operator[](i).copy(true));
 		else
 			ret.push_back(operator[](i));
 	}
@@ -76,6 +80,30 @@ Array& Array::operator+=(const Array& p_other) {
 	}
 	return *this;
 }
+
+// Dictionary ----------------------------------------
+Dictionary::operator std::string() const {
+	std::stringstream ss;
+	ss << "{ ";
+	for (std::map<var, var>::iterator it; it != (*_data).end(); it++) {
+		ss << it->first.operator std::string() << " : " << it->second.operator std::string();
+		ss << ", ";
+	}
+	ss << "}";
+	return ss.str();
+}
+
+Dictionary Dictionary::copy(bool p_deep) const {
+	Dictionary ret;
+	for (std::map<var, var>::iterator it; it != (*_data).end(); it++) {
+		if (p_deep)
+			ret[it->first] = it->second.copy(true);
+		else
+			ret[it->first] = it->second;
+	}
+	return ret;
+}
+
 // var -----------------------------------------------
 
 void var::clear() {
@@ -137,10 +165,10 @@ var::var(const std::string& p_std_string) {
 	_data_std_string = std::string(p_std_string);
 }
 
-#define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)        \
-var::var(const D_VEC(Vect, m_dim, m_t)& p_vect) {    \
-	type = D_VEC(VECT, m_dim, m_T);                  \
-	memcpy(_data._mem, &p_vect, sizeof(_data._mem)); \
+#define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)             \
+var::var(const D_VEC(Vect, m_dim, m_t)& p_vect) {         \
+	type = D_VEC(VECT, m_dim, m_T);                       \
+	std::memcpy(_data._mem, &p_vect, sizeof(_data._mem)); \
 }
 VAR_VECT_CONSTRUCTOR(2, f, F)
 VAR_VECT_CONSTRUCTOR(2, i, I)
@@ -153,6 +181,11 @@ var::var(const Array& p_array) {
 	type = ARRAY;
 	_data_arr = p_array._data;
 }
+
+//var::var(const Dictionary& p_dict) {
+//	type = DICTIONARY;
+//	_data_dict = p_dict._data;
+//}
 
 var::~var() {
 	clear();

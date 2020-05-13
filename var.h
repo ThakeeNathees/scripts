@@ -36,11 +36,14 @@
 
 #include <memory>
 #include <string>
+#include <cstring>
 #include <iostream>
+#include <sstream>
+
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <vector>
-#include <sstream>
+#include <map>
 
 #define STR_CAT2(m_a, m_b) m_a##m_b
 #define STR_CAT3(m_a, m_b, m_c) m_a##m_b##m_c
@@ -51,7 +54,8 @@
 
 #define M_PLACE_HOLDER
 
-#define newref(T, ...) std::make_shared<T>(__VA_ARGS__);
+#define newref_t1(T1, ...) std::make_shared<T1>(__VA_ARGS__);
+#define newref_t2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__);
 template<typename T>
 using Ref = std::shared_ptr<T>;
 
@@ -97,15 +101,12 @@ private:
 public:
 	/* constructors */
 	Array() {
-		//type = ARRAY;
-		_data = newref(std::vector<var>);
+		_data = newref_t1(std::vector<var>);
 	}
 	Array(const Ref<std::vector<var>>& p_data) {
-		//type = ARRAY;
 		_data = p_data;
 	}
 	Array(const Array& p_copy) {
-		//type = ARRAY;
 		_data = p_copy._data;
 	}
 
@@ -128,6 +129,8 @@ public:
 	std::vector<var>::const_iterator end() const { return (*_data).end(); }
 	void clear() { (*_data).clear(); }
 	var& at(size_t p_pos) { return (*_data).at(p_pos); }
+	var& back() { return (*_data).back(); }
+	var& front() { return (*_data).front(); }
 	// TODO: 
 
 	/* cast operators */
@@ -168,8 +171,6 @@ struct Vect2
 	Vect2(const T* p_arr) : x(p_arr[0]), y(p_arr[1]) {}
 	template<typename T2>
 	Vect2(const Vect2<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
-	template<typename T2>
-	Vect2(const T2& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
 
 	real_t get_length() const {
 		return (real_t)sqrtf((real_t)(x * x + y * y));
@@ -218,18 +219,11 @@ struct Vect2
 		x -= p_other.x; y -= p_other.y;
 		return *this;
 	}
+
 	Vect2<T>& operator*=(const Vect2<T>& p_other) {
 		x *= p_other.x; y *= p_other.y;
 		return *this;
 	}
-#define M_OP_TEMPLATE(T2)                    \
-	Vect2<T>& operator*=(T2 p_val) const {   \
-		x *= p_val; y*= p_val;               \
-		return *this;                        \
-	}
-	M_OP_TEMPLATE(float)
-	M_OP_TEMPLATE(int)
-#undef M_OP_TEMPLATE
 
 	Vect2<T>& operator/=(const Vect2<T>& p_other) {
 		if (p_other.x == 0 || p_other.y == 0)
@@ -276,10 +270,6 @@ struct Vect3
 	}
 	Vect3<T> operator*(const Vect3<T>& p_other) const {
 		return Vect3<T>(x * p_other.x, y * p_other.y, z * p_other.z);
-	}
-	template <typename T2>
-	Vect3<T> operator*(T2 p_val) const {
-		return Vect3<T>(x * p_val, y * p_val, z * p_val);
 	}
 	Vect3<T> operator/(const Vect3<T>& p_other) const {
 		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
@@ -359,6 +349,67 @@ typedef Vect2f Point;
 
 #endif //VECTOR_H
 
+#ifndef  DICTIONARY_H
+#define  DICTIONARY_H
+
+//include "core.h"
+
+class var;
+
+class Dictionary
+{
+private:
+	friend class var;
+	Ref<std::map<var, var>> _data;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
+public:
+	/* constructors */
+	Dictionary() {
+		_data = newref_t2(std::map<var, var>);
+	}
+	Dictionary(const Ref<std::map<var, var>>& p_data) {
+		_data = p_data;
+	}
+	Dictionary(const Dictionary& p_copy) {
+		_data = p_copy._data;
+	}
+
+	std::map<var, var>* get_data() {
+		return _data.operator->();
+	}
+	std::map<var, var>* get_data() const {
+		return _data.operator->();
+	}
+
+	Dictionary copy(bool p_deep = true) const;
+	// 
+	// /* wrappers */
+	size_t size() const { return _data->size(); }
+	// bool empty() const { return _data->empty(); }
+	// void push_back(const var& p_var) { _data->push_back(p_var); }
+	var& operator[](const var& p_key) const { return (*_data)[p_key]; }
+	var& operator[](const var& p_key) { return (*_data)[p_key]; }
+	// std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
+	// std::vector<var>::const_iterator end() const { return (*_data).end(); }
+	// void clear() { (*_data).clear(); }
+	// var& at(size_t p_pos) { return (*_data).at(p_pos); }
+	// var& back() { return (*_data).back(); }
+	// var& front() { return (*_data).front(); }
+	// // TODO: 
+	// 
+	// /* cast operators */
+	// operator bool() const { return empty(); }
+	operator std::string() const;
+	operator const char* () const {
+		return operator std::string().c_str();
+	}
+	// bool operator ==(const Array& p_other) const;
+	// Array operator+(const Array& p_other) const;
+	// Array& operator+=(const Array& p_other);
+};
+
+#endif // DICTIONARY_H
+
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
 #define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
 
@@ -385,6 +436,7 @@ public:
 
 		// misc types
 		ARRAY,
+		DICTIONARY,
 		OBJ_PTR,
 
 		TYPE_MAX,
@@ -412,6 +464,7 @@ private:
 
 	std::string _data_std_string;
 	Array _data_arr;
+	Dictionary _data_dict;
 	_DataObj _data_obj;
 	union {
 		bool _bool;
@@ -441,6 +494,7 @@ public:
 	var(const Vect3f& p_vect3f);
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
+	//var(const Dictionary& p_dict);
 	template<typename T> var(const T& p_obj) {
 		type = OBJ_PTR;
 		const void * _ptr = (const void *)&p_obj;
@@ -578,6 +632,10 @@ std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr) {
 	p_ostream << p_arr.operator std::string();
 	return p_ostream;
 }
+std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict) {
+	p_ostream << p_dict.operator std::string();
+	return p_ostream;
+}
 
 // FIXME
 static void var_err_callback(const char* p_msg, const char* p_func, const char* p_file, int p_line) {
@@ -620,7 +678,7 @@ Array Array::copy(bool p_deep) const {
 	Array ret;
 	for (size_t i = 0; i < size(); i++) {
 		if (p_deep)
-			ret.push_back(operator[](i).copy());
+			ret.push_back(operator[](i).copy(true));
 		else
 			ret.push_back(operator[](i));
 	}
@@ -641,6 +699,30 @@ Array& Array::operator+=(const Array& p_other) {
 	}
 	return *this;
 }
+
+// Dictionary ----------------------------------------
+Dictionary::operator std::string() const {
+	std::stringstream ss;
+	ss << "{ ";
+	for (std::map<var, var>::iterator it; it != (*_data).end(); it++) {
+		ss << it->first.operator std::string() << " : " << it->second.operator std::string();
+		ss << ", ";
+	}
+	ss << "}";
+	return ss.str();
+}
+
+Dictionary Dictionary::copy(bool p_deep) const {
+	Dictionary ret;
+	for (std::map<var, var>::iterator it; it != (*_data).end(); it++) {
+		if (p_deep)
+			ret[it->first] = it->second.copy(true);
+		else
+			ret[it->first] = it->second;
+	}
+	return ret;
+}
+
 // var -----------------------------------------------
 
 void var::clear() {
@@ -702,10 +784,10 @@ var::var(const std::string& p_std_string) {
 	_data_std_string = std::string(p_std_string);
 }
 
-#define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)        \
-var::var(const D_VEC(Vect, m_dim, m_t)& p_vect) {    \
-	type = D_VEC(VECT, m_dim, m_T);                  \
-	memcpy(_data._mem, &p_vect, sizeof(_data._mem)); \
+#define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)             \
+var::var(const D_VEC(Vect, m_dim, m_t)& p_vect) {         \
+	type = D_VEC(VECT, m_dim, m_T);                       \
+	std::memcpy(_data._mem, &p_vect, sizeof(_data._mem)); \
 }
 VAR_VECT_CONSTRUCTOR(2, f, F)
 VAR_VECT_CONSTRUCTOR(2, i, I)
@@ -718,6 +800,11 @@ var::var(const Array& p_array) {
 	type = ARRAY;
 	_data_arr = p_array._data;
 }
+
+//var::var(const Dictionary& p_dict) {
+//	type = DICTIONARY;
+//	_data_dict = p_dict._data;
+//}
 
 var::~var() {
 	clear();

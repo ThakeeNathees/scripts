@@ -43,5 +43,7 @@ int main()
 	var varr = arr;
 	print(varr);
 
+	var d = Dictionary();
+
 	return 0;
 }

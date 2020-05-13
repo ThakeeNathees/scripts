@@ -28,11 +28,14 @@
 
 #include <memory>
 #include <string>
+#include <cstring>
 #include <iostream>
+#include <sstream>
+
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <vector>
-#include <sstream>
+#include <map>
 
 #define STR_CAT2(m_a, m_b) m_a##m_b
 #define STR_CAT3(m_a, m_b, m_c) m_a##m_b##m_c
@@ -43,7 +46,8 @@
 
 #define M_PLACE_HOLDER
 
-#define newref(T, ...) std::make_shared<T>(__VA_ARGS__);
+#define newref_t1(T1, ...) std::make_shared<T1>(__VA_ARGS__);
+#define newref_t2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__);
 template<typename T>
 using Ref = std::shared_ptr<T>;
 
