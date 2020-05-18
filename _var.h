@@ -83,9 +83,11 @@ private:
 	};
 
 	std::string _data_std_string;
-	Array _data_arr;
-	Dictionary _data_dict;
-	_DataObj _data_obj;
+		Dictionary _data_dict;
+		_DataObj _data_obj;
+		Array _data_arr;
+	union {
+	};
 	union {
 		bool _bool;
 		int _int;
@@ -114,7 +116,7 @@ public:
 	var(const Vect3f& p_vect3f);
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
-	//var(const Dictionary& p_dict);
+	var(const Dictionary& p_dict);
 	template<typename T> var(const T& p_obj) {
 		type = OBJ_PTR;
 		const void * _ptr = (const void *)&p_obj;
@@ -140,11 +142,18 @@ public:
 	operator Vect3f() const;
 	operator Vect3i() const;
 	operator Array() const;
+	operator Dictionary() const;
 
 	template<typename T>
 	T* as() const {
-		VAR_ASSERT(type == OBJ_PTR, "invalid casting");
-		return (T*)_data_obj._ptr;
+		switch (type) {
+			// TODO: 
+			case ARRAY: return (T*)(&_data_arr);
+			case DICTIONARY: return (T*)(&_data_dict);
+			case OBJ_PTR: return (T*)_data_obj._ptr;
+		}
+		VAR_ERR("invalid casting");
+		return nullptr;
 	}
 
 	bool is(const var& p_other) {
@@ -190,8 +199,8 @@ public:
 	var operator--();
 	var operator--(int);
 	bool operator !() const { return !operator bool(); }
-	var& operator[](size_t index);
-	var& operator[](size_t index) const;
+	//var& operator[](const var& p_key);
+	var& operator[](const var& p_key) const;
 
 	//	/* binary */
 	VAR_OP_DECL(var, +, const);

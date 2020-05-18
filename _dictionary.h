@@ -30,8 +30,6 @@
 
 class var;
 
-using dict_iterator = std::_Tree<std::_Tmap_traits<var, var, std::less<var>, std::allocator<std::pair<const var, var>>, false>>::iterator;
-
 class Dictionary
 {
 private:
@@ -58,28 +56,25 @@ public:
 	}
 
 	Dictionary copy(bool p_deep = true) const;
-	//
-	// /* wrappers */
-	size_t size() const { return _data->size(); }
-	// bool empty() const { return _data->empty(); }
-	//void push_back(const var& p_var) { _data->push_back(p_var); }
-	//var& operator[](const var& p_key) const { return (*_data)[p_key]; }
-	//var& operator[](const var& p_key) { return (*_data)[p_key]; }
-	//dict_iterator begin() const { return (*_data).begin(); }
-	//dict_iterator end() const { return (*_data).end(); }
-	//void clear() { (*_data).clear(); }
-	//bool empty() const { return (*_data).empty(); }
-	// // TODO:
 
-	// /* cast operators */
-	//operator bool() const { return empty(); }
-	//operator std::string() const;
-	//operator const char* () const {
-	//	return operator std::string().c_str();
-	//}
-	//bool operator ==(const Dictionary& p_other) const;
-	// Array operator+(const Array& p_other) const;
-	// Array& operator+=(const Array& p_other);
+	/* wrappers */
+	size_t size() const { return _data->size(); }
+	bool empty() const { return _data->empty(); }
+	var& operator[](const var& p_key) const;
+	var& operator[](const var& p_key);
+	std::map<var, var>::iterator begin() const;
+	std::map<var, var>::iterator end() const;
+	std::map<var, var>::iterator find(const var& p_key) const;
+	void clear() { _data->clear(); }
+
+	bool has(const var& p_key) const;
+	// TODO:
+
+	/* operators */
+	operator bool() const { return empty(); }
+	operator std::string() const;
+	//operator const char* () const { return operator std::string().c_str(); }
+	bool operator ==(const Dictionary& p_other) const;
 };
 
 #endif // DICTIONARY_H

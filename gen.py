@@ -57,7 +57,7 @@ gen += '#if defined(VAR_IMPLEMENTATION)\n'
 for file in src:
     if file == 'main.cpp': continue
     gen += src[file] + '\n'
-gen += '#endif // VAR_IMPLEMENTATION'
+gen += '\n#endif // VAR_IMPLEMENTATION'
 
 for include in re.findall(r'#include ".+"', gen):
     gen = gen.replace(include, include.replace('#', '//'))

@@ -48,6 +48,15 @@ public:
 		_data = p_copy._data;
 	}
 
+	// TODO: try implementing with packed variadic template 
+	//template<typename... T> Array(const T&... p_vars) {
+	//	_data = newref_t1(std::vector<var>);
+	//	var arr[] = { (p_vars)... };
+	//	for (size_t i = 0; i < sizeof(arr); i++) {
+	//		push_back(arr[i]);
+	//	}
+	//}
+
 	std::vector<var>* get_data() {
 		return _data.operator->();
 	}
