@@ -120,9 +120,13 @@ public:
 	Array copy(bool p_deep = true) const;
 
 	/* wrappers */
+	// TODO: make all errors to VAR_ERR
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
 	void push_back(const var& p_var) { _data->push_back(p_var); }
+	void append(const var& p_var) { push_back(p_var); }
+	void pop_back() { _data->pop_back(); }
+	var& pop() { var& ret = this->operator[](size() - 1); pop_back(); return ret; } 
 	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
 	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
 	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
@@ -136,9 +140,10 @@ public:
 	/* cast operators */
 	operator bool() const { return empty(); }
 	operator std::string() const;
-	operator const char* () const {
-		return operator std::string().c_str();
-	}
+	// this treated as: built-in C++ operator[](const char *, int), conflict with operator[](size_t)
+	//operator const char* () const { 
+	//	return operator std::string().c_str();
+	//}
 	bool operator ==(const Array& p_other) const;
 	Array operator+(const Array& p_other) const;
 	Array& operator+=(const Array& p_other);
@@ -356,6 +361,8 @@ typedef Vect2f Point;
 
 class var;
 
+using dict_iterator = std::_Tree<std::_Tmap_traits<var, var, std::less<var>, std::allocator<std::pair<const var, var>>, false>>::iterator;
+
 class Dictionary
 {
 private:
@@ -382,28 +389,26 @@ public:
 	}
 
 	Dictionary copy(bool p_deep = true) const;
-	// 
+	//
 	// /* wrappers */
 	size_t size() const { return _data->size(); }
 	// bool empty() const { return _data->empty(); }
-	// void push_back(const var& p_var) { _data->push_back(p_var); }
-	var& operator[](const var& p_key) const { return (*_data)[p_key]; }
-	var& operator[](const var& p_key) { return (*_data)[p_key]; }
-	// std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
-	// std::vector<var>::const_iterator end() const { return (*_data).end(); }
-	// void clear() { (*_data).clear(); }
-	// var& at(size_t p_pos) { return (*_data).at(p_pos); }
-	// var& back() { return (*_data).back(); }
-	// var& front() { return (*_data).front(); }
-	// // TODO: 
-	// 
+	//void push_back(const var& p_var) { _data->push_back(p_var); }
+	//var& operator[](const var& p_key) const { return (*_data)[p_key]; }
+	//var& operator[](const var& p_key) { return (*_data)[p_key]; }
+	//dict_iterator begin() const { return (*_data).begin(); }
+	//dict_iterator end() const { return (*_data).end(); }
+	//void clear() { (*_data).clear(); }
+	//bool empty() const { return (*_data).empty(); }
+	// // TODO:
+
 	// /* cast operators */
-	// operator bool() const { return empty(); }
-	operator std::string() const;
-	operator const char* () const {
-		return operator std::string().c_str();
-	}
-	// bool operator ==(const Array& p_other) const;
+	//operator bool() const { return empty(); }
+	//operator std::string() const;
+	//operator const char* () const {
+	//	return operator std::string().c_str();
+	//}
+	//bool operator ==(const Dictionary& p_other) const;
 	// Array operator+(const Array& p_other) const;
 	// Array& operator+=(const Array& p_other);
 };
@@ -513,7 +518,8 @@ public:
 	operator float() const { return (float)operator double(); }
 	operator double() const;
 	operator std::string() const;
-	operator const char* () const;
+	// this treated as: built-in C++ operator[](const char *, int), conflict with operator[](size_t)
+	// operator const char* () const;
 	operator Vect2f() const;
 	operator Vect2i() const;
 	operator Vect3f() const;
@@ -632,10 +638,10 @@ std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr) {
 	p_ostream << p_arr.operator std::string();
 	return p_ostream;
 }
-std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict) {
-	p_ostream << p_dict.operator std::string();
-	return p_ostream;
-}
+//std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict) {
+//	p_ostream << p_dict.operator std::string();
+//	return p_ostream;
+//}
 
 // FIXME
 static void var_err_callback(const char* p_msg, const char* p_func, const char* p_file, int p_line) {
@@ -700,6 +706,7 @@ Array& Array::operator+=(const Array& p_other) {
 	return *this;
 }
 
+#if false
 // Dictionary ----------------------------------------
 Dictionary::operator std::string() const {
 	std::stringstream ss;
@@ -714,15 +721,25 @@ Dictionary::operator std::string() const {
 
 Dictionary Dictionary::copy(bool p_deep) const {
 	Dictionary ret;
-	for (std::map<var, var>::iterator it; it != (*_data).end(); it++) {
-		if (p_deep)
-			ret[it->first] = it->second.copy(true);
-		else
-			ret[it->first] = it->second;
-	}
+	//for (std::map<var, var>::iterator it; it != (*_data).end(); it++) {
+	//	if (p_deep)
+	//		ret[it->first] = it->second.copy(true);
+	//	else
+	//		ret[it->first] = it->second;
+	//}
 	return ret;
 }
 
+bool Dictionary::operator ==(const Dictionary& p_other) const {
+	if (size() != p_other.size())
+		return false;
+	//for (size_t i = 0; i < size(); i++) {
+	//	if (operator[](i) != p_other[i])
+	//		return false;
+	//}
+	return true;
+}
+#endif
 // var -----------------------------------------------
 
 void var::clear() {
@@ -842,7 +859,7 @@ var& var::operator[](size_t index) {
 	switch (type) {
 		case ARRAY:
 			return _data_arr[index];
-		// case DICTIONARY:
+		// case DICTIONARY: // TODO:
 	}
 	VAR_ERR("invalid operator[]");
 	return var::tmp;
@@ -851,7 +868,7 @@ var& var::operator[](size_t index) const {
 	switch (type) {
 		case ARRAY:
 			return _data_arr[index];
-			// case DICTIONARY:
+			// case DICTIONARY: // TODO:
 	}
 	VAR_ERR("invalid operator[]");
 	return var::tmp;
@@ -917,9 +934,10 @@ var::operator std::string() const {
 	return "TODO";
 }
 
-var::operator const char* () const {
-	return operator std::string().c_str();
-}
+// 
+//var::operator const char* () const {
+//	return operator std::string().c_str();
+//}
 
 
 #define VAR_VECT_CAST(m_dim, m_t)                                                       \

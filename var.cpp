@@ -13,10 +13,10 @@ std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr) {
 	p_ostream << p_arr.operator std::string();
 	return p_ostream;
 }
-std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict) {
-	p_ostream << p_dict.operator std::string();
-	return p_ostream;
-}
+//std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict) {
+//	p_ostream << p_dict.operator std::string();
+//	return p_ostream;
+//}
 
 // FIXME
 static void var_err_callback(const char* p_msg, const char* p_func, const char* p_file, int p_line) {
@@ -81,6 +81,7 @@ Array& Array::operator+=(const Array& p_other) {
 	return *this;
 }
 
+#if false
 // Dictionary ----------------------------------------
 Dictionary::operator std::string() const {
 	std::stringstream ss;
@@ -95,15 +96,25 @@ Dictionary::operator std::string() const {
 
 Dictionary Dictionary::copy(bool p_deep) const {
 	Dictionary ret;
-	for (std::map<var, var>::iterator it; it != (*_data).end(); it++) {
-		if (p_deep)
-			ret[it->first] = it->second.copy(true);
-		else
-			ret[it->first] = it->second;
-	}
+	//for (std::map<var, var>::iterator it; it != (*_data).end(); it++) {
+	//	if (p_deep)
+	//		ret[it->first] = it->second.copy(true);
+	//	else
+	//		ret[it->first] = it->second;
+	//}
 	return ret;
 }
 
+bool Dictionary::operator ==(const Dictionary& p_other) const {
+	if (size() != p_other.size())
+		return false;
+	//for (size_t i = 0; i < size(); i++) {
+	//	if (operator[](i) != p_other[i])
+	//		return false;
+	//}
+	return true;
+}
+#endif
 // var -----------------------------------------------
 
 void var::clear() {
@@ -223,7 +234,7 @@ var& var::operator[](size_t index) {
 	switch (type) {
 		case ARRAY:
 			return _data_arr[index];
-		// case DICTIONARY:
+		// case DICTIONARY: // TODO:
 	}
 	VAR_ERR("invalid operator[]");
 	return var::tmp;
@@ -232,7 +243,7 @@ var& var::operator[](size_t index) const {
 	switch (type) {
 		case ARRAY:
 			return _data_arr[index];
-			// case DICTIONARY:
+			// case DICTIONARY: // TODO:
 	}
 	VAR_ERR("invalid operator[]");
 	return var::tmp;
@@ -298,9 +309,10 @@ var::operator std::string() const {
 	return "TODO";
 }
 
-var::operator const char* () const {
-	return operator std::string().c_str();
-}
+// 
+//var::operator const char* () const {
+//	return operator std::string().c_str();
+//}
 
 
 #define VAR_VECT_CAST(m_dim, m_t)                                                       \

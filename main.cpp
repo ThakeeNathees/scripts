@@ -10,19 +10,9 @@
 
 #define print(x) std::cout << (x) << std::endl;
 
-class Test
-{
-public:
-	int x, y;
-};
+class Test {};
 
-
-int main()
-{
-	var y = 1;
-	print(y + 1);
-
-
+void test_1() {
 	Vect2f v1(2, 3);
 	Vect2f v2(2, 2);
 	std::cout << v1 * v2 << std::endl;
@@ -42,8 +32,12 @@ int main()
 	arr.push_back(2.0);
 	var varr = arr;
 	print(varr);
+}
 
-	var d = Dictionary();
+int main()
+{
+
+	// test_1();
 
 	return 0;
 }

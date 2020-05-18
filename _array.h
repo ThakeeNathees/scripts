@@ -58,9 +58,13 @@ public:
 	Array copy(bool p_deep = true) const;
 
 	/* wrappers */
+	// TODO: make all errors to VAR_ERR
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
 	void push_back(const var& p_var) { _data->push_back(p_var); }
+	void append(const var& p_var) { push_back(p_var); }
+	void pop_back() { _data->pop_back(); }
+	var& pop() { var& ret = this->operator[](size() - 1); pop_back(); return ret; } 
 	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
 	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
 	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
@@ -74,9 +78,10 @@ public:
 	/* cast operators */
 	operator bool() const { return empty(); }
 	operator std::string() const;
-	operator const char* () const {
-		return operator std::string().c_str();
-	}
+	// this treated as: built-in C++ operator[](const char *, int), conflict with operator[](size_t)
+	//operator const char* () const { 
+	//	return operator std::string().c_str();
+	//}
 	bool operator ==(const Array& p_other) const;
 	Array operator+(const Array& p_other) const;
 	Array& operator+=(const Array& p_other);

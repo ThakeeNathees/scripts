@@ -133,7 +133,8 @@ public:
 	operator float() const { return (float)operator double(); }
 	operator double() const;
 	operator std::string() const;
-	operator const char* () const;
+	// this treated as: built-in C++ operator[](const char *, int), conflict with operator[](size_t)
+	// operator const char* () const;
 	operator Vect2f() const;
 	operator Vect2i() const;
 	operator Vect3f() const;
