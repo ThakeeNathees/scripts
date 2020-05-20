@@ -35,6 +35,9 @@
 
 #define DATA_PTR(T) reinterpret_cast<T *>(_data._mem)
 #define DATA_PTR_OTHER(T) reinterpret_cast<T *>(p_other._data._mem)
+
+#define DATA_MEM_SIZE 4 * sizeof(real_t)
+
 // TODO: var fn = &func; fn(); operator(){}
 
 class var
@@ -82,18 +85,24 @@ private:
 		{}
 	};
 
-	std::string _data_std_string;
-		Dictionary _data_dict;
-		_DataObj _data_obj;
-		Array _data_arr;
-	union {
-	};
-	union {
+	union VarData 
+	{
+		VarData() : _float(.0f) {}
+		~VarData(){}
+		Dictionary _dict;
+		Array _arr;
+		std::string _std_string;
+		_DataObj _obj;
+
 		bool _bool;
 		int _int;
 		double _float;
-		uint8_t _mem[4 * sizeof(real_t)];
-	} _data;
+		uint8_t _mem[DATA_MEM_SIZE];
+	};
+
+	VarData _data;
+	void copy_data(const var& p_other);
+	void clear_data();
 
 public:
 	/* public api */
@@ -104,7 +113,7 @@ public:
 
 	/* constructors */
 	var();
-	var(const var& p_copy) = default;
+	var(const var& p_copy);
 	var(bool p_bool);
 	var(int p_int);
 	var(float p_float);
@@ -120,12 +129,12 @@ public:
 	template<typename T> var(const T& p_obj) {
 		type = OBJ_PTR;
 		const void * _ptr = (const void *)&p_obj;
-		_data_obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
+		_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
 	}
 	template<typename T> var(const T* p_obj) {
 		type = OBJ_PTR;
 		const void* _ptr = (const void*)p_obj;
-		_data_obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
+		_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
 	}
 
 
@@ -148,9 +157,9 @@ public:
 	T* as() const {
 		switch (type) {
 			// TODO: 
-			case ARRAY: return (T*)(&_data_arr);
-			case DICTIONARY: return (T*)(&_data_dict);
-			case OBJ_PTR: return (T*)_data_obj._ptr;
+			case ARRAY: return (T*)(&_data._arr);
+			case DICTIONARY: return (T*)(&_data._dict);
+			case OBJ_PTR: return (T*)_data._obj._ptr;
 		}
 		VAR_ERR("invalid casting");
 		return nullptr;
@@ -168,8 +177,9 @@ public:
 			case VECT3F:
 			case VECT3I:
 				return operator ==(p_other);
-			case ARRAY: return _data_arr._data == p_other._data_arr._data;
-			case OBJ_PTR: return _data_obj._ptr == p_other._data_obj._ptr;
+			case ARRAY: return _data._arr._data == p_other._data._arr._data;
+			case DICTIONARY: return _data._dict._data == p_other._data._dict._data;
+			case OBJ_PTR: return _data._obj._ptr == p_other._data._obj._ptr;
 		}
 		VAR_ERR("invalid var type");
 		return false;
@@ -199,7 +209,6 @@ public:
 	var operator--();
 	var operator--(int);
 	bool operator !() const { return !operator bool(); }
-	//var& operator[](const var& p_key);
 	var& operator[](const var& p_key) const;
 
 	//	/* binary */
@@ -210,7 +219,7 @@ public:
 	VAR_OP_DECL(var, %, const);
 
 	//	/* assignments */
-	var& operator=(const var& p_other) = default;
+	var& operator=(const var& p_other);
 	VAR_OP_DECL(var&, +=, M_PLACE_HOLDER);
 	VAR_OP_DECL(var&, -=, M_PLACE_HOLDER);
 	VAR_OP_DECL(var&, *=, M_PLACE_HOLDER);
@@ -230,13 +239,14 @@ bool _isinstance(const var& p_other) {
 		case var::INT:
 		case var::FLOAT:
 			return false;
-		case var::STD_STRING: return typeid(p_other._data_std_string) == typeid(T);
+		case var::STD_STRING: return typeid(p_other._data._std_string) == typeid(T);
 		case var::VECT2F: return typeid(*DATA_PTR_OTHER_CONST(Vect2f)) == typeid(T);
 		case var::VECT2I: return typeid(*DATA_PTR_OTHER_CONST(Vect2i)) == typeid(T);
 		case var::VECT3F: return typeid(*DATA_PTR_OTHER_CONST(Vect3f)) == typeid(T);
 		case var::VECT3I: return typeid(*DATA_PTR_OTHER_CONST(Vect3i)) == typeid(T);
-		case var::ARRAY: return typeid(p_other._data_arr) == typeid(T);
-		case var::OBJ_PTR: return p_other._data_obj.hash_code == typeid(T).hash_code();
+		case var::ARRAY: return typeid(p_other._data._arr) == typeid(T);
+		case var::DICTIONARY: return typeid(p_other._data._dict) == typeid(T);
+		case var::OBJ_PTR: return p_other._data._obj.hash_code == typeid(T).hash_code();
 	}
 	VAR_ERR("invalid var type");
 	return false;

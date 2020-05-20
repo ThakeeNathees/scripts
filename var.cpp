@@ -151,6 +151,7 @@ bool Dictionary::operator ==(const Dictionary& p_other) const {
 
 void var::clear() {
 	type = _NULL;
+	clear_data();
 }
 
 var var::copy(bool p_deep) const {
@@ -165,8 +166,8 @@ var var::copy(bool p_deep) const {
 		case VECT3F:
 		case VECT3I:
 			return *this;
-		case ARRAY: return _data_arr.copy(p_deep);
-		case DICTIONARY: return _data_dict.copy(p_deep);
+		case ARRAY: return _data._arr.copy(p_deep);
+		case DICTIONARY: return _data._dict.copy(p_deep);
 		case OBJ_PTR:
 			VAR_ERR("user defined objects are non copyable");
 	}
@@ -177,6 +178,11 @@ var var::copy(bool p_deep) const {
 var::var() {
 	_data._bool = false;
 	type = _NULL;
+}
+
+var::var(const var& p_copy) {
+	type = p_copy.type;
+	copy_data(p_copy);
 }
 
 var::var(bool p_bool) {
@@ -201,12 +207,12 @@ var::var(double p_double) {
 
 var::var(const char* p_cstring) {
 	type = STD_STRING;
-	_data_std_string = std::string(p_cstring);
+	_data._std_string = std::string(p_cstring);
 }
 
 var::var(const std::string& p_std_string) {
 	type = STD_STRING;
-	_data_std_string = std::string(p_std_string);
+	_data._std_string = std::string(p_std_string);
 }
 
 #define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)             \
@@ -223,12 +229,12 @@ VAR_VECT_CONSTRUCTOR(3, i, I)
 
 var::var(const Array& p_array) {
 	type = ARRAY;
-	_data_arr = p_array._data;
+	_data._arr = p_array._data;
 }
 
 var::var(const Dictionary& p_dict) {
 	type = DICTIONARY;
-	_data_dict = p_dict._data;
+	_data._dict = p_dict._data;
 }
 
 var::~var() {
@@ -263,18 +269,23 @@ VAR_OP_POST_INCR_DECR(--)
 #undef VAR_OP_PRE_INCR_DECR
 #undef VAR_OP_POST_INCR_DECR
 
+var& var::operator=(const var& p_other) {
+	copy_data(p_other);
+	return *this;
+}
+
 var& var::operator[](const var& p_key) const {
 	switch (type) {
 		case ARRAY: {
 			int index = (int)p_key;
-			if (0 <= index && index < (int)_data_arr.size())
-				return _data_arr[index];
-			if ((int)_data_arr.size() * -1 <= index && index < 0)
-				return _data_arr[_data_arr.size() + index];
+			if (0 <= index && index < (int)_data._arr.size())
+				return _data._arr[index];
+			if ((int)_data._arr.size() * -1 <= index && index < 0)
+				return _data._arr[_data._arr.size() + index];
 			VAR_ERR("index error");
 		}
 		case DICTIONARY:
-			return _data_dict[p_key];
+			return _data._dict[p_key];
 	}
 	VAR_ERR("invalid operator[]");
 	return var::tmp;
@@ -287,15 +298,15 @@ var::operator bool() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int != 0;
 		case FLOAT: return _data._float != 0;
-		case STD_STRING: return _data_std_string.size() != 0;
+		case STD_STRING: return _data._std_string.size() != 0;
 
 		case VECT2F: return *DATA_PTR_CONST(Vect2f) == Vect2f();
 		case VECT2I: return *DATA_PTR_CONST(Vect2i) == Vect2i();
 		case VECT3F: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case VECT3I: return *DATA_PTR_CONST(Vect3f) == Vect3f();
-		case ARRAY: return !_data_arr.empty();
-		case DICTIONARY: return !_data_dict.empty();
-		case OBJ_PTR: return _data_obj._ptr == nullptr;
+		case ARRAY: return !_data._arr.empty();
+		case DICTIONARY: return !_data._dict.empty();
+		case OBJ_PTR: return _data._obj._ptr == nullptr;
 	}
 	VAR_ERR("invalid casting");
 	return false;
@@ -306,7 +317,7 @@ var::operator int() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return (int)_data._float;
-		case STD_STRING: return  std::stoi(_data_std_string);
+		case STD_STRING: return  std::stoi(_data._std_string);
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -317,7 +328,7 @@ var::operator double() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return _data._float;
-		case STD_STRING: return  std::stod(_data_std_string);
+		case STD_STRING: return  std::stod(_data._std_string);
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -329,14 +340,14 @@ var::operator std::string() const {
 		case BOOL: return (_data._bool) ? "true" : "false";
 		case INT: return std::to_string(_data._int);
 		case FLOAT: return std::to_string(_data._float);
-		case STD_STRING: return _data_std_string;
+		case STD_STRING: return _data._std_string;
 		case VECT2F: return *DATA_PTR_CONST(Vect2f);
 		case VECT2I: return *DATA_PTR_CONST(Vect2i);
 		case VECT3F: return *DATA_PTR_CONST(Vect3f);
 		case VECT3I: return *DATA_PTR_CONST(Vect3i);
-		case ARRAY: return _data_arr.operator std::string();
-		case DICTIONARY: return _data_dict.operator std::string();
-		case OBJ_PTR: return std::string("Object(").append(_data_obj.name).append(")");
+		case ARRAY: return _data._arr.operator std::string();
+		case DICTIONARY: return _data._dict.operator std::string();
+		case OBJ_PTR: return std::string("Object(").append(_data._obj.name).append(")");
 	}
 	VAR_ERR("invalid casting");
 	return "TODO";
@@ -365,7 +376,7 @@ VAR_VECT_CAST(3, i)
 
 var::operator Array() const {
 	switch (type) {
-		case ARRAY: return _data_arr;
+		case ARRAY: return _data._arr;
 		default: VAR_ERR("invalid casting");
 	}
 	return Array();
@@ -373,7 +384,7 @@ var::operator Array() const {
 
 var::operator Dictionary() const {
 	switch (type) {
-		case DICTIONARY: return _data_dict;
+		case DICTIONARY: return _data._dict;
 		default: VAR_ERR("invalid casting");
 	}
 	return Dictionary();
@@ -404,7 +415,7 @@ bool var::operator==(const var& p_other) const {
 		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, ==) }
 		case STD_STRING: {
 			if (p_other.type == STD_STRING)
-				return _data_std_string == p_other._data_std_string;
+				return _data._std_string == p_other._data._std_string;
 			break;
 		}
 		case VECT2F: { VAR_SWITCH_VECT(2, f, ==) }
@@ -413,19 +424,19 @@ bool var::operator==(const var& p_other) const {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, ==) }
 		case ARRAY: {
 			if (p_other.type == ARRAY) {
-				return _data_arr == p_other.operator Array();
+				return _data._arr == p_other.operator Array();
 			}
 			break;
 		}
 		case DICTIONARY: {
 			if (p_other.type == DICTIONARY) {
-				return _data_dict == p_other.operator Dictionary();
+				return _data._dict == p_other.operator Dictionary();
 			}
 			break;
 		}
 		case OBJ_PTR: {
 			if (p_other.type == OBJ_PTR)
-				return _data_obj._ptr == p_other._data_obj._ptr;
+				return _data._obj._ptr == p_other._data._obj._ptr;
 			break;
 		}
 	}
@@ -444,7 +455,7 @@ bool var::operator<(const var& p_other) const {
 		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, <) }
 		case STD_STRING: {
 			if (p_other.type == STD_STRING)
-				return _data_std_string < p_other._data_std_string;
+				return _data._std_string < p_other._data._std_string;
 			break;
 		}
 		case VECT2F: { VAR_SWITCH_VECT(2, f, < ) }
@@ -453,13 +464,13 @@ bool var::operator<(const var& p_other) const {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, < ) }
 		case ARRAY: {
 			if (p_other.type == ARRAY)
-				return *_data_arr.get_data() < *p_other.operator Array().get_data();
+				return *_data._arr.get_data() < *p_other.operator Array().get_data();
 			break;
 		}
 		case DICTIONARY:
 		case OBJ_PTR: {
 			if (p_other.type == OBJ_PTR)
-				return _data_obj._ptr < p_other._data_obj._ptr;
+				return _data._obj._ptr < p_other._data._obj._ptr;
 			break;
 		}
 	}
@@ -475,7 +486,7 @@ bool var::operator>(const var& p_other) const {
 		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, > ) }
 		case STD_STRING: {
 			if (p_other.type == STD_STRING)
-				return _data_std_string < p_other._data_std_string;
+				return _data._std_string < p_other._data._std_string;
 			break;
 		}
 		case VECT2F: { VAR_SWITCH_VECT(2, f, > ) }
@@ -484,13 +495,13 @@ bool var::operator>(const var& p_other) const {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, > ) }
 		case ARRAY: {
 			if (p_other.type == ARRAY)
-				return *_data_arr.get_data() > *p_other.operator Array().get_data();
+				return *_data._arr.get_data() > *p_other.operator Array().get_data();
 			break;
 		}
 		case DICTIONARY:
 		case OBJ_PTR: {
 			if (p_other.type == OBJ_PTR)
-				return _data_obj._ptr > p_other._data_obj._ptr;
+				return _data._obj._ptr > p_other._data._obj._ptr;
 			break;
 		}
 	}
@@ -513,7 +524,7 @@ var var::operator +(const var& p_other) const {
 		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, + ) }
 		case STD_STRING: {
 			if (p_other.type == STD_STRING)
-				return _data_std_string + p_other._data_std_string;
+				return _data._std_string + p_other._data._std_string;
 			break;
 		}
 		case VECT2F: { VAR_SWITCH_VECT(2, f, + ) }
@@ -522,7 +533,7 @@ var var::operator +(const var& p_other) const {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, + ) }
 		case ARRAY: {
 			if (p_other.type == ARRAY) {
-				return _data_arr + p_other._data_arr;
+				return _data._arr + p_other._data._arr;
 			}
 			break;
 		}
@@ -663,7 +674,7 @@ var& var::operator+=(const var& p_other) {
 		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, +=) }
 		case STD_STRING: {
 			if (p_other.type == STD_STRING) {
-				_data_std_string += p_other._data_std_string;
+				_data._std_string += p_other._data._std_string;
 				return *this;
 			}
 			break;
@@ -674,7 +685,7 @@ var& var::operator+=(const var& p_other) {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, +=) }
 		case ARRAY: {
 			if (p_other.type == ARRAY) {
-				_data_arr += p_other._data_arr;
+				_data._arr += p_other._data._arr;
 				return *this;
 			}
 			break;
@@ -781,6 +792,63 @@ var& var::operator %=(const var& p_other) {
 	}
 	VAR_ERR("unsupported operator %=");
 	return *this;
+}
+
+void var::copy_data(const var& p_other) {
+	clear_data();
+	switch (p_other.type) {
+		case var::_NULL: return;
+		case var::BOOL:
+			_data._bool = p_other._data._bool;
+			break;
+		case var::INT:
+			_data._int = p_other._data._int;
+			break;
+		case var::FLOAT:
+			_data._float = p_other._data._float;
+			break;
+		case var::STD_STRING:
+			_data._std_string = p_other._data._std_string;
+			break;
+		case var::VECT2F:
+		case var::VECT2I:
+		case var::VECT3F:
+		case var::VECT3I:
+			for (int i = 0; i < DATA_MEM_SIZE; i++) {
+				_data._mem[i] = p_other._data._mem[i];
+			}
+			break;
+		case var::ARRAY:
+			_data._arr = p_other._data._arr;
+			break;
+		case var::DICTIONARY:
+			_data._dict = p_other._data._dict;
+			break;
+		case var::OBJ_PTR:
+			_data._obj = p_other._data._obj;
+			return;
+	}
+}
+
+void var::clear_data() {
+	switch (type) {
+		case var::_NULL:
+		case var::BOOL:
+		case var::INT:
+		case var::FLOAT:
+		case var::STD_STRING:
+		case var::VECT2F:
+		case var::VECT2I:
+		case var::VECT3F:
+		case var::VECT3I:
+			return;
+		case var::ARRAY:
+			_data._arr._data = nullptr;
+		case var::DICTIONARY:
+			_data._dict._data = nullptr;
+		case var::OBJ_PTR:
+			_data._obj._ptr = nullptr; // may cause memory leak
+	}
 }
 
 #undef VAR_CASE_OP

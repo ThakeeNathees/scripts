@@ -36,5 +36,6 @@ void test_1() {
 
 int main()
 {
+	print(sizeof(var)); // 80 - 40
 	return 0;
 }
