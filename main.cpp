@@ -36,6 +36,10 @@ void test_1() {
 
 int main()
 {
+	String s = "test";
+	String ss = s;
+	print(ss);
+
 	print(sizeof(var)); // 80 - 40
 	return 0;
 }

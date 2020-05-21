@@ -29,6 +29,7 @@
 #include "core.h"
 
 class var;
+class String;
 
 class Array
 {
@@ -86,11 +87,7 @@ public:
 
 	/* cast operators */
 	operator bool() const { return empty(); }
-	operator std::string() const;
-	// this treated as: built-in C++ operator[](const char *, int), conflict with operator[](size_t)
-	//operator const char* () const { 
-	//	return operator std::string().c_str();
-	//}
+	operator String() const;
 	bool operator ==(const Array& p_other) const;
 	Array operator+(const Array& p_other) const;
 	Array& operator+=(const Array& p_other);

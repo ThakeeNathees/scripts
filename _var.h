@@ -26,6 +26,7 @@
 #ifndef _VAR_H
 #define _VAR_H
 
+#include "_string.h"
 #include "_array.h"
 #include "_vector.h"
 #include "_dictionary.h"
@@ -49,7 +50,7 @@ public:
 		BOOL,
 		INT,
 		FLOAT,
-		STD_STRING,
+		STRING,
 
 		// math types
 		VECT2F,
@@ -91,7 +92,7 @@ private:
 		~VarData(){}
 		Dictionary _dict;
 		Array _arr;
-		std::string _std_string;
+		String _string;
 		_DataObj _obj;
 
 		bool _bool;
@@ -107,7 +108,7 @@ private:
 public:
 	/* public api */
 	inline Type get_type() const { return type; }
-	std::string to_string() const { return operator std::string(); }
+	String to_string() const { return operator String(); }
 	void clear();
 	var copy(bool p_deep = false) const;
 
@@ -119,7 +120,7 @@ public:
 	var(float p_float);
 	var(double p_double);
 	var(const char* p_cstring);
-	var(const std::string& p_std_string);
+	var(const String& p_string);
 	var(const Vect2f& p_vect2f);
 	var(const Vect2i& p_vect2i);
 	var(const Vect3f& p_vect3f);
@@ -143,7 +144,7 @@ public:
 	operator int() const;
 	operator float() const { return (float)operator double(); }
 	operator double() const;
-	operator std::string() const;
+	operator String() const;
 	// this treated as: built-in C++ operator[](const char *, int), conflict with operator[](size_t)
 	// operator const char* () const;
 	operator Vect2f() const;
@@ -171,7 +172,7 @@ public:
 			case BOOL:
 			case INT:
 			case FLOAT:
-			case STD_STRING:
+			case STRING:
 			case VECT2F:
 			case VECT2I:
 			case VECT3F:
@@ -239,7 +240,7 @@ bool _isinstance(const var& p_other) {
 		case var::INT:
 		case var::FLOAT:
 			return false;
-		case var::STD_STRING: return typeid(p_other._data._std_string) == typeid(T);
+		case var::STRING: return typeid(p_other._data._string) == typeid(T);
 		case var::VECT2F: return typeid(*DATA_PTR_OTHER_CONST(Vect2f)) == typeid(T);
 		case var::VECT2I: return typeid(*DATA_PTR_OTHER_CONST(Vect2i)) == typeid(T);
 		case var::VECT3F: return typeid(*DATA_PTR_OTHER_CONST(Vect3f)) == typeid(T);
