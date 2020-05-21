@@ -23,58 +23,23 @@
 // SOFTWARE.
 //------------------------------------------------------------------------------
 
-#ifndef  DICTIONARY_H
-#define  DICTIONARY_H
+#ifndef STRING_H
+#define STRING_H
 
 #include "core.h"
 
 class var;
-class String;
 
-class Dictionary
+class String : public std::string
 {
 private:
 	friend class var;
-	Ref<std::map<var, var>> _data;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
+
 public:
-	/* constructors */
-	Dictionary() {
-		_data = newref_t2(std::map<var, var>);
-	}
-	Dictionary(const Ref<std::map<var, var>>& p_data) {
-		_data = p_data;
-	}
-	Dictionary(const Dictionary& p_copy) {
-		_data = p_copy._data;
-	}
-
-	std::map<var, var>* get_data() {
-		return _data.operator->();
-	}
-	std::map<var, var>* get_data() const {
-		return _data.operator->();
-	}
-
-	Dictionary copy(bool p_deep = true) const;
-
-	/* wrappers */
-	size_t size() const { return _data->size(); }
-	bool empty() const { return _data->empty(); }
-	var& operator[](const var& p_key) const;
-	var& operator[](const var& p_key);
-	std::map<var, var>::iterator begin() const;
-	std::map<var, var>::iterator end() const;
-	std::map<var, var>::iterator find(const var& p_key) const;
-	void clear() { _data->clear(); }
-
-	bool has(const var& p_key) const;
-	// TODO:
-
-	/* operators */
-	operator bool() const { return empty(); }
-	operator String() const;
-	bool operator ==(const Dictionary& p_other) const;
+	String() {}
+	String(const std::string& p_copy) : std::string(p_copy) {}
+	String(const char* p_copy) : std::string(p_copy) {}
 };
 
-#endif // DICTIONARY_H
+
+#endif // STRING_H

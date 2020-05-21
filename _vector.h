@@ -111,13 +111,10 @@ struct Vect2
 
 	/* cast operators */
 	operator bool() const { return x == 0 && y == 0; }
-	operator std::string() const { // FIXME
-		return std::string("Vect2(")
+	operator String() const { // FIXME
+		return String("Vect2(")
 			.append(std::to_string(x)).append(", ")
 			.append(std::to_string(y)).append(")");
-	}
-	operator const char* () const {
-		return operator std::string().c_str();
 	}
 };
 
@@ -196,8 +193,8 @@ struct Vect3
 
 	/* cast operators */
 	operator bool() const { return x == 0 && y == 0 && z == 0; }
-	operator std::string() const { // FIXME
-		return std::string("Vect3(")
+	operator String() const { // FIXME
+		return String("Vect3(")
 			.append(std::to_string(x)).append(", ")
 			.append(std::to_string(y)).append(", ")
 			.append(std::to_string(z)).append(")");
@@ -206,12 +203,12 @@ struct Vect3
 
 template<typename T>
 std::ostream& operator<<(std::ostream& p_ostream, const Vect2<T>& p_vect) {
-	p_ostream << p_vect.operator std::string();
+	p_ostream << p_vect.operator String();
 	return p_ostream;
 }
 template<typename T>
 std::ostream& operator<<(std::ostream& p_ostream, const Vect3<T>& p_vect) {
-	p_ostream << p_vect.operator std::string();
+	p_ostream << p_vect.operator String();
 	return p_ostream;
 }
 
