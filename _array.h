@@ -26,7 +26,7 @@
 #ifndef  ARRAY_H
 #define  ARRAY_H
 
-#include "core.h"
+#include "varhcore.h"
 
 class var;
 class String;

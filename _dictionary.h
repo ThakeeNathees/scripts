@@ -26,7 +26,7 @@
 #ifndef  DICTIONARY_H
 #define  DICTIONARY_H
 
-#include "core.h"
+#include "varhcore.h"
 
 class var;
 class String;

@@ -120,6 +120,7 @@ public:
 	var(float p_float);
 	var(double p_double);
 	var(const char* p_cstring);
+	var(const std::string& p_string);
 	var(const String& p_string);
 	var(const Vect2f& p_vect2f);
 	var(const Vect2i& p_vect2i);
@@ -127,11 +128,20 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Dictionary& p_dict);
+
 	template<typename T> var(const T& p_obj) {
-		type = OBJ_PTR;
-		const void * _ptr = (const void *)&p_obj;
-		_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
+		// this will cause a compile time error
+		//static_assert(!std::is_enum<T>::value, "Do not use var<T>(const T&) with enums use (int)E_VAL instead");
+		if (std::is_enum<T>::value){
+			type = INT;
+			_data._int = (int)p_obj;
+		} else {
+			type = OBJ_PTR;
+			const void * _ptr = (const void *)&p_obj;
+			_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
+		}
 	}
+
 	template<typename T> var(const T* p_obj) {
 		type = OBJ_PTR;
 		const void* _ptr = (const void*)p_obj;
@@ -164,6 +174,15 @@ public:
 		}
 		VAR_ERR("invalid casting");
 		return nullptr;
+	}
+
+	template<typename T>
+	T as_enum() const {
+		static_assert(std::is_enum<T>::value, "invalid use of as_enum on non enum type");
+		if (type != INT) {
+			VAR_ERR("cant cast non integer to enum");
+		}
+		return (T)_data._int;
 	}
 
 	bool is(const var& p_other) {
