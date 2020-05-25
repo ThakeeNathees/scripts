@@ -61,6 +61,7 @@ gen += '\n#endif // VAR_IMPLEMENTATION'
 
 for include in re.findall(r'#include ".+"', gen):
     gen = gen.replace(include, include.replace('#', '//'))
+gen = '\n#define VAR_H_HEADER_ONLY\n' + gen
 gen = LICENSE + gen.replace(LICENSE, '')
             
 with open('var.h', 'w') as f:

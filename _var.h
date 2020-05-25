@@ -120,7 +120,6 @@ public:
 	var(float p_float);
 	var(double p_double);
 	var(const char* p_cstring);
-	var(const std::string& p_string);
 	var(const String& p_string);
 	var(const Vect2f& p_vect2f);
 	var(const Vect2i& p_vect2i);
@@ -240,11 +239,11 @@ public:
 
 	//	/* assignments */
 	var& operator=(const var& p_other);
-	VAR_OP_DECL(var&, +=, M_PLACE_HOLDER);
-	VAR_OP_DECL(var&, -=, M_PLACE_HOLDER);
-	VAR_OP_DECL(var&, *=, M_PLACE_HOLDER);
-	VAR_OP_DECL(var&, /=, M_PLACE_HOLDER);
-	VAR_OP_DECL(var&, %=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
+	VAR_OP_DECL(var&, -=, PLACE_HOLDER_MACRO);
+	VAR_OP_DECL(var&, *=, PLACE_HOLDER_MACRO);
+	VAR_OP_DECL(var&, /=, PLACE_HOLDER_MACRO);
+	VAR_OP_DECL(var&, %=, PLACE_HOLDER_MACRO);
 
 	~var();
 
@@ -271,5 +270,26 @@ bool _isinstance(const var& p_other) {
 	VAR_ERR("invalid var type");
 	return false;
 }
+
+// undefine all var.h macros defined in varcore.h
+// this makes the user(carbon) independent of'em
+#if defined(UNDEF_VAR_DEFINES)
+#if !defined(VAR_H_HEADER_ONLY)
+
+#undef STRCAT2
+#undef STRCAT3
+#undef STRCAT4
+#undef STR
+#undef STRINGIFY
+#undef PLACE_HOLDER
+#undef newref_t1
+#undef newref_t2
+#undef DEBUG_BREAK
+#undef VAR_ERR
+#undef VAR_ASSERT
+#undef UNDEF_VAR_DEFINES
+
+#endif
+#endif
 
 #endif // _VAR_H

@@ -23,6 +23,8 @@
 // SOFTWARE.
 //------------------------------------------------------------------------------
 
+#define VAR_H_HEADER_ONLY
+
 #ifndef _VAR_H
 #define _VAR_H
 
@@ -31,28 +33,32 @@
 #define STRING_H
 
 
-#ifndef CORE_H
-#define CORE_H
+#ifndef VARHCORE_H
+#define VARHCORE_H
 
 #include <memory>
-#include <string>
 #include <cstring>
+#include <stdio.h>
 #include <iostream>
+#include <ostream>
 #include <sstream>
+#include <typeinfo>
+#include <string>
+#include <type_traits>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <vector>
 #include <map>
 
-#define STR_CAT2(m_a, m_b) m_a##m_b
-#define STR_CAT3(m_a, m_b, m_c) m_a##m_b##m_c
-#define STR_CAT4(m_a, m_b, m_c, m_d) m_a##m_b##m_c##m_d
+#define STRCAT2(m_a, m_b) m_a##m_b
+#define STRCAT3(m_a, m_b, m_c) m_a##m_b##m_c
+#define STRCAT4(m_a, m_b, m_c, m_d) m_a##m_b##m_c##m_d
 
 #define STR(m_mac) #m_mac
 #define STRINGIFY(m_mac) STR(m_mac)
 
-#define M_PLACE_HOLDER
+#define PLACE_HOLDER_MACRO
 
 #define newref_t1(T1, ...) std::make_shared<T1>(__VA_ARGS__);
 #define newref_t2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__);
@@ -78,8 +84,7 @@ VarErrCallback var_get_err_callback();
 #define VAR_ERR(m_msg) \
 	var_get_err_callback()(m_msg, __FUNCTION__, __FILE__, __LINE__)
 
-#define VAR_DEBUG // TODO
-#if defined(VAR_DEBUG)
+#if defined(_DEBUG)
 #define VAR_ASSERT(m_cond, m_msg)  \
 	if (!(m_cond))                 \
 		VAR_ERR(m_msg)
@@ -87,20 +92,54 @@ VarErrCallback var_get_err_callback();
 #define VAR_ASSERT
 #endif
 
-
-#endif // CORE_H
+#endif // VARHCORE_H
 
 class var;
 
-class String : public std::string
+class String //: public std::string
 {
 private:
 	friend class var;
+	std::string _data;
 
 public:
 	String() {}
-	String(const std::string& p_copy) : std::string(p_copy) {}
-	String(const char* p_copy) : std::string(p_copy) {}
+	String(const std::string& p_copy) : _data(p_copy) {}
+	String(const char* p_copy) : _data(p_copy) {}
+
+	int stoi() const { return std::stoi(_data); }
+	double stod() const { return std::stod(_data); }
+
+	/* operators */
+#define STR_CMP_OP(m_op)                               \
+	bool operator m_op(const String& p_other) const {  \
+		return _data m_op p_other._data;               \
+	}
+	STR_CMP_OP(==)
+	STR_CMP_OP(<)
+	STR_CMP_OP(<=)
+	STR_CMP_OP(>)
+	STR_CMP_OP(>=)
+#undef STR_CMP_OP
+
+	String operator+(const String& p_other) const {
+		return _data + p_other._data;
+	}
+
+	String& operator+=(const String& p_other) {
+		_data += p_other._data;
+		return *this;
+	}
+
+	/* wrappers */
+	// TODO: implement all wrappers and catch errors via VAR_ERR
+	size_t size() const { return _data.size(); }
+	String& append(const String& p_other) {
+		_data.append(p_other._data);
+		return *this;
+	}
+	const char* c_str() const { return _data.c_str(); }
+	char at(size_t p_off) { return _data.at(p_off); }
 };
 
 
@@ -109,7 +148,7 @@ public:
 #ifndef  ARRAY_H
 #define  ARRAY_H
 
-//include "core.h"
+//include "varhcore.h"
 
 class var;
 class String;
@@ -181,7 +220,7 @@ public:
 #ifndef VECTOR_H
 #define VECTOR_H
 
-//include "core.h"
+//include "varhcore.h"
 
 #define VECT2_DEFAULT_CMP_OP_OVERLOAD(m_op)            \
 bool operator m_op (const Vect2<T>& p_other) const {   \
@@ -381,9 +420,10 @@ typedef Vect2f Point;
 #ifndef  DICTIONARY_H
 #define  DICTIONARY_H
 
-//include "core.h"
+//include "varhcore.h"
 
 class var;
+class String;
 
 class Dictionary
 {
@@ -529,11 +569,20 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Dictionary& p_dict);
+
 	template<typename T> var(const T& p_obj) {
-		type = OBJ_PTR;
-		const void * _ptr = (const void *)&p_obj;
-		_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
+		// this will cause a compile time error
+		//static_assert(!std::is_enum<T>::value, "Do not use var<T>(const T&) with enums use (int)E_VAL instead");
+		if (std::is_enum<T>::value){
+			type = INT;
+			_data._int = (int)p_obj;
+		} else {
+			type = OBJ_PTR;
+			const void * _ptr = (const void *)&p_obj;
+			_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
+		}
 	}
+
 	template<typename T> var(const T* p_obj) {
 		type = OBJ_PTR;
 		const void* _ptr = (const void*)p_obj;
@@ -566,6 +615,15 @@ public:
 		}
 		VAR_ERR("invalid casting");
 		return nullptr;
+	}
+
+	template<typename T>
+	T as_enum() const {
+		static_assert(std::is_enum<T>::value, "invalid use of as_enum on non enum type");
+		if (type != INT) {
+			VAR_ERR("cant cast non integer to enum");
+		}
+		return (T)_data._int;
 	}
 
 	bool is(const var& p_other) {
@@ -623,11 +681,11 @@ public:
 
 	//	/* assignments */
 	var& operator=(const var& p_other);
-	VAR_OP_DECL(var&, +=, M_PLACE_HOLDER);
-	VAR_OP_DECL(var&, -=, M_PLACE_HOLDER);
-	VAR_OP_DECL(var&, *=, M_PLACE_HOLDER);
-	VAR_OP_DECL(var&, /=, M_PLACE_HOLDER);
-	VAR_OP_DECL(var&, %=, M_PLACE_HOLDER);
+	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
+	VAR_OP_DECL(var&, -=, PLACE_HOLDER_MACRO);
+	VAR_OP_DECL(var&, *=, PLACE_HOLDER_MACRO);
+	VAR_OP_DECL(var&, /=, PLACE_HOLDER_MACRO);
+	VAR_OP_DECL(var&, %=, PLACE_HOLDER_MACRO);
 
 	~var();
 
@@ -655,6 +713,27 @@ bool _isinstance(const var& p_other) {
 	return false;
 }
 
+// undefine all var.h macros defined in varcore.h
+// this makes the user(carbon) independent of'em
+#if defined(UNDEF_VAR_DEFINES)
+#if !defined(VAR_H_HEADER_ONLY)
+
+#undef STRCAT2
+#undef STRCAT3
+#undef STRCAT4
+#undef STR
+#undef STRINGIFY
+#undef PLACE_HOLDER
+#undef newref_t1
+#undef newref_t2
+#undef DEBUG_BREAK
+#undef VAR_ERR
+#undef VAR_ASSERT
+#undef UNDEF_VAR_DEFINES
+
+#endif
+#endif
+
 #endif // _VAR_H
 
 //--------------- VAR_IMPLEMENTATION -------------------
@@ -663,10 +742,14 @@ bool _isinstance(const var& p_other) {
 
 //include "_var.h"
 
-#define D_VEC(m_vect, m_dim, m_t) STR_CAT3(m_vect, m_dim, m_t)
+#define D_VEC(m_vect, m_dim, m_t) STRCAT3(m_vect, m_dim, m_t)
 
 var var::tmp;
 
+std::ostream& operator<<(std::ostream& p_ostream, const String& p_str) {
+	p_ostream << p_str.c_str();
+	return p_ostream;
+}
 std::ostream& operator<<(std::ostream& p_ostream, const var& p_var) {
 	p_ostream << p_var.operator String();
 	return p_ostream;
@@ -850,7 +933,7 @@ var::var(const char* p_cstring) {
 
 var::var(const String& p_string) {
 	type = STRING;
-	_data._string = String(p_string);
+	_data._string = p_string;
 }
 
 #define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)             \
@@ -955,7 +1038,7 @@ var::operator int() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return (int)_data._float;
-		case STRING: return  std::stoi(_data._string);
+		case STRING: return  _data._string.stoi();
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -966,7 +1049,7 @@ var::operator double() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return _data._float;
-		case STRING: return  std::stod(_data._string);
+		case STRING: return  _data._string.stod();
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -1488,5 +1571,21 @@ void var::clear_data() {
 #undef VAR_SWITCH_VECT
 #undef CASE_DIV_DATA
 #undef SWITCH_DIV_TYPES
+
+#if defined(UNDEF_VAR_DEFINES)
+#undef STRCAT2
+#undef STRCAT3
+#undef STRCAT4
+#undef STR
+#undef STRINGIFY
+#undef PLACE_HOLDER
+#undef newref_t1
+#undef newref_t2
+#undef DEBUG_BREAK
+#undef VAR_ERR
+#undef VAR_ASSERT
+#undef UNDEF_VAR_DEFINES
+#endif
+
 
 #endif // VAR_IMPLEMENTATION

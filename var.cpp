@@ -25,10 +25,14 @@
 
 #include "_var.h"
 
-#define D_VEC(m_vect, m_dim, m_t) STR_CAT3(m_vect, m_dim, m_t)
+#define D_VEC(m_vect, m_dim, m_t) STRCAT3(m_vect, m_dim, m_t)
 
 var var::tmp;
 
+std::ostream& operator<<(std::ostream& p_ostream, const String& p_str) {
+	p_ostream << p_str.c_str();
+	return p_ostream;
+}
 std::ostream& operator<<(std::ostream& p_ostream, const var& p_var) {
 	p_ostream << p_var.operator String();
 	return p_ostream;
@@ -210,11 +214,6 @@ var::var(const char* p_cstring) {
 	_data._string = String(p_cstring);
 }
 
-var::var(const std::string& p_string){
-	type = STRING;
-	_data._string = String(p_string);
-}
-
 var::var(const String& p_string) {
 	type = STRING;
 	_data._string = p_string;
@@ -322,7 +321,7 @@ var::operator int() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return (int)_data._float;
-		case STRING: return  std::stoi(_data._string);
+		case STRING: return  _data._string.stoi();
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -333,7 +332,7 @@ var::operator double() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return _data._float;
-		case STRING: return  std::stod(_data._string);
+		case STRING: return  _data._string.stod();
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -855,3 +854,18 @@ void var::clear_data() {
 #undef VAR_SWITCH_VECT
 #undef CASE_DIV_DATA
 #undef SWITCH_DIV_TYPES
+
+#if defined(UNDEF_VAR_DEFINES)
+#undef STRCAT2
+#undef STRCAT3
+#undef STRCAT4
+#undef STR
+#undef STRINGIFY
+#undef PLACE_HOLDER
+#undef newref_t1
+#undef newref_t2
+#undef DEBUG_BREAK
+#undef VAR_ERR
+#undef VAR_ASSERT
+#undef UNDEF_VAR_DEFINES
+#endif
