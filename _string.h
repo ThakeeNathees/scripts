@@ -26,7 +26,7 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include "core.h"
+#include "varhcore.h"
 
 class var;
 

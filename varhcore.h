@@ -23,19 +23,28 @@
 // SOFTWARE.
 //------------------------------------------------------------------------------
 
-#ifndef CORE_H
-#define CORE_H
+#ifndef VARHCORE_H
+#define VARHCORE_H
 
 #include <memory>
-#include <string>
 #include <cstring>
+#include <stdio.h>
 #include <iostream>
+#include <ostream>
 #include <sstream>
+#include <typeinfo>
+#include <string>
+#include <type_traits>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <vector>
 #include <map>
+
+#define EVAL(...) __VA_ARGS__
+#define ARGCOUNT_I(_,_9,_8,_7,_6,_5,_4,_3,_2,_1,X_,...) X_
+#define ARGCOUNT(...) \
+   ARGCOUNT_I(__VA_ARGS__,9,8,7,6,5,4,3,2,1,0)
 
 #define STR_CAT2(m_a, m_b) m_a##m_b
 #define STR_CAT3(m_a, m_b, m_c) m_a##m_b##m_c
@@ -45,6 +54,15 @@
 #define STRINGIFY(m_mac) STR(m_mac)
 
 #define M_PLACE_HOLDER
+
+#ifdef _DEBUG
+#define DBG                                             \
+do {                                                    \
+	printf("DBG: (%s:%i)\n", __FILE__, __LINE__);       \
+} while (false)
+#else
+#define DBG
+#endif
 
 #define newref_t1(T1, ...) std::make_shared<T1>(__VA_ARGS__);
 #define newref_t2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__);
@@ -80,4 +98,4 @@ VarErrCallback var_get_err_callback();
 #endif
 
 
-#endif // CORE_H
+#endif // VARHCORE_H

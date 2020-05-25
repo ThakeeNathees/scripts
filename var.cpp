@@ -210,9 +210,14 @@ var::var(const char* p_cstring) {
 	_data._string = String(p_cstring);
 }
 
-var::var(const String& p_string) {
+var::var(const std::string& p_string){
 	type = STRING;
 	_data._string = String(p_string);
+}
+
+var::var(const String& p_string) {
+	type = STRING;
+	_data._string = p_string;
 }
 
 #define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)             \
