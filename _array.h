@@ -28,6 +28,8 @@
 
 #include "varhcore.h"
 
+namespace varh {
+
 class var;
 class String;
 
@@ -89,8 +91,11 @@ public:
 	operator bool() const { return empty(); }
 	operator String() const;
 	bool operator ==(const Array& p_other) const;
+	Array& operator=(const Array& p_other);
 	Array operator+(const Array& p_other) const;
 	Array& operator+=(const Array& p_other);
 };
+
+}
 
 #endif // ARRAY_H

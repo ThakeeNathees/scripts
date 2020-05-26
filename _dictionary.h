@@ -28,6 +28,8 @@
 
 #include "varhcore.h"
 
+namespace varh {
+
 class var;
 class String;
 
@@ -75,6 +77,9 @@ public:
 	operator bool() const { return empty(); }
 	operator String() const;
 	bool operator ==(const Dictionary& p_other) const;
+	Dictionary& operator=(const Dictionary& p_other);
 };
+
+}
 
 #endif // DICTIONARY_H

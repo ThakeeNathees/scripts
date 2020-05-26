@@ -37,6 +37,8 @@ bool operator m_op (const Vect3<T>& p_other) const {   \
 	return get_length() m_op p_other.get_length();     \
 }
 
+namespace varh {
+
 template<typename T>
 struct Vect2
 {
@@ -220,5 +222,7 @@ typedef Vect3<int> Vect3i;
 
 typedef Vect2f Size;
 typedef Vect2f Point;
+
+}
 
 #endif //VECTOR_H

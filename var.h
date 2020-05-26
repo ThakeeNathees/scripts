@@ -71,9 +71,12 @@ typedef double real_t;
 typedef float real_t;
 #endif
 
-typedef void(*VarErrCallback)(const char* p_msg, const char* p_func, const char* p_file, int p_line);
-void var_set_err_callback(const VarErrCallback p_callback);
-VarErrCallback var_get_err_callback();
+namespace varh {
+	typedef void(*VarErrCallback)(const char* p_msg, const char* p_func, const char* p_file, int p_line);
+	void var_set_err_callback(const VarErrCallback p_callback);
+	VarErrCallback var_get_err_callback();
+}
+
 
 #ifdef _MSC_VER
 #define DEBUG_BREAK() __debugbreak()
@@ -94,54 +97,46 @@ VarErrCallback var_get_err_callback();
 
 #endif // VARHCORE_H
 
+namespace varh {
+
 class var;
 
-class String //: public std::string
+class String : public std::string
 {
 private:
 	friend class var;
-	std::string _data;
 
 public:
 	String() {}
-	String(const std::string& p_copy) : _data(p_copy) {}
-	String(const char* p_copy) : _data(p_copy) {}
+	String(const std::string& p_copy) : std::string(p_copy) {}
+	String(const char* p_copy) : std::string(p_copy) {}
 
-	int stoi() const { return std::stoi(_data); }
-	double stod() const { return std::stod(_data); }
+	~String() { }
 
-	/* operators */
-#define STR_CMP_OP(m_op)                               \
-	bool operator m_op(const String& p_other) const {  \
-		return _data m_op p_other._data;               \
-	}
-	STR_CMP_OP(==)
-	STR_CMP_OP(<)
-	STR_CMP_OP(<=)
-	STR_CMP_OP(>)
-	STR_CMP_OP(>=)
-#undef STR_CMP_OP
+	int stoi() const { return std::stoi(*this); }
+	double stod() const { return std::stod(*this); }
 
 	String operator+(const String& p_other) const {
-		return _data + p_other._data;
+		return std::operator+(*this, p_other);
+	}
+
+	String& operator=(const String& p_other) {
+		std::string::operator=(p_other);
+		return *this;
 	}
 
 	String& operator+=(const String& p_other) {
-		_data += p_other._data;
+		std::string::operator+=(p_other);
 		return *this;
 	}
 
-	/* wrappers */
-	// TODO: implement all wrappers and catch errors via VAR_ERR
-	size_t size() const { return _data.size(); }
-	String& append(const String& p_other) {
-		_data.append(p_other._data);
-		return *this;
+	char& operator[](size_t p_index) {
+		// TODO: VAR_ERR
+		return std::string::operator[](p_index);
 	}
-	const char* c_str() const { return _data.c_str(); }
-	char at(size_t p_off) { return _data.at(p_off); }
 };
 
+}
 
 #endif // STRING_H
 
@@ -149,6 +144,8 @@ public:
 #define  ARRAY_H
 
 //include "varhcore.h"
+
+namespace varh {
 
 class var;
 class String;
@@ -211,9 +208,12 @@ public:
 	operator bool() const { return empty(); }
 	operator String() const;
 	bool operator ==(const Array& p_other) const;
+	Array& operator=(const Array& p_other);
 	Array operator+(const Array& p_other) const;
 	Array& operator+=(const Array& p_other);
 };
+
+}
 
 #endif // ARRAY_H
 
@@ -230,6 +230,8 @@ bool operator m_op (const Vect2<T>& p_other) const {   \
 bool operator m_op (const Vect3<T>& p_other) const {   \
 	return get_length() m_op p_other.get_length();     \
 }
+
+namespace varh {
 
 template<typename T>
 struct Vect2
@@ -415,12 +417,16 @@ typedef Vect3<int> Vect3i;
 typedef Vect2f Size;
 typedef Vect2f Point;
 
+}
+
 #endif //VECTOR_H
 
 #ifndef  DICTIONARY_H
 #define  DICTIONARY_H
 
 //include "varhcore.h"
+
+namespace varh {
 
 class var;
 class String;
@@ -469,7 +475,10 @@ public:
 	operator bool() const { return empty(); }
 	operator String() const;
 	bool operator ==(const Dictionary& p_other) const;
+	Dictionary& operator=(const Dictionary& p_other);
 };
+
+}
 
 #endif // DICTIONARY_H
 
@@ -482,6 +491,8 @@ public:
 #define DATA_MEM_SIZE 4 * sizeof(real_t)
 
 // TODO: var fn = &func; fn(); operator(){}
+
+namespace varh {
 
 class var
 {
@@ -528,19 +539,23 @@ private:
 		{}
 	};
 
-	union VarData 
+	struct VarData
 	{
 		VarData() : _float(.0f) {}
 		~VarData(){}
+
 		Dictionary _dict;
 		Array _arr;
-		String _string;
-		_DataObj _obj;
 
-		bool _bool;
-		int _int;
-		double _float;
-		uint8_t _mem[DATA_MEM_SIZE];
+		union {
+			String _string;
+			_DataObj _obj;
+
+			bool _bool;
+			int _int;
+			double _float;
+			uint8_t _mem[DATA_MEM_SIZE];
+		};
 	};
 
 	VarData _data;
@@ -691,6 +706,7 @@ public:
 
 };
 
+
 #define isinstance(p_var, T) _isinstance<T>(p_var)
 template<typename T>
 bool _isinstance(const var& p_other) {
@@ -711,6 +727,8 @@ bool _isinstance(const var& p_other) {
 	}
 	VAR_ERR("invalid var type");
 	return false;
+}
+
 }
 
 // undefine all var.h macros defined in varcore.h
@@ -743,6 +761,8 @@ bool _isinstance(const var& p_other) {
 //include "_var.h"
 
 #define D_VEC(m_vect, m_dim, m_t) STRCAT3(m_vect, m_dim, m_t)
+
+namespace varh {
 
 var var::tmp;
 
@@ -826,6 +846,11 @@ Array& Array::operator+=(const Array& p_other) {
 	return *this;
 }
 
+Array& Array::operator=(const Array& p_other) {
+	_data = p_other._data;
+	return *this;
+}
+
 // Dictionary ----------------------------------------
 Dictionary::operator String() const {
 	std::stringstream ss;
@@ -868,11 +893,16 @@ bool Dictionary::operator ==(const Dictionary& p_other) const {
 	}
 	return true;
 }
+
+Dictionary& Dictionary::operator=(const Dictionary& p_other) {
+	_data = p_other._data;
+	return *this;
+}
 // var -----------------------------------------------
 
 void var::clear() {
-	type = _NULL;
 	clear_data();
+	type = _NULL;
 }
 
 var var::copy(bool p_deep) const {
@@ -928,12 +958,12 @@ var::var(double p_double) {
 
 var::var(const char* p_cstring) {
 	type = STRING;
-	_data._string = String(p_cstring);
+	new(&_data._string) String(p_cstring);
 }
 
 var::var(const String& p_string) {
 	type = STRING;
-	_data._string = p_string;
+	new(&_data._string) String(p_string);
 }
 
 #define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)             \
@@ -950,12 +980,12 @@ VAR_VECT_CONSTRUCTOR(3, i, I)
 
 var::var(const Array& p_array) {
 	type = ARRAY;
-	_data._arr = p_array._data;
+	_data._arr = p_array;
 }
 
 var::var(const Dictionary& p_dict) {
 	type = DICTIONARY;
-	_data._dict = p_dict._data;
+	_data._dict = p_dict;
 }
 
 var::~var() {
@@ -1511,8 +1541,9 @@ var& var::operator %=(const var& p_other) {
 
 void var::copy_data(const var& p_other) {
 	clear_data();
+	type = p_other.type;
 	switch (p_other.type) {
-		case var::_NULL: return;
+		case var::_NULL: break;
 		case var::BOOL:
 			_data._bool = p_other._data._bool;
 			break;
@@ -1523,7 +1554,7 @@ void var::copy_data(const var& p_other) {
 			_data._float = p_other._data._float;
 			break;
 		case var::STRING:
-			_data._string = p_other._data._string;
+			new(&_data._string) String(p_other._data._string);
 			break;
 		case var::VECT2F:
 		case var::VECT2I:
@@ -1551,19 +1582,26 @@ void var::clear_data() {
 		case var::BOOL:
 		case var::INT:
 		case var::FLOAT:
-		case var::STRING:
 		case var::VECT2F:
 		case var::VECT2I:
 		case var::VECT3F:
 		case var::VECT3I:
 			return;
+		case var::STRING:
+			_data._string.~String();
+			return;
 		case var::ARRAY:
 			_data._arr._data = nullptr;
+			break;
 		case var::DICTIONARY:
 			_data._dict._data = nullptr;
+			break;
 		case var::OBJ_PTR:
 			_data._obj._ptr = nullptr; // may cause memory leak
+			break;
 	}
+}
+
 }
 
 #undef VAR_CASE_OP
