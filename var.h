@@ -71,9 +71,12 @@ typedef double real_t;
 typedef float real_t;
 #endif
 
-typedef void(*VarErrCallback)(const char* p_msg, const char* p_func, const char* p_file, int p_line);
-void var_set_err_callback(const VarErrCallback p_callback);
-VarErrCallback var_get_err_callback();
+namespace varh {
+	typedef void(*VarErrCallback)(const char* p_msg, const char* p_func, const char* p_file, int p_line);
+	void var_set_err_callback(const VarErrCallback p_callback);
+	VarErrCallback var_get_err_callback();
+}
+
 
 #ifdef _MSC_VER
 #define DEBUG_BREAK() __debugbreak()
@@ -93,6 +96,8 @@ VarErrCallback var_get_err_callback();
 #endif
 
 #endif // VARHCORE_H
+
+namespace varh {
 
 class var;
 
@@ -142,6 +147,7 @@ public:
 	char at(size_t p_off) { return _data.at(p_off); }
 };
 
+}
 
 #endif // STRING_H
 
@@ -149,6 +155,8 @@ public:
 #define  ARRAY_H
 
 //include "varhcore.h"
+
+namespace varh {
 
 class var;
 class String;
@@ -215,6 +223,8 @@ public:
 	Array& operator+=(const Array& p_other);
 };
 
+}
+
 #endif // ARRAY_H
 
 #ifndef VECTOR_H
@@ -230,6 +240,8 @@ bool operator m_op (const Vect2<T>& p_other) const {   \
 bool operator m_op (const Vect3<T>& p_other) const {   \
 	return get_length() m_op p_other.get_length();     \
 }
+
+namespace varh {
 
 template<typename T>
 struct Vect2
@@ -415,12 +427,16 @@ typedef Vect3<int> Vect3i;
 typedef Vect2f Size;
 typedef Vect2f Point;
 
+}
+
 #endif //VECTOR_H
 
 #ifndef  DICTIONARY_H
 #define  DICTIONARY_H
 
 //include "varhcore.h"
+
+namespace varh {
 
 class var;
 class String;
@@ -471,6 +487,8 @@ public:
 	bool operator ==(const Dictionary& p_other) const;
 };
 
+}
+
 #endif // DICTIONARY_H
 
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
@@ -482,6 +500,8 @@ public:
 #define DATA_MEM_SIZE 4 * sizeof(real_t)
 
 // TODO: var fn = &func; fn(); operator(){}
+
+namespace varh {
 
 class var
 {
@@ -691,6 +711,7 @@ public:
 
 };
 
+
 #define isinstance(p_var, T) _isinstance<T>(p_var)
 template<typename T>
 bool _isinstance(const var& p_other) {
@@ -711,6 +732,8 @@ bool _isinstance(const var& p_other) {
 	}
 	VAR_ERR("invalid var type");
 	return false;
+}
+
 }
 
 // undefine all var.h macros defined in varcore.h
@@ -743,6 +766,8 @@ bool _isinstance(const var& p_other) {
 //include "_var.h"
 
 #define D_VEC(m_vect, m_dim, m_t) STRCAT3(m_vect, m_dim, m_t)
+
+namespace varh {
 
 var var::tmp;
 
@@ -1564,6 +1589,8 @@ void var::clear_data() {
 		case var::OBJ_PTR:
 			_data._obj._ptr = nullptr; // may cause memory leak
 	}
+}
+
 }
 
 #undef VAR_CASE_OP

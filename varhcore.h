@@ -61,9 +61,12 @@ typedef double real_t;
 typedef float real_t;
 #endif
 
-typedef void(*VarErrCallback)(const char* p_msg, const char* p_func, const char* p_file, int p_line);
-void var_set_err_callback(const VarErrCallback p_callback);
-VarErrCallback var_get_err_callback();
+namespace varh {
+	typedef void(*VarErrCallback)(const char* p_msg, const char* p_func, const char* p_file, int p_line);
+	void var_set_err_callback(const VarErrCallback p_callback);
+	VarErrCallback var_get_err_callback();
+}
+
 
 #ifdef _MSC_VER
 #define DEBUG_BREAK() __debugbreak()

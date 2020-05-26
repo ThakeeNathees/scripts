@@ -27,6 +27,8 @@
 
 #define D_VEC(m_vect, m_dim, m_t) STRCAT3(m_vect, m_dim, m_t)
 
+namespace varh {
+
 var var::tmp;
 
 std::ostream& operator<<(std::ostream& p_ostream, const String& p_str) {
@@ -109,6 +111,11 @@ Array& Array::operator+=(const Array& p_other) {
 	return *this;
 }
 
+Array& Array::operator=(const Array& p_other) {
+	_data = p_other._data;
+	return *this;
+}
+
 // Dictionary ----------------------------------------
 Dictionary::operator String() const {
 	std::stringstream ss;
@@ -151,11 +158,16 @@ bool Dictionary::operator ==(const Dictionary& p_other) const {
 	}
 	return true;
 }
+
+Dictionary& Dictionary::operator=(const Dictionary& p_other) {
+	_data = p_other._data;
+	return *this;
+}
 // var -----------------------------------------------
 
 void var::clear() {
-	type = _NULL;
 	clear_data();
+	type = _NULL;
 }
 
 var var::copy(bool p_deep) const {
@@ -211,12 +223,12 @@ var::var(double p_double) {
 
 var::var(const char* p_cstring) {
 	type = STRING;
-	_data._string = String(p_cstring);
+	new(&_data._string) String(p_cstring);
 }
 
 var::var(const String& p_string) {
 	type = STRING;
-	_data._string = p_string;
+	new(&_data._string) String(p_string);
 }
 
 #define VAR_VECT_CONSTRUCTOR(m_dim, m_t, m_T)             \
@@ -233,12 +245,12 @@ VAR_VECT_CONSTRUCTOR(3, i, I)
 
 var::var(const Array& p_array) {
 	type = ARRAY;
-	_data._arr = p_array._data;
+	_data._arr = p_array;
 }
 
 var::var(const Dictionary& p_dict) {
 	type = DICTIONARY;
-	_data._dict = p_dict._data;
+	_data._dict = p_dict;
 }
 
 var::~var() {
@@ -794,8 +806,9 @@ var& var::operator %=(const var& p_other) {
 
 void var::copy_data(const var& p_other) {
 	clear_data();
+	type = p_other.type;
 	switch (p_other.type) {
-		case var::_NULL: return;
+		case var::_NULL: break;
 		case var::BOOL:
 			_data._bool = p_other._data._bool;
 			break;
@@ -806,7 +819,7 @@ void var::copy_data(const var& p_other) {
 			_data._float = p_other._data._float;
 			break;
 		case var::STRING:
-			_data._string = p_other._data._string;
+			new(&_data._string) String(p_other._data._string);
 			break;
 		case var::VECT2F:
 		case var::VECT2I:
@@ -834,19 +847,26 @@ void var::clear_data() {
 		case var::BOOL:
 		case var::INT:
 		case var::FLOAT:
-		case var::STRING:
 		case var::VECT2F:
 		case var::VECT2I:
 		case var::VECT3F:
 		case var::VECT3I:
 			return;
+		case var::STRING:
+			_data._string.~String();
+			return;
 		case var::ARRAY:
 			_data._arr._data = nullptr;
+			break;
 		case var::DICTIONARY:
 			_data._dict._data = nullptr;
+			break;
 		case var::OBJ_PTR:
 			_data._obj._ptr = nullptr; // may cause memory leak
+			break;
 	}
+}
+
 }
 
 #undef VAR_CASE_OP

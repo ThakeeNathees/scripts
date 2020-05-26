@@ -41,6 +41,8 @@
 
 // TODO: var fn = &func; fn(); operator(){}
 
+namespace varh {
+
 class var
 {
 public:
@@ -249,6 +251,7 @@ public:
 
 };
 
+
 #define isinstance(p_var, T) _isinstance<T>(p_var)
 template<typename T>
 bool _isinstance(const var& p_other) {
@@ -269,6 +272,8 @@ bool _isinstance(const var& p_other) {
 	}
 	VAR_ERR("invalid var type");
 	return false;
+}
+
 }
 
 // undefine all var.h macros defined in varcore.h
