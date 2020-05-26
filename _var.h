@@ -88,19 +88,23 @@ private:
 		{}
 	};
 
-	union VarData 
+	struct VarData
 	{
 		VarData() : _float(.0f) {}
 		~VarData(){}
+
 		Dictionary _dict;
 		Array _arr;
-		String _string;
-		_DataObj _obj;
 
-		bool _bool;
-		int _int;
-		double _float;
-		uint8_t _mem[DATA_MEM_SIZE];
+		union {
+			String _string;
+			_DataObj _obj;
+
+			bool _bool;
+			int _int;
+			double _float;
+			uint8_t _mem[DATA_MEM_SIZE];
+		};
 	};
 
 	VarData _data;
