@@ -23,60 +23,49 @@
 // SOFTWARE.
 //------------------------------------------------------------------------------
 
-#ifndef  DICTIONARY_H
-#define  DICTIONARY_H
+#ifndef OBJECT_H
+#define OBJECT_H
 
 #include "varhcore.h"
 
 namespace varh {
 
-class Dictionary
+class Object
 {
 private:
 	friend class var;
-	Ptr<std::map<var, var>> _data;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
+
 public:
-	/* constructors */
-	Dictionary() {
-		_data = newptr2(std::map<var, var>);
-	}
-	Dictionary(const Ptr<std::map<var, var>>& p_data) {
-		_data = p_data;
-	}
-	Dictionary(const Dictionary& p_copy) {
-		_data = p_copy._data;
+
+	// operators
+	virtual String to_string() const { return operator String(); }
+	virtual operator String() const { return String("[Object:") + String((int)this) + String("]"); }
+	virtual Object& operator=(const Object& p_copy) = default;
+
+	virtual bool operator==(const Object& p_other) { return &p_other == this; }
+	virtual bool operator!=(const Object& p_other) { return !operator == (p_other); }
+	virtual bool operator<=(const Object& p_other) { return this <= &p_other; }
+	virtual bool operator>=(const Object& p_other) { return this >= &p_other; }
+	virtual bool operator<(const Object& p_other) { return this < &p_other; }
+	virtual bool operator>(const Object& p_other) { return this > &p_other; }
+
+
+	// methods
+	virtual bool get(const String& p_name, var& r_val) const = 0;
+	virtual bool set(const String& p_name, const var& p_val) = 0;
+	virtual bool has(const String& p_name) const = 0;
+
+	virtual void copy(Object* r_ret, bool p_deep) const = 0;
+	String get_class_name() const { return "Object"; }
+
+	template <typename T>
+	T* cast() const { 
+		return dynamic_cast<T*>(this); 
 	}
 
-	std::map<var, var>* get_data() {
-		return _data.operator->();
-	}
-	std::map<var, var>* get_data() const {
-		return _data.operator->();
-	}
-
-	Dictionary copy(bool p_deep = true) const;
-
-	/* wrappers */
-	size_t size() const { return _data->size(); }
-	bool empty() const { return _data->empty(); }
-	var& operator[](const var& p_key) const;
-	var& operator[](const var& p_key);
-	std::map<var, var>::iterator begin() const;
-	std::map<var, var>::iterator end() const;
-	std::map<var, var>::iterator find(const var& p_key) const;
-	void clear() { _data->clear(); }
-
-	bool has(const var& p_key) const;
-	// TODO:
-
-	/* operators */
-	operator bool() const { return empty(); }
-	operator String() const;
-	bool operator ==(const Dictionary& p_other) const;
-	Dictionary& operator=(const Dictionary& p_other);
 };
 
 }
 
-#endif // DICTIONARY_H
+
+#endif //OBJECT_H

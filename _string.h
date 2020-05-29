@@ -32,40 +32,65 @@ namespace varh {
 
 class var;
 
-class String : public std::string
+class String //: public std::string
 {
 private:
 	friend class var;
+	std::string _data;
 
 public:
 	String() {}
-	String(const std::string& p_copy) : std::string(p_copy) {}
-	String(const char* p_copy) : std::string(p_copy) {}
+	String(const std::string& p_copy) { _data = p_copy; }
+	String(const char* p_copy) { _data = p_copy; }
+	String(const String& p_copy) { _data = p_copy._data; }
+	String(const char& p_char) { _data = p_char; }
+	String(int p_i) { _data = std::to_string(p_i); }
+	String(double p_d) { _data = std::to_string(p_d); }
+
+	static String format(const char* p_format, ...);
 
 	~String() { }
 
-	int stoi() const { return std::stoi(*this); }
-	double stod() const { return std::stod(*this); }
+	int to_int() const { return std::stoi(_data); }
+	double to_double() const { return std::stod(_data); }
 
-	String operator+(const String& p_other) const {
-		return std::operator+(*this, p_other);
-	}
 
 	String& operator=(const String& p_other) {
-		std::string::operator=(p_other);
+		_data = p_other._data;
 		return *this;
 	}
-
 	String& operator+=(const String& p_other) {
-		std::string::operator+=(p_other);
+		_data += p_other._data;
 		return *this;
 	}
-
+	char operator[](size_t p_index) const {
+		// TODO: VAR_ERR
+		return _data[p_index];
+	}
 	char& operator[](size_t p_index) {
 		// TODO: VAR_ERR
-		return std::string::operator[](p_index);
+		return _data[p_index];
 	}
+
+	String operator+(const char* p_cstr) const { return _data + p_cstr; }
+	String operator+(const String& p_other) const { return _data + p_other._data; }
+	bool operator==(const String & p_other) const { return _data == p_other._data; }
+	bool operator!=(const String & p_other) const { return _data != p_other._data; }
+	bool operator<(const String& p_other) const { return _data < p_other._data; }
+	operator std::string() const { return _data; }
+
+	String& operator+=(const char& p_c) { _data += p_c; return *this; }
+
+	// wrappers
+	size_t size() const { return _data.size(); }
+	const char* c_str() const { return _data.c_str(); }
+	String& append(const String& p_other) { _data.append(p_other); return *this; }
 };
+
+// global operations // TODO: implement more
+bool operator==(const char* p_cstr, const String& p_str);
+bool operator!=(const char* p_cstr, const String& p_str);
+
 
 }
 
