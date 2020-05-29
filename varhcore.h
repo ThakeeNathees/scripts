@@ -51,10 +51,10 @@
 
 #define PLACE_HOLDER_MACRO
 
-#define newref_t1(T1, ...) std::make_shared<T1>(__VA_ARGS__);
-#define newref_t2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__);
+#define newptr(T1, ...) std::make_shared<T1>(__VA_ARGS__)
+#define newptr2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__)
 template<typename T>
-using Ref = std::shared_ptr<T>;
+using Ptr = std::shared_ptr<T>;
 
 #if defined(DOUBLE_AS_REAL)
 typedef double real_t;

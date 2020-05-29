@@ -10,25 +10,16 @@
 using namespace varh;
 #define print(x) std::cout << (x) << std::endl
 
-class A{
-	virtual void f(){}
-};
-class B:public A {};
-class C:public A {};
-class CC :public C {};
-
-class X : public Object {
-	virtual String to_string() const { return "X"; }
-	virtual operator String() const { return to_string(); }
-
+class X :public Object {
+public:
 	virtual bool get(const String& p_name, var& r_val) const { return false; }
 	virtual bool set(const String& p_name, const var& p_val) { return false; }
 	virtual bool has(const String& p_name) const { return false; }
-};
 
+	virtual void copy(Object* r_ret, bool p_deep) const {}
+};
 
 int main()
 {
-
 	return 0;
 }

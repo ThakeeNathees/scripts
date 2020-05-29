@@ -61,8 +61,8 @@
 
 #define PLACE_HOLDER_MACRO
 
-#define newref_t1(T1, ...) std::make_shared<T1>(__VA_ARGS__);
-#define newref_t2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__);
+#define newptr(T1, ...) std::make_shared<T1>(__VA_ARGS__);
+#define newptr2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__);
 template<typename T>
 using Ref = std::shared_ptr<T>;
 
@@ -169,7 +169,7 @@ private:
 public:
 	/* constructors */
 	Array() {
-		_data = newref_t1(std::vector<var>);
+		_data = newptr(std::vector<var>);
 	}
 	Array(const Ref<std::vector<var>>& p_data) {
 		_data = p_data;
@@ -180,7 +180,7 @@ public:
 
 	// TODO: try implementing with packed variadic template 
 	//template<typename... T> Array(const T&... p_vars) {
-	//	_data = newref_t1(std::vector<var>);
+	//	_data = newptr(std::vector<var>);
 	//	var arr[] = { (p_vars)... };
 	//	for (size_t i = 0; i < sizeof(arr); i++) {
 	//		push_back(arr[i]);
@@ -450,7 +450,7 @@ private:
 public:
 	/* constructors */
 	Dictionary() {
-		_data = newref_t2(std::map<var, var>);
+		_data = newptr2(std::map<var, var>);
 	}
 	Dictionary(const Ref<std::map<var, var>>& p_data) {
 		_data = p_data;
@@ -754,8 +754,8 @@ public:
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newref_t1
-#undef newref_t2
+#undef newptr
+#undef newptr2
 #undef DEBUG_BREAK
 #undef VAR_ERR
 #undef VAR_ASSERT
@@ -1630,8 +1630,8 @@ void var::clear_data() {
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newref_t1
-#undef newref_t2
+#undef newptr
+#undef newptr2
 #undef DEBUG_BREAK
 #undef VAR_ERR
 #undef VAR_ASSERT

@@ -30,11 +30,6 @@
 
 namespace varh {
 
-class var;
-class String;
-class Array;
-class Dictionary;
-
 class Object
 {
 private:
@@ -45,7 +40,8 @@ protected:
 public:
 
 	// operators
-	virtual operator String() { return String("[Object:") + std::string("]"); }
+	virtual String to_string() const { return operator String(); }
+	virtual operator String() const { return String("[Object:") + std::string("]"); }
 	virtual Object& operator=(const Object& p_copy) = default;
 
 	virtual bool operator==(const Object& p_other) { return &p_other == this; }
@@ -64,7 +60,9 @@ public:
 	virtual void copy(Object* r_ret, bool p_deep) const = 0;
 
 	template <typename T>
-	T* cast() const { return dynamic_cast<T*>(this); }
+	T* cast() const { 
+		return dynamic_cast<T*>(this); 
+	}
 
 
 

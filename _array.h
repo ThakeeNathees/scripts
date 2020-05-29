@@ -30,21 +30,18 @@
 
 namespace varh {
 
-class var;
-class String;
-
 class Array
 {
 private:
 	friend class var;
-	Ref<std::vector<var>> _data;
+	Ptr<std::vector<var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
 public:
 	/* constructors */
 	Array() {
-		_data = newref_t1(std::vector<var>);
+		_data = newptr(std::vector<var>);
 	}
-	Array(const Ref<std::vector<var>>& p_data) {
+	Array(const Ptr<std::vector<var>>& p_data) {
 		_data = p_data;
 	}
 	Array(const Array& p_copy) {
@@ -53,7 +50,7 @@ public:
 
 	// TODO: try implementing with packed variadic template 
 	//template<typename... T> Array(const T&... p_vars) {
-	//	_data = newref_t1(std::vector<var>);
+	//	_data = newptr(std::vector<var>);
 	//	var arr[] = { (p_vars)... };
 	//	for (size_t i = 0; i < sizeof(arr); i++) {
 	//		push_back(arr[i]);

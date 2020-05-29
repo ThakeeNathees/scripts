@@ -31,6 +31,7 @@
 #include "_vector.h"
 #include "_dictionary.h"
 #include "_object.h"
+#include "_reference.h"
 
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
 #define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
@@ -82,7 +83,7 @@ private:
 
 		Dictionary _dict;
 		Array _arr;
-		Ref<Object> _obj;
+		Ref _obj;
 
 		union {
 			String _string;
@@ -120,12 +121,19 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Dictionary& p_dict);
-
-	template<typename T> var(const T& p_enum) {
-		static_assert(!std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
-		type = INT;
-		_data._int = (int)p_enum;
+	var(const Ref& p_obj);
+	
+	template <typename T>
+	var(const Ptr<T>& p_ptr) {
+		type = OBJECT;
+		_data._obj = Ref(p_ptr);
 	}
+
+	//template<typename T> var(const T& p_enum) {
+	//	static_assert(!std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
+	//	type = INT;
+	//	_data._int = (int)p_enum;
+	//}
 
 	/* casting */
 	operator bool() const;
@@ -155,14 +163,14 @@ public:
 	//	return nullptr;
 	//}
 
-	template<typename T>
-	T as_enum() const {
-		static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() on non enum type");
-		if (type != INT) {
-			VAR_ERR("cant cast non integer to enum");
-		}
-		return (T)_data._int;
-	}
+	//template<typename T>
+	//T as_enum() const {
+	//	static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() on non enum type");
+	//	if (type != INT) {
+	//		VAR_ERR("cant cast non integer to enum");
+	//	}
+	//	return (T)_data._int;
+	//}
 
 	//bool is(const var& p_other) {
 	//	switch (type) {
@@ -219,6 +227,7 @@ public:
 
 	//	/* assignments */
 	var& operator=(const var& p_other);
+	var& operator=(const Ptr<Object>& p_other);
 	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, -=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, *=, PLACE_HOLDER_MACRO);
@@ -242,8 +251,8 @@ public:
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newref_t1
-#undef newref_t2
+#undef newptr
+#undef newptr2
 #undef DEBUG_BREAK
 #undef VAR_ERR
 #undef VAR_ASSERT

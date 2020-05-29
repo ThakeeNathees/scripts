@@ -163,6 +163,16 @@ Dictionary& Dictionary::operator=(const Dictionary& p_other) {
 	_data = p_other._data;
 	return *this;
 }
+// Ref -----------------------------------------------
+
+String Ref::to_string() const {
+	return (*_data).to_string();
+}
+
+Ref::operator String() const {
+	return (*_data).operator String();
+}
+
 // var -----------------------------------------------
 
 void var::clear() {
@@ -185,6 +195,7 @@ var var::copy(bool p_deep) const {
 		case ARRAY: return _data._arr.copy(p_deep);
 		case DICTIONARY: return _data._dict.copy(p_deep);
 		case OBJECT:
+
 			break;
 	}
 			// TODO:
@@ -254,6 +265,11 @@ var::var(const Dictionary& p_dict) {
 	_data._dict = p_dict;
 }
 
+var::var(const Ref& p_obj) {
+	type = OBJECT;
+	_data._obj = p_obj;
+}
+
 var::~var() {
 	clear();
 }
@@ -290,6 +306,12 @@ var& var::operator=(const var& p_other) {
 	copy_data(p_other);
 	return *this;
 }
+var& var::operator=(const Ptr<Object>& p_other) {
+	clear_data();
+	type = OBJECT;
+	_data._obj = p_other;
+	return *this;
+}
 
 var& var::operator[](const var& p_key) const {
 	switch (type) {
@@ -323,7 +345,7 @@ var::operator bool() const {
 		case VECT3I: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case ARRAY: return !_data._arr.empty();
 		case DICTIONARY: return !_data._dict.empty();
-		case OBJECT: return _data._obj == nullptr;
+		case OBJECT: return _data._obj.is_null();
 	}
 	VAR_ERR("invalid casting");
 	return false;
@@ -364,7 +386,7 @@ var::operator String() const {
 		case VECT3I: return (*DATA_PTR_CONST(Vect3i)).operator String();
 		case ARRAY: return _data._arr.operator String();
 		case DICTIONARY: return _data._dict.operator String();
-		case OBJECT: return (*_data._obj).operator String();
+		case OBJECT: return _data._obj.operator String();
 	}
 	VAR_ERR("invalid casting");
 	return "";
@@ -447,7 +469,7 @@ bool var::operator==(const var& p_other) const {
 		}
 		case OBJECT: {
 			if (p_other.type == OBJECT)
-				return *_data._obj == *p_other._data._obj;
+				return _data._obj == p_other._data._obj;
 			break;
 		}
 	}
@@ -481,7 +503,7 @@ bool var::operator<(const var& p_other) const {
 		case DICTIONARY:
 		case OBJECT: {
 			if (p_other.type == OBJECT)
-				return *_data._obj < *p_other._data._obj;
+				return _data._obj < p_other._data._obj;
 			break;
 		}
 	}
@@ -512,7 +534,7 @@ bool var::operator>(const var& p_other) const {
 		case DICTIONARY:
 		case OBJECT: {
 			if (p_other.type == OBJECT)
-				return *_data._obj > *p_other._data._obj;
+				return _data._obj > p_other._data._obj;
 			break;
 		}
 	}
@@ -556,7 +578,7 @@ var var::operator +(const var& p_other) const {
 	return false;
 }
 
-var var::operator -(const var& p_other) const {
+var var::operator-(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
 		case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, -) }
@@ -883,8 +905,8 @@ void var::clear_data() {
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newref_t1
-#undef newref_t2
+#undef newptr
+#undef newptr2
 #undef DEBUG_BREAK
 #undef VAR_ERR
 #undef VAR_ASSERT
