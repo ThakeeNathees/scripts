@@ -23,60 +23,44 @@
 // SOFTWARE.
 //------------------------------------------------------------------------------
 
-#ifndef  DICTIONARY_H
-#define  DICTIONARY_H
+#ifndef REFERENCE_H
+#define REFERENCE_H
 
 #include "varhcore.h"
 
 namespace varh {
 
-class Dictionary
+class Ref
 {
 private:
-	friend class var;
-	Ptr<std::map<var, var>> _data;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
+	Ptr<Object> _data;
+
 public:
-	/* constructors */
-	Dictionary() {
-		_data = newptr2(std::map<var, var>);
-	}
-	Dictionary(const Ptr<std::map<var, var>>& p_data) {
-		_data = p_data;
-	}
-	Dictionary(const Dictionary& p_copy) {
-		_data = p_copy._data;
-	}
+	Ref(){}
 
-	std::map<var, var>* get_data() {
-		return _data.operator->();
-	}
-	std::map<var, var>* get_data() const {
-		return _data.operator->();
-	}
+	template <typename T>
+	Ref(const Ptr<T>& p_ptr) { _data = p_ptr; }
 
-	Dictionary copy(bool p_deep = true) const;
 
-	/* wrappers */
-	size_t size() const { return _data->size(); }
-	bool empty() const { return _data->empty(); }
-	var& operator[](const var& p_key) const;
-	var& operator[](const var& p_key);
-	std::map<var, var>::iterator begin() const;
-	std::map<var, var>::iterator end() const;
-	std::map<var, var>::iterator find(const var& p_key) const;
-	void clear() { _data->clear(); }
+	bool is_null() const { return _data == nullptr; }
+	Ptr<Object> ptr() const { return _data; }
+	// const Object* raw_ptr() const { return &(*_data); }
 
-	bool has(const var& p_key) const;
-	// TODO:
-
-	/* operators */
-	operator bool() const { return empty(); }
+	String to_string() const;
 	operator String() const;
-	bool operator ==(const Dictionary& p_other) const;
-	Dictionary& operator=(const Dictionary& p_other);
+	Ref& operator=(const Ptr<Object>& p_obj) { _data = p_obj; return *this; }
+
+#define REF_CMP_OP(m_op) \
+	bool operator m_op (const Ref& p_other) const { return *_data m_op *p_other._data; }
+	REF_CMP_OP(==);
+	REF_CMP_OP(!=);
+	REF_CMP_OP(<=);
+	REF_CMP_OP(>=);
+	REF_CMP_OP(<);
+	REF_CMP_OP(>);
+
 };
 
 }
 
-#endif // DICTIONARY_H
+#endif // REFERENCE_H

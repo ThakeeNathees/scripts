@@ -36,20 +36,22 @@
 #ifndef VARHCORE_H
 #define VARHCORE_H
 
-#include <memory>
+#include <assert.h>
 #include <cstring>
-#include <stdio.h>
 #include <iostream>
+#include <memory>
 #include <ostream>
 #include <sstream>
-#include <typeinfo>
+#include <stdarg.h>
+#include <stdio.h>
 #include <string>
 #include <type_traits>
+#include <typeinfo>
 
 #define _USE_MATH_DEFINES
+#include <map>
 #include <math.h>
 #include <vector>
-#include <map>
 
 #define STRCAT2(m_a, m_b) m_a##m_b
 #define STRCAT3(m_a, m_b, m_c) m_a##m_b##m_c
@@ -60,10 +62,12 @@
 
 #define PLACE_HOLDER_MACRO
 
-#define newref_t1(T1, ...) std::make_shared<T1>(__VA_ARGS__);
-#define newref_t2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__);
+#define newptr(T1, ...) std::make_shared<T1>(__VA_ARGS__)
+#define newptr2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__)
 template<typename T>
-using Ref = std::shared_ptr<T>;
+using Ptr = std::shared_ptr<T>;
+
+#define VSNPRINTF_BUFF_SIZE 8192
 
 #if defined(DOUBLE_AS_REAL)
 typedef double real_t;
@@ -101,39 +105,51 @@ namespace varh {
 
 class var;
 
-class String : public std::string
+class String //: public std::string
 {
 private:
 	friend class var;
+	std::string _data;
 
 public:
 	String() {}
-	String(const std::string& p_copy) : std::string(p_copy) {}
-	String(const char* p_copy) : std::string(p_copy) {}
+	String(const std::string& p_copy) { _data = p_copy; }
+	String(const char* p_copy) { _data = p_copy; }
+	String(const String& p_copy) { _data = p_copy._data; }
+
+	static String format(const char* p_format, ...);
 
 	~String() { }
 
-	int stoi() const { return std::stoi(*this); }
-	double stod() const { return std::stod(*this); }
+	int to_int() const { return std::stoi(_data); }
+	double to_double() const { return std::stod(_data); }
 
-	String operator+(const String& p_other) const {
-		return std::operator+(*this, p_other);
-	}
 
 	String& operator=(const String& p_other) {
-		std::string::operator=(p_other);
+		_data = p_other._data;
 		return *this;
 	}
-
 	String& operator+=(const String& p_other) {
-		std::string::operator+=(p_other);
+		_data += p_other._data;
 		return *this;
 	}
-
 	char& operator[](size_t p_index) {
 		// TODO: VAR_ERR
-		return std::string::operator[](p_index);
+		return _data[p_index];
 	}
+
+	String operator+(const char* p_cstr) const { return _data + p_cstr; }
+	String operator+(const String& p_other) const { return _data + p_other._data; }
+	bool operator==(const String & p_other) const { return _data == p_other._data; }
+	bool operator<(const String& p_other) const { return _data < p_other._data; }
+	operator std::string() const { return _data; }
+
+
+
+	// wrappers
+	size_t size() const { return _data.size(); }
+	const char* c_str() const { return _data.c_str(); }
+	String& append(const String& p_other) { _data.append(p_other); return *this; }
 };
 
 }
@@ -147,21 +163,18 @@ public:
 
 namespace varh {
 
-class var;
-class String;
-
 class Array
 {
 private:
 	friend class var;
-	Ref<std::vector<var>> _data;
+	Ptr<std::vector<var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
 public:
 	/* constructors */
 	Array() {
-		_data = newref_t1(std::vector<var>);
+		_data = newptr(std::vector<var>);
 	}
-	Array(const Ref<std::vector<var>>& p_data) {
+	Array(const Ptr<std::vector<var>>& p_data) {
 		_data = p_data;
 	}
 	Array(const Array& p_copy) {
@@ -170,7 +183,7 @@ public:
 
 	// TODO: try implementing with packed variadic template 
 	//template<typename... T> Array(const T&... p_vars) {
-	//	_data = newref_t1(std::vector<var>);
+	//	_data = newptr(std::vector<var>);
 	//	var arr[] = { (p_vars)... };
 	//	for (size_t i = 0; i < sizeof(arr); i++) {
 	//		push_back(arr[i]);
@@ -428,21 +441,18 @@ typedef Vect2f Point;
 
 namespace varh {
 
-class var;
-class String;
-
 class Dictionary
 {
 private:
 	friend class var;
-	Ref<std::map<var, var>> _data;
+	Ptr<std::map<var, var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
 public:
 	/* constructors */
 	Dictionary() {
-		_data = newref_t2(std::map<var, var>);
+		_data = newptr2(std::map<var, var>);
 	}
-	Dictionary(const Ref<std::map<var, var>>& p_data) {
+	Dictionary(const Ptr<std::map<var, var>>& p_data) {
 		_data = p_data;
 	}
 	Dictionary(const Dictionary& p_copy) {
@@ -482,6 +492,98 @@ public:
 
 #endif // DICTIONARY_H
 
+#ifndef OBJECT_H
+#define OBJECT_H
+
+//include "varhcore.h"
+
+namespace varh {
+
+class Object
+{
+private:
+	friend class var;
+
+protected:
+
+public:
+
+	// operators
+	virtual String to_string() const { return operator String(); }
+	virtual operator String() const { return String("[Object:") + std::string("]"); }
+	virtual Object& operator=(const Object& p_copy) = default;
+
+	virtual bool operator==(const Object& p_other) { return &p_other == this; }
+	virtual bool operator!=(const Object& p_other) { return !operator == (p_other); }
+	virtual bool operator<=(const Object& p_other) { return this <= &p_other; }
+	virtual bool operator>=(const Object& p_other) { return this >= &p_other; }
+	virtual bool operator<(const Object& p_other) { return this < &p_other; }
+	virtual bool operator>(const Object& p_other) { return this > &p_other; }
+
+
+	// methods
+	virtual bool get(const String& p_name, var& r_val) const = 0;
+	virtual bool set(const String& p_name, const var& p_val) = 0;
+	virtual bool has(const String& p_name) const = 0;
+
+	virtual void copy(Object* r_ret, bool p_deep) const = 0;
+
+	template <typename T>
+	T* cast() const { 
+		return dynamic_cast<T*>(this); 
+	}
+
+
+
+};
+
+}
+
+
+#endif //OBJECT_H
+
+#ifndef REFERENCE_H
+#define REFERENCE_H
+
+//include "varhcore.h"
+
+namespace varh {
+
+class Ref
+{
+private:
+	Ptr<Object> _data;
+
+public:
+	Ref(){}
+
+	template <typename T>
+	Ref(const Ptr<T>& p_ptr) { _data = p_ptr; }
+
+
+	bool is_null() const { return _data == nullptr; }
+	Ptr<Object> ptr() const { return _data; }
+	// const Object* raw_ptr() const { return &(*_data); }
+
+	String to_string() const;
+	operator String() const;
+	Ref& operator=(const Ptr<Object>& p_obj) { _data = p_obj; return *this; }
+
+#define REF_CMP_OP(m_op) \
+	bool operator m_op (const Ref& p_other) const { return *_data m_op *p_other._data; }
+	REF_CMP_OP(==);
+	REF_CMP_OP(!=);
+	REF_CMP_OP(<=);
+	REF_CMP_OP(>=);
+	REF_CMP_OP(<);
+	REF_CMP_OP(>);
+
+};
+
+}
+
+#endif // REFERENCE_H
+
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
 #define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
 
@@ -514,7 +616,8 @@ public:
 		// misc types
 		ARRAY,
 		DICTIONARY,
-		OBJ_PTR,
+		OBJECT,
+		//OBJ_PTR,
 
 		TYPE_MAX,
 	};
@@ -523,21 +626,6 @@ private:
 	static var tmp;
 	Type type;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
-	template <typename T>
-	friend bool _isinstance(const var& p_other);
-
-	struct _DataObj
-	{
-		size_t hash_code;
-		const char* name;
-		const void* _ptr;
-		_DataObj(const size_t hash_code, const char* name, const void* _ptr)
-			: hash_code(hash_code), name(name), _ptr(_ptr)
-		{}
-		_DataObj()
-			: hash_code(-1), name("???"), _ptr(nullptr)
-		{}
-	};
 
 	struct VarData
 	{
@@ -546,10 +634,10 @@ private:
 
 		Dictionary _dict;
 		Array _arr;
+		Ref _obj;
 
 		union {
 			String _string;
-			_DataObj _obj;
 
 			bool _bool;
 			int _int;
@@ -584,26 +672,28 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Dictionary& p_dict);
+	var(const Ref& p_obj);
+	
+	template <typename T>
+	var(const Ptr<T>& p_ptr) {
+		type = OBJECT;
+		_data._obj = Ref(p_ptr);
+	}
 
-	template<typename T> var(const T& p_obj) {
-		// this will cause a compile time error
-		//static_assert(!std::is_enum<T>::value, "Do not use var<T>(const T&) with enums use (int)E_VAL instead");
-		if (std::is_enum<T>::value){
-			type = INT;
-			_data._int = (int)p_obj;
-		} else {
-			type = OBJ_PTR;
-			const void * _ptr = (const void *)&p_obj;
-			_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
+	template<typename T> var(const T& p_enum) {
+		static_assert(std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
+		type = INT;
+		_data._int = (int)p_enum;
+	}
+
+	template<typename T>
+	T as_enum() const {
+		static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
+		if (type != INT) {
+			VAR_ERR("cant cast non integer to enum");
 		}
+		return (T)_data._int;
 	}
-
-	template<typename T> var(const T* p_obj) {
-		type = OBJ_PTR;
-		const void* _ptr = (const void*)p_obj;
-		_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
-	}
-
 
 	/* casting */
 	operator bool() const;
@@ -620,46 +710,38 @@ public:
 	operator Array() const;
 	operator Dictionary() const;
 
-	template<typename T>
-	T* as() const {
-		switch (type) {
-			// TODO: 
-			case ARRAY: return (T*)(&_data._arr);
-			case DICTIONARY: return (T*)(&_data._dict);
-			case OBJ_PTR: return (T*)_data._obj._ptr;
-		}
-		VAR_ERR("invalid casting");
-		return nullptr;
-	}
+	// make Array Dictionary String as object and use cast<T>()
+	//template<typename T>
+	//T* as() const {
+	//	switch (type) {
+	//		// TODO: 
+	//		case ARRAY: return (T*)(&_data._arr);
+	//		case DICTIONARY: return (T*)(&_data._dict);
+	//		case OBJECT: return (T*)_data._obj._ptr;
+	//	}
+	//	VAR_ERR("invalid casting");
+	//	return nullptr;
+	//}
 
-	template<typename T>
-	T as_enum() const {
-		static_assert(std::is_enum<T>::value, "invalid use of as_enum on non enum type");
-		if (type != INT) {
-			VAR_ERR("cant cast non integer to enum");
-		}
-		return (T)_data._int;
-	}
-
-	bool is(const var& p_other) {
-		switch (type) {
-			case _NULL: return false;
-			case BOOL:
-			case INT:
-			case FLOAT:
-			case STRING:
-			case VECT2F:
-			case VECT2I:
-			case VECT3F:
-			case VECT3I:
-				return operator ==(p_other);
-			case ARRAY: return _data._arr._data == p_other._data._arr._data;
-			case DICTIONARY: return _data._dict._data == p_other._data._dict._data;
-			case OBJ_PTR: return _data._obj._ptr == p_other._data._obj._ptr;
-		}
-		VAR_ERR("invalid var type");
-		return false;
-	}
+	//bool is(const var& p_other) {
+	//	switch (type) {
+	//		case _NULL: return false;
+	//		case BOOL:
+	//		case INT:
+	//		case FLOAT:
+	//		case STRING:
+	//		case VECT2F:
+	//		case VECT2I:
+	//		case VECT3F:
+	//		case VECT3I:
+	//			return operator ==(p_other);
+	//		case ARRAY: return _data._arr._data == p_other._data._arr._data;
+	//		case DICTIONARY: return _data._dict._data == p_other._data._dict._data;
+	//		case OBJECT: return *_data._obj == *p_other._data._obj;
+	//	}
+	//	VAR_ERR("invalid var type");
+	//	return false;
+	//}
 
 	/* operator overloading */
 		/* comparison */
@@ -696,6 +778,7 @@ public:
 
 	//	/* assignments */
 	var& operator=(const var& p_other);
+	var& operator=(const Ptr<Object>& p_other);
 	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, -=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, *=, PLACE_HOLDER_MACRO);
@@ -705,29 +788,6 @@ public:
 	~var();
 
 };
-
-
-#define isinstance(p_var, T) _isinstance<T>(p_var)
-template<typename T>
-bool _isinstance(const var& p_other) {
-	switch (p_other.type) {
-		case var::_NULL:
-		case var::BOOL:
-		case var::INT:
-		case var::FLOAT:
-			return false;
-		case var::STRING: return typeid(p_other._data._string) == typeid(T);
-		case var::VECT2F: return typeid(*DATA_PTR_OTHER_CONST(Vect2f)) == typeid(T);
-		case var::VECT2I: return typeid(*DATA_PTR_OTHER_CONST(Vect2i)) == typeid(T);
-		case var::VECT3F: return typeid(*DATA_PTR_OTHER_CONST(Vect3f)) == typeid(T);
-		case var::VECT3I: return typeid(*DATA_PTR_OTHER_CONST(Vect3i)) == typeid(T);
-		case var::ARRAY: return typeid(p_other._data._arr) == typeid(T);
-		case var::DICTIONARY: return typeid(p_other._data._dict) == typeid(T);
-		case var::OBJ_PTR: return p_other._data._obj.hash_code == typeid(T).hash_code();
-	}
-	VAR_ERR("invalid var type");
-	return false;
-}
 
 }
 
@@ -742,8 +802,9 @@ bool _isinstance(const var& p_other) {
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newref_t1
-#undef newref_t2
+#undef newptr
+#undef newptr2
+#undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
 #undef VAR_ERR
 #undef VAR_ASSERT
@@ -795,6 +856,23 @@ void var_set_err_callback(const VarErrCallback p_callback) {
 }
 VarErrCallback var_get_err_callback() {
 	return s_var_err_callback;
+}
+
+// String -----------------------------------------------
+
+String String::format(const char* p_format, ...) {
+	va_list argp;
+
+	va_start(argp, p_format);
+
+	static const unsigned int BUFFER_SIZE = VSNPRINTF_BUFF_SIZE;
+	char buffer[BUFFER_SIZE + 1]; // +1 for the terminating character
+	int len = vsnprintf(buffer, BUFFER_SIZE, p_format, argp);
+
+	va_end(argp);
+	
+	if (len == 0) return String();
+	return String(buffer);
 }
 
 // Array -----------------------------------------------
@@ -898,6 +976,16 @@ Dictionary& Dictionary::operator=(const Dictionary& p_other) {
 	_data = p_other._data;
 	return *this;
 }
+// Ref -----------------------------------------------
+
+String Ref::to_string() const {
+	return (*_data).to_string();
+}
+
+Ref::operator String() const {
+	return (*_data).operator String();
+}
+
 // var -----------------------------------------------
 
 void var::clear() {
@@ -919,9 +1007,11 @@ var var::copy(bool p_deep) const {
 			return *this;
 		case ARRAY: return _data._arr.copy(p_deep);
 		case DICTIONARY: return _data._dict.copy(p_deep);
-		case OBJ_PTR:
-			VAR_ERR("user defined objects are non copyable");
+		case OBJECT:
+
+			break;
 	}
+			// TODO:
 	return *this;
 }
 
@@ -988,6 +1078,11 @@ var::var(const Dictionary& p_dict) {
 	_data._dict = p_dict;
 }
 
+var::var(const Ref& p_obj) {
+	type = OBJECT;
+	_data._obj = p_obj;
+}
+
 var::~var() {
 	clear();
 }
@@ -1024,6 +1119,12 @@ var& var::operator=(const var& p_other) {
 	copy_data(p_other);
 	return *this;
 }
+var& var::operator=(const Ptr<Object>& p_other) {
+	clear_data();
+	type = OBJECT;
+	_data._obj = p_other;
+	return *this;
+}
 
 var& var::operator[](const var& p_key) const {
 	switch (type) {
@@ -1057,7 +1158,7 @@ var::operator bool() const {
 		case VECT3I: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case ARRAY: return !_data._arr.empty();
 		case DICTIONARY: return !_data._dict.empty();
-		case OBJ_PTR: return _data._obj._ptr == nullptr;
+		case OBJECT: return _data._obj.is_null();
 	}
 	VAR_ERR("invalid casting");
 	return false;
@@ -1068,7 +1169,7 @@ var::operator int() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return (int)_data._float;
-		case STRING: return  _data._string.stoi();
+		case STRING: return  _data._string.to_int();
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -1079,7 +1180,7 @@ var::operator double() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return _data._float;
-		case STRING: return  _data._string.stod();
+		case STRING: return  _data._string.to_double();
 		default: VAR_ERR("invalid casting");
 	}
 	return -1;
@@ -1098,10 +1199,10 @@ var::operator String() const {
 		case VECT3I: return (*DATA_PTR_CONST(Vect3i)).operator String();
 		case ARRAY: return _data._arr.operator String();
 		case DICTIONARY: return _data._dict.operator String();
-		case OBJ_PTR: return String("Object(").append(_data._obj.name).append(")");
+		case OBJECT: return _data._obj.operator String();
 	}
 	VAR_ERR("invalid casting");
-	return "TODO";
+	return "";
 }
 
 #define VAR_VECT_CAST(m_dim, m_t)                                                       \
@@ -1179,9 +1280,9 @@ bool var::operator==(const var& p_other) const {
 			}
 			break;
 		}
-		case OBJ_PTR: {
-			if (p_other.type == OBJ_PTR)
-				return _data._obj._ptr == p_other._data._obj._ptr;
+		case OBJECT: {
+			if (p_other.type == OBJECT)
+				return _data._obj == p_other._data._obj;
 			break;
 		}
 	}
@@ -1213,9 +1314,9 @@ bool var::operator<(const var& p_other) const {
 			break;
 		}
 		case DICTIONARY:
-		case OBJ_PTR: {
-			if (p_other.type == OBJ_PTR)
-				return _data._obj._ptr < p_other._data._obj._ptr;
+		case OBJECT: {
+			if (p_other.type == OBJECT)
+				return _data._obj < p_other._data._obj;
 			break;
 		}
 	}
@@ -1244,9 +1345,9 @@ bool var::operator>(const var& p_other) const {
 			break;
 		}
 		case DICTIONARY:
-		case OBJ_PTR: {
-			if (p_other.type == OBJ_PTR)
-				return _data._obj._ptr > p_other._data._obj._ptr;
+		case OBJECT: {
+			if (p_other.type == OBJECT)
+				return _data._obj > p_other._data._obj;
 			break;
 		}
 	}
@@ -1283,14 +1384,14 @@ var var::operator +(const var& p_other) const {
 			break;
 		}
 		case DICTIONARY:
-		case OBJ_PTR:
+		case OBJECT:
 			break;
 	}
 	VAR_ERR("unsupported operator +");
 	return false;
 }
 
-var var::operator -(const var& p_other) const {
+var var::operator-(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
 		case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, -) }
@@ -1303,7 +1404,7 @@ var var::operator -(const var& p_other) const {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, -) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, -) }
 		case ARRAY:
-		case OBJ_PTR:
+		case OBJECT:
 			break;
 	}
 	VAR_ERR("unsupported operator -");
@@ -1324,7 +1425,7 @@ var var::operator *(const var& p_other) const {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, *) }
 		case ARRAY:
 		case DICTIONARY:
-		case OBJ_PTR:
+		case OBJECT:
 			break;
 	}
 	VAR_ERR("unsupported operator *");
@@ -1362,7 +1463,7 @@ var var::operator /(const var& p_other) const {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, /) }
 		case ARRAY:
 		case DICTIONARY:
-		case OBJ_PTR:
+		case OBJECT:
 			break;
 	}
 	VAR_ERR("unsupported operator /");
@@ -1436,7 +1537,7 @@ var& var::operator+=(const var& p_other) {
 			break;
 		}
 		case DICTIONARY:
-		case OBJ_PTR:
+		case OBJECT:
 			break;
 	}
 	VAR_ERR("unsupported operator +=");
@@ -1457,7 +1558,7 @@ var& var::operator-=(const var& p_other) {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, -=) }
 		case ARRAY:
 		case DICTIONARY:
-		case OBJ_PTR:
+		case OBJECT:
 			break;
 	}
 	VAR_ERR("unsupported operator -=");
@@ -1479,7 +1580,7 @@ var& var::operator*=(const var& p_other) {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, *=) }
 		case ARRAY:
 		case DICTIONARY:
-		case OBJ_PTR:
+		case OBJECT:
 			break;
 	}
 	VAR_ERR("unsupported operator *=");
@@ -1517,7 +1618,7 @@ var& var::operator/=(const var& p_other) {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, /=) }
 		case ARRAY:
 		case DICTIONARY:
-		case OBJ_PTR:
+		case OBJECT:
 			break;
 	}
 	VAR_ERR("unsupported operator /=");
@@ -1570,7 +1671,7 @@ void var::copy_data(const var& p_other) {
 		case var::DICTIONARY:
 			_data._dict = p_other._data._dict;
 			break;
-		case var::OBJ_PTR:
+		case var::OBJECT:
 			_data._obj = p_other._data._obj;
 			return;
 	}
@@ -1596,8 +1697,8 @@ void var::clear_data() {
 		case var::DICTIONARY:
 			_data._dict._data = nullptr;
 			break;
-		case var::OBJ_PTR:
-			_data._obj._ptr = nullptr; // may cause memory leak
+		case var::OBJECT:
+			_data._obj = nullptr;
 			break;
 	}
 }
@@ -1617,8 +1718,9 @@ void var::clear_data() {
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newref_t1
-#undef newref_t2
+#undef newptr
+#undef newptr2
+#undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
 #undef VAR_ERR
 #undef VAR_ASSERT

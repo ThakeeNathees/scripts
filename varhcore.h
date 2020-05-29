@@ -26,20 +26,22 @@
 #ifndef VARHCORE_H
 #define VARHCORE_H
 
-#include <memory>
+#include <assert.h>
 #include <cstring>
-#include <stdio.h>
 #include <iostream>
+#include <memory>
 #include <ostream>
 #include <sstream>
-#include <typeinfo>
+#include <stdarg.h>
+#include <stdio.h>
 #include <string>
 #include <type_traits>
+#include <typeinfo>
 
 #define _USE_MATH_DEFINES
+#include <map>
 #include <math.h>
 #include <vector>
-#include <map>
 
 #define STRCAT2(m_a, m_b) m_a##m_b
 #define STRCAT3(m_a, m_b, m_c) m_a##m_b##m_c
@@ -50,10 +52,12 @@
 
 #define PLACE_HOLDER_MACRO
 
-#define newref_t1(T1, ...) std::make_shared<T1>(__VA_ARGS__);
-#define newref_t2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__);
+#define newptr(T1, ...) std::make_shared<T1>(__VA_ARGS__)
+#define newptr2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__)
 template<typename T>
-using Ref = std::shared_ptr<T>;
+using Ptr = std::shared_ptr<T>;
+
+#define VSNPRINTF_BUFF_SIZE 8192
 
 #if defined(DOUBLE_AS_REAL)
 typedef double real_t;

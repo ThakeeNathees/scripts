@@ -30,6 +30,8 @@
 #include "_array.h"
 #include "_vector.h"
 #include "_dictionary.h"
+#include "_object.h"
+#include "_reference.h"
 
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
 #define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
@@ -63,7 +65,8 @@ public:
 		// misc types
 		ARRAY,
 		DICTIONARY,
-		OBJ_PTR,
+		OBJECT,
+		//OBJ_PTR,
 
 		TYPE_MAX,
 	};
@@ -72,21 +75,6 @@ private:
 	static var tmp;
 	Type type;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
-	template <typename T>
-	friend bool _isinstance(const var& p_other);
-
-	struct _DataObj
-	{
-		size_t hash_code;
-		const char* name;
-		const void* _ptr;
-		_DataObj(const size_t hash_code, const char* name, const void* _ptr)
-			: hash_code(hash_code), name(name), _ptr(_ptr)
-		{}
-		_DataObj()
-			: hash_code(-1), name("???"), _ptr(nullptr)
-		{}
-	};
 
 	struct VarData
 	{
@@ -95,10 +83,10 @@ private:
 
 		Dictionary _dict;
 		Array _arr;
+		Ref _obj;
 
 		union {
 			String _string;
-			_DataObj _obj;
 
 			bool _bool;
 			int _int;
@@ -133,26 +121,28 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Dictionary& p_dict);
+	var(const Ref& p_obj);
+	
+	template <typename T>
+	var(const Ptr<T>& p_ptr) {
+		type = OBJECT;
+		_data._obj = Ref(p_ptr);
+	}
 
-	template<typename T> var(const T& p_obj) {
-		// this will cause a compile time error
-		//static_assert(!std::is_enum<T>::value, "Do not use var<T>(const T&) with enums use (int)E_VAL instead");
-		if (std::is_enum<T>::value){
-			type = INT;
-			_data._int = (int)p_obj;
-		} else {
-			type = OBJ_PTR;
-			const void * _ptr = (const void *)&p_obj;
-			_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
+	template<typename T> var(const T& p_enum) {
+		static_assert(std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
+		type = INT;
+		_data._int = (int)p_enum;
+	}
+
+	template<typename T>
+	T as_enum() const {
+		static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
+		if (type != INT) {
+			VAR_ERR("cant cast non integer to enum");
 		}
+		return (T)_data._int;
 	}
-
-	template<typename T> var(const T* p_obj) {
-		type = OBJ_PTR;
-		const void* _ptr = (const void*)p_obj;
-		_data._obj = _DataObj(typeid(T).hash_code(), typeid(T).name(), _ptr);
-	}
-
 
 	/* casting */
 	operator bool() const;
@@ -169,46 +159,38 @@ public:
 	operator Array() const;
 	operator Dictionary() const;
 
-	template<typename T>
-	T* as() const {
-		switch (type) {
-			// TODO: 
-			case ARRAY: return (T*)(&_data._arr);
-			case DICTIONARY: return (T*)(&_data._dict);
-			case OBJ_PTR: return (T*)_data._obj._ptr;
-		}
-		VAR_ERR("invalid casting");
-		return nullptr;
-	}
+	// make Array Dictionary String as object and use cast<T>()
+	//template<typename T>
+	//T* as() const {
+	//	switch (type) {
+	//		// TODO: 
+	//		case ARRAY: return (T*)(&_data._arr);
+	//		case DICTIONARY: return (T*)(&_data._dict);
+	//		case OBJECT: return (T*)_data._obj._ptr;
+	//	}
+	//	VAR_ERR("invalid casting");
+	//	return nullptr;
+	//}
 
-	template<typename T>
-	T as_enum() const {
-		static_assert(std::is_enum<T>::value, "invalid use of as_enum on non enum type");
-		if (type != INT) {
-			VAR_ERR("cant cast non integer to enum");
-		}
-		return (T)_data._int;
-	}
-
-	bool is(const var& p_other) {
-		switch (type) {
-			case _NULL: return false;
-			case BOOL:
-			case INT:
-			case FLOAT:
-			case STRING:
-			case VECT2F:
-			case VECT2I:
-			case VECT3F:
-			case VECT3I:
-				return operator ==(p_other);
-			case ARRAY: return _data._arr._data == p_other._data._arr._data;
-			case DICTIONARY: return _data._dict._data == p_other._data._dict._data;
-			case OBJ_PTR: return _data._obj._ptr == p_other._data._obj._ptr;
-		}
-		VAR_ERR("invalid var type");
-		return false;
-	}
+	//bool is(const var& p_other) {
+	//	switch (type) {
+	//		case _NULL: return false;
+	//		case BOOL:
+	//		case INT:
+	//		case FLOAT:
+	//		case STRING:
+	//		case VECT2F:
+	//		case VECT2I:
+	//		case VECT3F:
+	//		case VECT3I:
+	//			return operator ==(p_other);
+	//		case ARRAY: return _data._arr._data == p_other._data._arr._data;
+	//		case DICTIONARY: return _data._dict._data == p_other._data._dict._data;
+	//		case OBJECT: return *_data._obj == *p_other._data._obj;
+	//	}
+	//	VAR_ERR("invalid var type");
+	//	return false;
+	//}
 
 	/* operator overloading */
 		/* comparison */
@@ -245,6 +227,7 @@ public:
 
 	//	/* assignments */
 	var& operator=(const var& p_other);
+	var& operator=(const Ptr<Object>& p_other);
 	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, -=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, *=, PLACE_HOLDER_MACRO);
@@ -254,29 +237,6 @@ public:
 	~var();
 
 };
-
-
-#define isinstance(p_var, T) _isinstance<T>(p_var)
-template<typename T>
-bool _isinstance(const var& p_other) {
-	switch (p_other.type) {
-		case var::_NULL:
-		case var::BOOL:
-		case var::INT:
-		case var::FLOAT:
-			return false;
-		case var::STRING: return typeid(p_other._data._string) == typeid(T);
-		case var::VECT2F: return typeid(*DATA_PTR_OTHER_CONST(Vect2f)) == typeid(T);
-		case var::VECT2I: return typeid(*DATA_PTR_OTHER_CONST(Vect2i)) == typeid(T);
-		case var::VECT3F: return typeid(*DATA_PTR_OTHER_CONST(Vect3f)) == typeid(T);
-		case var::VECT3I: return typeid(*DATA_PTR_OTHER_CONST(Vect3i)) == typeid(T);
-		case var::ARRAY: return typeid(p_other._data._arr) == typeid(T);
-		case var::DICTIONARY: return typeid(p_other._data._dict) == typeid(T);
-		case var::OBJ_PTR: return p_other._data._obj.hash_code == typeid(T).hash_code();
-	}
-	VAR_ERR("invalid var type");
-	return false;
-}
 
 }
 
@@ -291,8 +251,9 @@ bool _isinstance(const var& p_other) {
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newref_t1
-#undef newref_t2
+#undef newptr
+#undef newptr2
+#undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
 #undef VAR_ERR
 #undef VAR_ASSERT
