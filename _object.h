@@ -23,59 +23,54 @@
 // SOFTWARE.
 //------------------------------------------------------------------------------
 
-#ifndef STRING_H
-#define STRING_H
+#ifndef OBJECT_H
+#define OBJECT_H
 
 #include "varhcore.h"
 
 namespace varh {
 
 class var;
+class String;
+class Array;
+class Dictionary;
 
-class String //: public std::string
+class Object
 {
 private:
 	friend class var;
-	std::string _data;
+
+protected:
 
 public:
-	String() {}
-	String(const std::string& p_copy) { _data = p_copy; }
-	String(const char* p_copy) { _data = p_copy; }
-	String(const String& p_copy) { _data = p_copy._data; }
 
-	~String() { }
+	// operators
+	virtual operator String() { return String("[Object:") + std::string("]"); }
+	virtual Object& operator=(const Object& p_copy) = default;
 
-	int to_int() const { return std::stoi(_data); }
-	double to_double() const { return std::stod(_data); }
+	virtual bool operator==(const Object& p_other) { return &p_other == this; }
+	virtual bool operator!=(const Object& p_other) { return !operator == (p_other); }
+	virtual bool operator<=(const Object& p_other) { return this <= &p_other; }
+	virtual bool operator>=(const Object& p_other) { return this >= &p_other; }
+	virtual bool operator<(const Object& p_other) { return this < &p_other; }
+	virtual bool operator>(const Object& p_other) { return this > &p_other; }
 
-	String& operator=(const String& p_other) {
-		_data = p_other._data;
-		return *this;
-	}
-	String& operator+=(const String& p_other) {
-		_data += p_other._data;
-		return *this;
-	}
-	char& operator[](size_t p_index) {
-		// TODO: VAR_ERR
-		return _data[p_index];
-	}
 
-	String operator+(const char* p_cstr) const { return _data + p_cstr; }
-	String operator+(const String& p_other) const { return _data + p_other._data; }
-	bool operator==(const String & p_other) const { return _data == p_other._data; }
-	bool operator<(const String& p_other) const { return _data < p_other._data; }
-	operator std::string() const { return _data; }
+	// methods
+	virtual bool get(const String& p_name, var& r_val) const = 0;
+	virtual bool set(const String& p_name, const var& p_val) = 0;
+	virtual bool has(const String& p_name) const = 0;
+
+	virtual void copy(Object* r_ret, bool p_deep) const = 0;
+
+	template <typename T>
+	T* cast() const { return dynamic_cast<T*>(this); }
 
 
 
-	// wrappers
-	size_t size() const { return _data.size(); }
-	const char* c_str() const { return _data.c_str(); }
-	String& append(const String& p_other) { _data.append(p_other); return *this; }
 };
 
 }
 
-#endif // STRING_H
+
+#endif //OBJECT_H

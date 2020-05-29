@@ -1,5 +1,5 @@
 
-#define TEST_AUTO_GENERATED 0
+//#define TEST_AUTO_GENERATED
 
 #if (TEST_AUTO_GENERATED)
 #define VAR_IMPLEMENTATION
@@ -7,39 +7,28 @@
 #else
 #include "_var.h"
 #endif
+using namespace varh;
+#define print(x) std::cout << (x) << std::endl
 
-#define print(x) std::cout << (x) << std::endl;
+class A{
+	virtual void f(){}
+};
+class B:public A {};
+class C:public A {};
+class CC :public C {};
 
-class Test {};
+class X : public Object {
+	virtual String to_string() const { return "X"; }
+	virtual operator String() const { return to_string(); }
 
-void test_1() {
-	Vect2f v1(2, 3);
-	Vect2f v2(2, 2);
-	std::cout << v1 * v2 << std::endl;
+	virtual bool get(const String& p_name, var& r_val) const { return false; }
+	virtual bool set(const String& p_name, const var& p_val) { return false; }
+	virtual bool has(const String& p_name) const { return false; }
+};
 
-	var x = 1;
-	x = "hey var";
-	x = Test();
-	print(x); // Object : class Test
-	Test* t = x.as<Test>();
-	x = Vect2f();
-	var is_vec = isinstance(x, Vect2f);
-	print(is_vec);
-
-	Array arr;
-	arr.push_back(1);
-	arr.push_back("test");
-	arr.push_back(2.0);
-	var varr = arr;
-	print(varr);
-}
 
 int main()
 {
-	String s = "test";
-	String ss = s;
-	print(ss);
 
-	print(sizeof(var)); // 80 - 40
 	return 0;
 }

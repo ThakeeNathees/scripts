@@ -26,6 +26,7 @@
 #ifndef VARHCORE_H
 #define VARHCORE_H
 
+#include <assert.h>
 #include <memory>
 #include <cstring>
 #include <stdio.h>
