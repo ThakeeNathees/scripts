@@ -68,7 +68,9 @@ public:
 		return _data[p_index];
 	}
 	char& operator[](size_t p_index) {
-		// TODO: VAR_ERR
+		if (p_index >= size()) {
+			throw VarError(VarError::INVALID_INDEX, "");
+		}
 		return _data[p_index];
 	}
 

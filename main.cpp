@@ -21,5 +21,10 @@ public:
 
 int main()
 {
+	try {
+		throw VarError(VarError::ZERO_DIVISION, "can't divide by 0.");
+	} catch (const VarError & err) {
+		print(err.what());
+	}
 	return 0;
 }

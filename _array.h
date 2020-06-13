@@ -67,7 +67,7 @@ public:
 	Array copy(bool p_deep = true) const;
 
 	/* wrappers */
-	// TODO: make all errors to VAR_ERR
+	// TODO: throw all errors with VarError
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
 	void push_back(const var& p_var) { _data->push_back(p_var); }

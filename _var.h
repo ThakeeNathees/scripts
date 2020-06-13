@@ -139,7 +139,7 @@ public:
 	T as_enum() const {
 		static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
 		if (type != INT) {
-			VAR_ERR("cant cast non integer to enum");
+			VarError(VarError::INVALID_CASTING, "");
 		}
 		return (T)_data._int;
 	}
@@ -255,7 +255,6 @@ public:
 #undef newptr2
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
-#undef VAR_ERR
 #undef VAR_ASSERT
 #undef UNDEF_VAR_DEFINES
 
