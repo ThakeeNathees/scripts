@@ -54,6 +54,7 @@
 
 #define newptr(T1, ...) std::make_shared<T1>(__VA_ARGS__)
 #define newptr2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__)
+#define ptr_cast(T, m_ptr)    std::static_pointer_cast<T>(m_ptr)
 template<typename T>
 using Ptr = std::shared_ptr<T>;
 
@@ -65,21 +66,14 @@ typedef double real_t;
 typedef float real_t;
 #endif
 
-namespace varh {
-	typedef void(*VarErrCallback)(const char* p_msg, const char* p_func, const char* p_file, int p_line);
-	void var_set_err_callback(const VarErrCallback p_callback);
-	VarErrCallback var_get_err_callback();
-}
-
-
 #ifdef _MSC_VER
 #define DEBUG_BREAK() __debugbreak()
 #else
 #define DEBUG_BREAK() __builtin_trap()
 #endif
 
-#define VAR_ERR(m_msg) \
-	var_get_err_callback()(m_msg, __FUNCTION__, __FILE__, __LINE__)
+#define DEBUG_PRINT(m_msg, ...) \
+	printf("DEBUG: %s\n\tat: %s(%s:%li)", m_msg, __FUNCTION__, __FILE__, __LINE__)
 
 #if defined(_DEBUG)
 #define VAR_ASSERT(m_cond, m_msg)  \
@@ -88,5 +82,33 @@ namespace varh {
 #else
 #define VAR_ASSERT
 #endif
+
+namespace varh {
+class VarError : public std::exception {
+public:
+	enum Type {
+		OK,
+		NULL_POINTER,
+		INVALID_INDEX,
+		INVALID_CASTING,
+		NOT_IMPLEMENTED,
+		ZERO_DIVISION,
+	};
+
+	const char* what() const noexcept override { return msg.c_str(); }
+	Type get_Type() const { return type; }
+
+	VarError() {}
+	VarError(Type p_type) { type = p_type; }
+	VarError(Type p_type, const std::string& p_msg) {
+		type = p_type;
+		msg = p_msg;
+	}
+
+private:
+	Type type = OK;
+	std::string msg;
+};
+}
 
 #endif // VARHCORE_H

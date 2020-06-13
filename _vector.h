@@ -75,7 +75,7 @@ struct Vect2
 	}
 	Vect2<T> operator/(const Vect2<T>& p_other) const {
 		if (p_other.x == 0 || p_other.y == 0)
-			VAR_ERR("zero division error");
+			throw VarError(VarError::ZERO_DIVISION, "");
 		return Vect2<T>(x / p_other.x, y / p_other.y);
 	}
 
@@ -106,7 +106,7 @@ struct Vect2
 
 	Vect2<T>& operator/=(const Vect2<T>& p_other) {
 		if (p_other.x == 0 || p_other.y == 0)
-			VAR_ERR("zero division error");
+			throw VarError(VarError::ZERO_DIVISION, "");
 		x /= p_other.x; y /= p_other.y;
 		return *this;
 	}
@@ -149,7 +149,7 @@ struct Vect3
 	}
 	Vect3<T> operator/(const Vect3<T>& p_other) const {
 		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
-			VAR_ERR("zero division error");
+			throw VarError(VarError::ZERO_DIVISION, "");
 		return Vect3<T>(x / p_other.x, y / p_other.y, z / p_other.z);
 	}
 
@@ -188,7 +188,7 @@ struct Vect3
 	template<typename T2>
 	Vect3<T>& operator/=(const Vect3<T2>& p_other) {
 		if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
-			VAR_ERR("zero division error");
+			throw VarError(VarError::ZERO_DIVISION, "");
 		x /= (T)p_other.x; y /= (T)p_other.y; z /= (T)p_other.z;
 		return *this;
 	}

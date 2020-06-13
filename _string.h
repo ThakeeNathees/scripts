@@ -31,6 +31,7 @@
 namespace varh {
 
 class var;
+class Object;
 
 class String //: public std::string
 {
@@ -39,51 +40,60 @@ private:
 	std::string _data;
 
 public:
-	String() {}
-	String(const std::string& p_copy) { _data = p_copy; }
-	String(const char* p_copy) { _data = p_copy; }
-	String(const String& p_copy) { _data = p_copy._data; }
-	String(const char& p_char) { _data = p_char; }
-	String(int p_i) { _data = std::to_string(p_i); }
-	String(double p_d) { _data = std::to_string(p_d); }
+	String()                           {}
+	String(const std::string& p_copy)  { _data = p_copy; }
+	String(const char* p_copy)         { _data = p_copy; }
+	String(const String& p_copy)       { _data = p_copy._data; }
+	String(char p_char)                { _data = p_char; }
+	String(int p_i)                    { _data = std::to_string(p_i); }
+	String(double p_d)                 { _data = std::to_string(p_d); }
+	~String()                          {}
 
 	static String format(const char* p_format, ...);
 
-	~String() { }
-
 	int to_int() const { return std::stoi(_data); }
-	double to_double() const { return std::stod(_data); }
+	double to_float() const { return std::stod(_data); }
 
-
-	String& operator=(const String& p_other) {
-		_data = p_other._data;
-		return *this;
-	}
-	String& operator+=(const String& p_other) {
-		_data += p_other._data;
-		return *this;
-	}
 	char operator[](size_t p_index) const {
-		// TODO: VAR_ERR
+		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
 		return _data[p_index];
 	}
 	char& operator[](size_t p_index) {
-		// TODO: VAR_ERR
+		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
 		return _data[p_index];
 	}
 
-	String operator+(const char* p_cstr) const { return _data + p_cstr; }
-	String operator+(const String& p_other) const { return _data + p_other._data; }
-	bool operator==(const String & p_other) const { return _data == p_other._data; }
-	bool operator!=(const String & p_other) const { return _data != p_other._data; }
-	bool operator<(const String& p_other) const { return _data < p_other._data; }
-	operator std::string() const { return _data; }
+	operator std::string() const                   { return _data; }
+	// operator bool() {} don't implement this don't even delete
+	
+	bool operator==(const String & p_other) const  { return _data == p_other._data; }
+	bool operator!=(const String & p_other) const  { return _data != p_other._data; }
+	bool operator<(const String& p_other) const    { return _data < p_other._data; }
 
-	String& operator+=(const char& p_c) { _data += p_c; return *this; }
+	String operator+(char p_c) const               { return _data + p_c; }
+	String operator+(int p_i) const                { return _data + std::to_string(p_i); }
+	String operator+(double p_d) const             { return _data + std::to_string(p_d); }
+	String operator+(const char* p_cstr) const     { return _data + p_cstr; }
+	String operator+(const String& p_other) const  { return _data + p_other._data; }
+	// String operator+(var& p_obj) const          { TODO: }
+
+	String& operator+=(char p_c)                   { _data += p_c;                 return *this; }
+	String& operator+=(int p_i)                    { _data += std::to_string(p_i); return *this; }
+	String& operator+=(double p_d)                 { _data += std::to_string(p_d); return *this; }
+	String& operator+=(const char* p_cstr)         { _data += p_cstr;              return *this; }
+	String& operator+=(const String& p_other)      { _data += p_other._data;       return *this; }
+	// String& operator+(var& p_obj)               { TODO: }
+
+	String& operator=(char p_c)                   { _data = p_c;                 return *this; }
+	String& operator=(int p_i)                    { _data = std::to_string(p_i); return *this; }
+	String& operator=(double p_d)                 { _data = std::to_string(p_d); return *this; }
+	String& operator=(const char* p_cstr)         { _data = p_cstr;              return *this; }
+	String& operator=(const String& p_other)      { _data = p_other._data;       return *this; }
+	// String& operator=(var& p_obj)               { TODO: }
 
 	// wrappers
-	size_t size() const { return _data.size(); }
-	const char* c_str() const { return _data.c_str(); }
+	size_t size() const                   { return _data.size(); }
+	const char* c_str() const             { return _data.c_str(); }
 	String& append(const String& p_other) { _data.append(p_other); return *this; }
 };
 

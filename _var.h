@@ -31,7 +31,6 @@
 #include "_vector.h"
 #include "_dictionary.h"
 #include "_object.h"
-#include "_reference.h"
 
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
 #define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
@@ -83,7 +82,7 @@ private:
 
 		Dictionary _dict;
 		Array _arr;
-		Ref _obj;
+		Ptr<Object> _obj;
 
 		union {
 			String _string;
@@ -121,12 +120,12 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Dictionary& p_dict);
-	var(const Ref& p_obj);
+	var(const Ptr<Object>& p_obj);
 	
 	template <typename T>
 	var(const Ptr<T>& p_ptr) {
 		type = OBJECT;
-		_data._obj = Ref(p_ptr);
+		_data._obj = p_ptr;
 	}
 
 	template<typename T> var(const T& p_enum) {
@@ -139,7 +138,7 @@ public:
 	T as_enum() const {
 		static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
 		if (type != INT) {
-			VAR_ERR("cant cast non integer to enum");
+			VarError(VarError::INVALID_CASTING, "");
 		}
 		return (T)_data._int;
 	}
@@ -253,9 +252,10 @@ public:
 #undef PLACE_HOLDER
 #undef newptr
 #undef newptr2
+#undef ptr_cast
 #undef VSNPRINTF_BUFF_SIZE
+#undef DEBUG_PRINT
 #undef DEBUG_BREAK
-#undef VAR_ERR
 #undef VAR_ASSERT
 #undef UNDEF_VAR_DEFINES
 

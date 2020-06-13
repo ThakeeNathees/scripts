@@ -37,32 +37,25 @@ private:
 
 public:
 
-	// operators
+	// Operators.
 	virtual String to_string() const { return operator String(); }
-	virtual operator String() const { return String("[Object:") + String((int)this) + String("]"); }
+	virtual operator String()  const { return String("[Object:") + String("]"); }
 	virtual Object& operator=(const Object& p_copy) = default;
 
 	virtual bool operator==(const Object& p_other) { return &p_other == this; }
 	virtual bool operator!=(const Object& p_other) { return !operator == (p_other); }
 	virtual bool operator<=(const Object& p_other) { return this <= &p_other; }
 	virtual bool operator>=(const Object& p_other) { return this >= &p_other; }
-	virtual bool operator<(const Object& p_other) { return this < &p_other; }
-	virtual bool operator>(const Object& p_other) { return this > &p_other; }
+	virtual bool operator<(const Object& p_other)  { return this < &p_other; }
+	virtual bool operator>(const Object& p_other)  { return this > &p_other; }
 
 
-	// methods
-	virtual bool get(const String& p_name, var& r_val) const = 0;
-	virtual bool set(const String& p_name, const var& p_val) = 0;
-	virtual bool has(const String& p_name) const = 0;
-
-	virtual void copy(Object* r_ret, bool p_deep) const = 0;
-	String get_class_name() const { return "Object"; }
-
-	template <typename T>
-	T* cast() const { 
-		return dynamic_cast<T*>(this); 
-	}
-
+	// Abstract methods.
+	virtual bool get(const String& p_name, var& r_val)       const = 0;
+	virtual bool set(const String& p_name, const var& p_val)       = 0;
+	virtual bool has(const String& p_name)                   const = 0;
+	virtual Ptr<Object> copy(bool p_deep)                    const = 0;
+	virtual String get_class_name()                          const { return "Object"; }
 };
 
 }
