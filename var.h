@@ -64,6 +64,7 @@
 
 #define newptr(T1, ...) std::make_shared<T1>(__VA_ARGS__)
 #define newptr2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__)
+#define ptr_cast(T, m_ptr)    std::static_pointer_cast<T>(m_ptr)
 template<typename T>
 using Ptr = std::shared_ptr<T>;
 
@@ -97,7 +98,7 @@ class VarError : public std::exception {
 public:
 	enum Type {
 		OK,
-		NULL_PTR,
+		NULL_POINTER,
 		INVALID_INDEX,
 		INVALID_CASTING,
 		NOT_IMPLEMENTED,
@@ -125,6 +126,7 @@ private:
 namespace varh {
 
 class var;
+class Object;
 
 class String //: public std::string
 {
@@ -133,53 +135,60 @@ private:
 	std::string _data;
 
 public:
-	String() {}
-	String(const std::string& p_copy) { _data = p_copy; }
-	String(const char* p_copy) { _data = p_copy; }
-	String(const String& p_copy) { _data = p_copy._data; }
-	String(const char& p_char) { _data = p_char; }
-	String(int p_i) { _data = std::to_string(p_i); }
-	String(double p_d) { _data = std::to_string(p_d); }
+	String()                           {}
+	String(const std::string& p_copy)  { _data = p_copy; }
+	String(const char* p_copy)         { _data = p_copy; }
+	String(const String& p_copy)       { _data = p_copy._data; }
+	String(char p_char)                { _data = p_char; }
+	String(int p_i)                    { _data = std::to_string(p_i); }
+	String(double p_d)                 { _data = std::to_string(p_d); }
+	~String()                          {}
 
 	static String format(const char* p_format, ...);
 
-	~String() { }
-
 	int to_int() const { return std::stoi(_data); }
-	double to_double() const { return std::stod(_data); }
+	double to_float() const { return std::stod(_data); }
 
-
-	String& operator=(const String& p_other) {
-		_data = p_other._data;
-		return *this;
-	}
-	String& operator+=(const String& p_other) {
-		_data += p_other._data;
-		return *this;
-	}
 	char operator[](size_t p_index) const {
-		// TODO: VAR_ERR
+		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
 		return _data[p_index];
 	}
 	char& operator[](size_t p_index) {
-		if (p_index >= size()) {
-			throw VarError(VarError::INVALID_INDEX, "");
-		}
+		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
 		return _data[p_index];
 	}
 
-	String operator+(const char* p_cstr) const { return _data + p_cstr; }
-	String operator+(const String& p_other) const { return _data + p_other._data; }
-	bool operator==(const String & p_other) const { return _data == p_other._data; }
-	bool operator!=(const String & p_other) const { return _data != p_other._data; }
-	bool operator<(const String& p_other) const { return _data < p_other._data; }
-	operator std::string() const { return _data; }
+	operator std::string() const                   { return _data; }
+	// operator bool() {} don't implement this don't even delete
+	
+	bool operator==(const String & p_other) const  { return _data == p_other._data; }
+	bool operator!=(const String & p_other) const  { return _data != p_other._data; }
+	bool operator<(const String& p_other) const    { return _data < p_other._data; }
 
-	String& operator+=(const char& p_c) { _data += p_c; return *this; }
+	String operator+(char p_c) const               { return _data + p_c; }
+	String operator+(int p_i) const                { return _data + std::to_string(p_i); }
+	String operator+(double p_d) const             { return _data + std::to_string(p_d); }
+	String operator+(const char* p_cstr) const     { return _data + p_cstr; }
+	String operator+(const String& p_other) const  { return _data + p_other._data; }
+	// String operator+(var& p_obj) const          { TODO: }
+
+	String& operator+=(char p_c)                   { _data += p_c;                 return *this; }
+	String& operator+=(int p_i)                    { _data += std::to_string(p_i); return *this; }
+	String& operator+=(double p_d)                 { _data += std::to_string(p_d); return *this; }
+	String& operator+=(const char* p_cstr)         { _data += p_cstr;              return *this; }
+	String& operator+=(const String& p_other)      { _data += p_other._data;       return *this; }
+	// String& operator+(var& p_obj)               { TODO: }
+
+	String& operator=(char p_c)                   { _data = p_c;                 return *this; }
+	String& operator=(int p_i)                    { _data = std::to_string(p_i); return *this; }
+	String& operator=(double p_d)                 { _data = std::to_string(p_d); return *this; }
+	String& operator=(const char* p_cstr)         { _data = p_cstr;              return *this; }
+	String& operator=(const String& p_other)      { _data = p_other._data;       return *this; }
+	// String& operator=(var& p_obj)               { TODO: }
 
 	// wrappers
-	size_t size() const { return _data.size(); }
-	const char* c_str() const { return _data.c_str(); }
+	size_t size() const                   { return _data.size(); }
+	const char* c_str() const             { return _data.c_str(); }
 	String& append(const String& p_other) { _data.append(p_other); return *this; }
 };
 
@@ -542,80 +551,31 @@ private:
 
 public:
 
-	// operators
+	// Operators.
 	virtual String to_string() const { return operator String(); }
-	virtual operator String() const { return String("[Object:") + String((int)this) + String("]"); }
+	virtual operator String()  const { return String("[Object:") + String("]"); }
 	virtual Object& operator=(const Object& p_copy) = default;
 
 	virtual bool operator==(const Object& p_other) { return &p_other == this; }
 	virtual bool operator!=(const Object& p_other) { return !operator == (p_other); }
 	virtual bool operator<=(const Object& p_other) { return this <= &p_other; }
 	virtual bool operator>=(const Object& p_other) { return this >= &p_other; }
-	virtual bool operator<(const Object& p_other) { return this < &p_other; }
-	virtual bool operator>(const Object& p_other) { return this > &p_other; }
+	virtual bool operator<(const Object& p_other)  { return this < &p_other; }
+	virtual bool operator>(const Object& p_other)  { return this > &p_other; }
 
 
-	// methods
-	virtual bool get(const String& p_name, var& r_val) const = 0;
-	virtual bool set(const String& p_name, const var& p_val) = 0;
-	virtual bool has(const String& p_name) const = 0;
-
-	virtual void copy(Object* r_ret, bool p_deep) const = 0;
-	String get_class_name() const { return "Object"; }
-
-	template <typename T>
-	T* cast() const { 
-		return dynamic_cast<T*>(this); 
-	}
-
+	// Abstract methods.
+	virtual bool get(const String& p_name, var& r_val)       const = 0;
+	virtual bool set(const String& p_name, const var& p_val)       = 0;
+	virtual bool has(const String& p_name)                   const = 0;
+	virtual Ptr<Object> copy(bool p_deep)                    const = 0;
+	virtual String get_class_name()                          const { return "Object"; }
 };
 
 }
 
 
 #endif //OBJECT_H
-
-#ifndef REFERENCE_H
-#define REFERENCE_H
-
-//include "varhcore.h"
-
-namespace varh {
-
-class Ref
-{
-private:
-	Ptr<Object> _data;
-
-public:
-	Ref(){}
-
-	template <typename T>
-	Ref(const Ptr<T>& p_ptr) { _data = p_ptr; }
-
-
-	bool is_null() const { return _data == nullptr; }
-	Ptr<Object> ptr() const { return _data; }
-	// const Object* raw_ptr() const { return &(*_data); }
-
-	String to_string() const;
-	operator String() const;
-	Ref& operator=(const Ptr<Object>& p_obj) { _data = p_obj; return *this; }
-
-#define REF_CMP_OP(m_op) \
-	bool operator m_op (const Ref& p_other) const { return *_data m_op *p_other._data; }
-	REF_CMP_OP(==);
-	REF_CMP_OP(!=);
-	REF_CMP_OP(<=);
-	REF_CMP_OP(>=);
-	REF_CMP_OP(<);
-	REF_CMP_OP(>);
-
-};
-
-}
-
-#endif // REFERENCE_H
 
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
 #define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
@@ -667,7 +627,7 @@ private:
 
 		Dictionary _dict;
 		Array _arr;
-		Ref _obj;
+		Ptr<Object> _obj;
 
 		union {
 			String _string;
@@ -705,12 +665,12 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Dictionary& p_dict);
-	var(const Ref& p_obj);
+	var(const Ptr<Object>& p_obj);
 	
 	template <typename T>
 	var(const Ptr<T>& p_ptr) {
 		type = OBJECT;
-		_data._obj = Ref(p_ptr);
+		_data._obj = p_ptr;
 	}
 
 	template<typename T> var(const T& p_enum) {
@@ -837,7 +797,9 @@ public:
 #undef PLACE_HOLDER
 #undef newptr
 #undef newptr2
+#undef ptr_cast
 #undef VSNPRINTF_BUFF_SIZE
+#undef DEBUG_PRINT
 #undef DEBUG_BREAK
 #undef VAR_ASSERT
 #undef UNDEF_VAR_DEFINES
@@ -891,6 +853,13 @@ String String::format(const char* p_format, ...) {
 	
 	if (len == 0) return String();
 	return String(buffer);
+}
+
+bool operator==(const char* p_cstr, const String& p_str) {
+	return p_str == String(p_cstr);
+}
+bool operator!=(const char* p_cstr, const String& p_str) {
+	return p_str != String(p_cstr);
 }
 
 // Array -----------------------------------------------
@@ -994,22 +963,6 @@ Dictionary& Dictionary::operator=(const Dictionary& p_other) {
 	_data = p_other._data;
 	return *this;
 }
-// Ref -----------------------------------------------
-
-String Ref::to_string() const {
-	return (*_data).to_string();
-}
-
-Ref::operator String() const {
-	return (*_data).operator String();
-}
-
-bool operator==(const char* p_cstr, const String& p_str) {
-	return p_str == String(p_cstr);
-}
-bool operator!=(const char* p_cstr, const String& p_str) {
-	return p_str != String(p_cstr);
-}
 
 // var -----------------------------------------------
 
@@ -1032,8 +985,7 @@ var var::copy(bool p_deep) const {
 			return *this;
 		case ARRAY: return _data._arr.copy(p_deep);
 		case DICTIONARY: return _data._dict.copy(p_deep);
-		case OBJECT:
-
+		case OBJECT: return _data._obj->copy(p_deep);
 			break;
 	}
 			// TODO:
@@ -1103,7 +1055,7 @@ var::var(const Dictionary& p_dict) {
 	_data._dict = p_dict;
 }
 
-var::var(const Ref& p_obj) {
+var::var(const Ptr<Object>& p_obj) {
 	type = OBJECT;
 	_data._obj = p_obj;
 }
@@ -1183,7 +1135,7 @@ var::operator bool() const {
 		case VECT3I: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case ARRAY: return !_data._arr.empty();
 		case DICTIONARY: return !_data._dict.empty();
-		case OBJECT: return _data._obj.is_null();
+		case OBJECT: return _data._obj.operator bool();
 	}
 	throw VarError(VarError::INVALID_CASTING, "");
 	return false;
@@ -1205,7 +1157,7 @@ var::operator double() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return _data._float;
-		case STRING: return  _data._string.to_double();
+		case STRING: return  _data._string.to_float();
 		default: throw VarError(VarError::INVALID_CASTING, "");
 	}
 	return -1;
@@ -1224,7 +1176,7 @@ var::operator String() const {
 		case VECT3I: return (*DATA_PTR_CONST(Vect3i)).operator String();
 		case ARRAY: return _data._arr.operator String();
 		case DICTIONARY: return _data._dict.operator String();
-		case OBJECT: return _data._obj.operator String();
+		case OBJECT: return _data._obj->operator String();
 	}
 	throw VarError(VarError::INVALID_CASTING, "");
 	return "";
@@ -1745,9 +1697,10 @@ void var::clear_data() {
 #undef PLACE_HOLDER
 #undef newptr
 #undef newptr2
+#undef ptr_cast
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
-#undef VAR_ERR
+#undef DEBUG_PRINT
 #undef VAR_ASSERT
 #undef UNDEF_VAR_DEFINES
 #endif

@@ -65,6 +65,13 @@ String String::format(const char* p_format, ...) {
 	return String(buffer);
 }
 
+bool operator==(const char* p_cstr, const String& p_str) {
+	return p_str == String(p_cstr);
+}
+bool operator!=(const char* p_cstr, const String& p_str) {
+	return p_str != String(p_cstr);
+}
+
 // Array -----------------------------------------------
 Array::operator String() const {
 	std::stringstream ss;
@@ -166,22 +173,6 @@ Dictionary& Dictionary::operator=(const Dictionary& p_other) {
 	_data = p_other._data;
 	return *this;
 }
-// Ref -----------------------------------------------
-
-String Ref::to_string() const {
-	return (*_data).to_string();
-}
-
-Ref::operator String() const {
-	return (*_data).operator String();
-}
-
-bool operator==(const char* p_cstr, const String& p_str) {
-	return p_str == String(p_cstr);
-}
-bool operator!=(const char* p_cstr, const String& p_str) {
-	return p_str != String(p_cstr);
-}
 
 // var -----------------------------------------------
 
@@ -204,8 +195,7 @@ var var::copy(bool p_deep) const {
 			return *this;
 		case ARRAY: return _data._arr.copy(p_deep);
 		case DICTIONARY: return _data._dict.copy(p_deep);
-		case OBJECT:
-
+		case OBJECT: return _data._obj->copy(p_deep);
 			break;
 	}
 			// TODO:
@@ -275,7 +265,7 @@ var::var(const Dictionary& p_dict) {
 	_data._dict = p_dict;
 }
 
-var::var(const Ref& p_obj) {
+var::var(const Ptr<Object>& p_obj) {
 	type = OBJECT;
 	_data._obj = p_obj;
 }
@@ -355,7 +345,7 @@ var::operator bool() const {
 		case VECT3I: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case ARRAY: return !_data._arr.empty();
 		case DICTIONARY: return !_data._dict.empty();
-		case OBJECT: return _data._obj.is_null();
+		case OBJECT: return _data._obj.operator bool();
 	}
 	throw VarError(VarError::INVALID_CASTING, "");
 	return false;
@@ -377,7 +367,7 @@ var::operator double() const {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
 		case FLOAT: return _data._float;
-		case STRING: return  _data._string.to_double();
+		case STRING: return  _data._string.to_float();
 		default: throw VarError(VarError::INVALID_CASTING, "");
 	}
 	return -1;
@@ -396,7 +386,7 @@ var::operator String() const {
 		case VECT3I: return (*DATA_PTR_CONST(Vect3i)).operator String();
 		case ARRAY: return _data._arr.operator String();
 		case DICTIONARY: return _data._dict.operator String();
-		case OBJECT: return _data._obj.operator String();
+		case OBJECT: return _data._obj->operator String();
 	}
 	throw VarError(VarError::INVALID_CASTING, "");
 	return "";
@@ -917,9 +907,10 @@ void var::clear_data() {
 #undef PLACE_HOLDER
 #undef newptr
 #undef newptr2
+#undef ptr_cast
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
-#undef VAR_ERR
+#undef DEBUG_PRINT
 #undef VAR_ASSERT
 #undef UNDEF_VAR_DEFINES
 #endif
