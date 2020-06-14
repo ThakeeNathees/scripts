@@ -265,7 +265,7 @@ var::var(const Dictionary& p_dict) {
 	_data._dict = p_dict;
 }
 
-var::var(const Ptr<Object>& p_obj) {
+var::var(const ptr<Object>& p_obj) {
 	type = OBJECT;
 	_data._obj = p_obj;
 }
@@ -306,7 +306,7 @@ var& var::operator=(const var& p_other) {
 	copy_data(p_other);
 	return *this;
 }
-var& var::operator=(const Ptr<Object>& p_other) {
+var& var::operator=(const ptr<Object>& p_other) {
 	clear_data();
 	type = OBJECT;
 	_data._obj = p_other;
@@ -906,8 +906,6 @@ void var::clear_data() {
 #undef STRINGIFY
 #undef PLACE_HOLDER
 #undef newptr
-#undef newptr2
-#undef ptr_cast
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
 #undef DEBUG_PRINT

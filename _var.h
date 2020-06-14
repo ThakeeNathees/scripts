@@ -65,7 +65,6 @@ public:
 		ARRAY,
 		DICTIONARY,
 		OBJECT,
-		//OBJ_PTR,
 
 		TYPE_MAX,
 	};
@@ -82,7 +81,7 @@ private:
 
 		Dictionary _dict;
 		Array _arr;
-		Ptr<Object> _obj;
+		ptr<Object> _obj;
 
 		union {
 			String _string;
@@ -120,10 +119,10 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Dictionary& p_dict);
-	var(const Ptr<Object>& p_obj);
+	var(const ptr<Object>& p_obj);
 	
 	template <typename T>
-	var(const Ptr<T>& p_ptr) {
+	var(const ptr<T>& p_ptr) {
 		type = OBJECT;
 		_data._obj = p_ptr;
 	}
@@ -226,7 +225,7 @@ public:
 
 	//	/* assignments */
 	var& operator=(const var& p_other);
-	var& operator=(const Ptr<Object>& p_other);
+	var& operator=(const ptr<Object>& p_other);
 	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, -=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, *=, PLACE_HOLDER_MACRO);
@@ -251,8 +250,6 @@ public:
 #undef STRINGIFY
 #undef PLACE_HOLDER
 #undef newptr
-#undef newptr2
-#undef ptr_cast
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_PRINT
 #undef DEBUG_BREAK

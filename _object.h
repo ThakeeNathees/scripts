@@ -54,7 +54,7 @@ public:
 	virtual bool get(const String& p_name, var& r_val)       const = 0;
 	virtual bool set(const String& p_name, const var& p_val)       = 0;
 	virtual bool has(const String& p_name)                   const = 0;
-	virtual Ptr<Object> copy(bool p_deep)                    const = 0;
+	virtual ptr<Object> copy(bool p_deep)                    const = 0;
 	virtual String get_class_name()                          const { return "Object"; }
 };
 

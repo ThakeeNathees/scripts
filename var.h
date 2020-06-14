@@ -59,14 +59,23 @@
 
 #define STR(m_mac) #m_mac
 #define STRINGIFY(m_mac) STR(m_mac)
-
 #define PLACE_HOLDER_MACRO
 
-#define newptr(T1, ...) std::make_shared<T1>(__VA_ARGS__)
-#define newptr2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__)
-#define ptr_cast(T, m_ptr)    std::static_pointer_cast<T>(m_ptr)
 template<typename T>
-using Ptr = std::shared_ptr<T>;
+using ptr = std::shared_ptr<T>;
+
+template<typename T>
+using stdvec = std::vector<T>;
+
+template<typename T, typename... Targs>
+inline ptr<T> newptr(Targs... p_args) {
+	return std::make_shared<T>(p_args...);
+}
+
+template<typename T1, typename T2>
+inline ptr<T1> ptrcast(T2 p_ptr) {
+	return std::static_pointer_cast<T1>(p_ptr);
+}
 
 #define VSNPRINTF_BUFF_SIZE 8192
 
@@ -212,14 +221,14 @@ class Array
 {
 private:
 	friend class var;
-	Ptr<std::vector<var>> _data;
+	ptr<std::vector<var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
 public:
 	/* constructors */
 	Array() {
-		_data = newptr(std::vector<var>);
+		_data = newptr<stdvec<var>>();
 	}
-	Array(const Ptr<std::vector<var>>& p_data) {
+	Array(const ptr<std::vector<var>>& p_data) {
 		_data = p_data;
 	}
 	Array(const Array& p_copy) {
@@ -490,14 +499,14 @@ class Dictionary
 {
 private:
 	friend class var;
-	Ptr<std::map<var, var>> _data;
+	ptr<std::map<var, var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
 public:
 	/* constructors */
 	Dictionary() {
-		_data = newptr2(std::map<var, var>);
+		_data = std::make_shared<std::map<var, var>>();
 	}
-	Dictionary(const Ptr<std::map<var, var>>& p_data) {
+	Dictionary(const ptr<std::map<var, var>>& p_data) {
 		_data = p_data;
 	}
 	Dictionary(const Dictionary& p_copy) {
@@ -568,7 +577,7 @@ public:
 	virtual bool get(const String& p_name, var& r_val)       const = 0;
 	virtual bool set(const String& p_name, const var& p_val)       = 0;
 	virtual bool has(const String& p_name)                   const = 0;
-	virtual Ptr<Object> copy(bool p_deep)                    const = 0;
+	virtual ptr<Object> copy(bool p_deep)                    const = 0;
 	virtual String get_class_name()                          const { return "Object"; }
 };
 
@@ -610,7 +619,6 @@ public:
 		ARRAY,
 		DICTIONARY,
 		OBJECT,
-		//OBJ_PTR,
 
 		TYPE_MAX,
 	};
@@ -627,7 +635,7 @@ private:
 
 		Dictionary _dict;
 		Array _arr;
-		Ptr<Object> _obj;
+		ptr<Object> _obj;
 
 		union {
 			String _string;
@@ -665,10 +673,10 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Dictionary& p_dict);
-	var(const Ptr<Object>& p_obj);
+	var(const ptr<Object>& p_obj);
 	
 	template <typename T>
-	var(const Ptr<T>& p_ptr) {
+	var(const ptr<T>& p_ptr) {
 		type = OBJECT;
 		_data._obj = p_ptr;
 	}
@@ -771,7 +779,7 @@ public:
 
 	//	/* assignments */
 	var& operator=(const var& p_other);
-	var& operator=(const Ptr<Object>& p_other);
+	var& operator=(const ptr<Object>& p_other);
 	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, -=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, *=, PLACE_HOLDER_MACRO);
@@ -796,8 +804,6 @@ public:
 #undef STRINGIFY
 #undef PLACE_HOLDER
 #undef newptr
-#undef newptr2
-#undef ptr_cast
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_PRINT
 #undef DEBUG_BREAK
@@ -1055,7 +1061,7 @@ var::var(const Dictionary& p_dict) {
 	_data._dict = p_dict;
 }
 
-var::var(const Ptr<Object>& p_obj) {
+var::var(const ptr<Object>& p_obj) {
 	type = OBJECT;
 	_data._obj = p_obj;
 }
@@ -1096,7 +1102,7 @@ var& var::operator=(const var& p_other) {
 	copy_data(p_other);
 	return *this;
 }
-var& var::operator=(const Ptr<Object>& p_other) {
+var& var::operator=(const ptr<Object>& p_other) {
 	clear_data();
 	type = OBJECT;
 	_data._obj = p_other;
@@ -1696,8 +1702,6 @@ void var::clear_data() {
 #undef STRINGIFY
 #undef PLACE_HOLDER
 #undef newptr
-#undef newptr2
-#undef ptr_cast
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
 #undef DEBUG_PRINT

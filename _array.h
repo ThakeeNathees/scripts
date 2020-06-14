@@ -34,14 +34,14 @@ class Array
 {
 private:
 	friend class var;
-	Ptr<std::vector<var>> _data;
+	ptr<std::vector<var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
 public:
 	/* constructors */
 	Array() {
-		_data = newptr(std::vector<var>);
+		_data = newptr<stdvec<var>>();
 	}
-	Array(const Ptr<std::vector<var>>& p_data) {
+	Array(const ptr<std::vector<var>>& p_data) {
 		_data = p_data;
 	}
 	Array(const Array& p_copy) {
