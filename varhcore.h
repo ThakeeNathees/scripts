@@ -49,14 +49,23 @@
 
 #define STR(m_mac) #m_mac
 #define STRINGIFY(m_mac) STR(m_mac)
-
 #define PLACE_HOLDER_MACRO
 
-#define newptr(T1, ...) std::make_shared<T1>(__VA_ARGS__)
-#define newptr2(T1, T2, ...) std::make_shared<T1, T2>(__VA_ARGS__)
-#define ptr_cast(T, m_ptr)    std::static_pointer_cast<T>(m_ptr)
 template<typename T>
-using Ptr = std::shared_ptr<T>;
+using ptr = std::shared_ptr<T>;
+
+template<typename T>
+using stdvec = std::vector<T>;
+
+template<typename T, typename... Targs>
+inline ptr<T> newptr(Targs... p_args) {
+	return std::make_shared<T>(p_args...);
+}
+
+template<typename T1, typename T2>
+inline ptr<T1> ptrcast(T2 p_ptr) {
+	return std::static_pointer_cast<T1>(p_ptr);
+}
 
 #define VSNPRINTF_BUFF_SIZE 8192
 

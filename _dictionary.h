@@ -34,14 +34,14 @@ class Dictionary
 {
 private:
 	friend class var;
-	Ptr<std::map<var, var>> _data;
+	ptr<std::map<var, var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
 public:
 	/* constructors */
 	Dictionary() {
-		_data = newptr2(std::map<var, var>);
+		_data = std::make_shared<std::map<var, var>>();
 	}
-	Dictionary(const Ptr<std::map<var, var>>& p_data) {
+	Dictionary(const ptr<std::map<var, var>>& p_data) {
 		_data = p_data;
 	}
 	Dictionary(const Dictionary& p_copy) {
