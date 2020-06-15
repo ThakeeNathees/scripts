@@ -82,7 +82,6 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Map& p_map);
-	var(const ptr<Object>& p_obj);
 	~var();
 	
 	template <typename T=Object>
@@ -192,7 +191,13 @@ public:
 
 	//	/* assignments */
 	var& operator=(const var& p_other);
-	var& operator=(const ptr<Object>& p_other);
+	template<typename T=Object>
+	var& operator=(const ptr<T>& p_other) {
+		clear_data();
+		type = OBJECT;
+		_data._obj = ptrcast<Object>(p_other);
+		return *this;
+	}
 	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, -=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, *=, PLACE_HOLDER_MACRO);

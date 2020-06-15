@@ -42,15 +42,11 @@ public:
 	Array(const Array& p_copy) {
 		_data = p_copy._data;
 	}
-
-	// TODO: try implementing with packed variadic template 
-	//template<typename... T> Array(const T&... p_vars) {
-	//	_data = newptr(std::vector<var>);
-	//	var arr[] = { (p_vars)... };
-	//	for (size_t i = 0; i < sizeof(arr); i++) {
-	//		push_back(arr[i]);
-	//	}
-	//}
+	template <typename... Targs>
+	Array(Targs... p_args) {
+		_data = newptr<stdvec<var>>();
+		_make_va_arg_array(p_args...);
+	}
 
 	std::vector<var>* get_data() {
 		return _data.operator->();
@@ -66,8 +62,8 @@ public:
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
 	void push_back(const var& p_var) { _data->push_back(p_var); }
-	void append(const var& p_var) { push_back(p_var); }
 	void pop_back() { _data->pop_back(); }
+	Array& append(const var& p_var) { push_back(p_var); return *this; }
 	var& pop() { var& ret = this->operator[](size() - 1); pop_back(); return ret; } 
 	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
 	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
@@ -91,6 +87,14 @@ private:
 	friend class var;
 	ptr<std::vector<var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
+
+	// va_args constructor internal
+	template <typename... Targs>
+	constexpr void _make_va_arg_array(var p_val, Targs... p_args) {
+		push_back(p_val);
+		_make_va_arg_array(p_args...);
+	}
+	void _make_va_arg_array() { return; }
 };
 
 }

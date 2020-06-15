@@ -19,12 +19,17 @@ public:
 	virtual void copy(Object* r_ret, bool p_deep) const {}
 };
 
-int main()
-{
-	try {
-		throw VarError(VarError::ZERO_DIVISION, "can't divide by 0.");
-	} catch (const VarError & err) {
-		print(err.what());
+class MyClass : public Object {
+public:
+	virtual operator String() const override {
+		return "MyClass";
 	}
+	~MyClass() {
+		print("~MyClass");
+	}
+
+};
+
+int main() {
 	return 0;
 }
