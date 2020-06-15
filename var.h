@@ -137,13 +137,10 @@ namespace varh {
 class var;
 class Object;
 
-class String //: public std::string
-{
-private:
-	friend class var;
-	std::string _data;
-
+class String {
 public:
+
+	// Constructors.
 	String()                           {}
 	String(const std::string& p_copy)  { _data = p_copy; }
 	String(const char* p_copy)         { _data = p_copy; }
@@ -153,11 +150,12 @@ public:
 	String(double p_d)                 { _data = std::to_string(p_d); }
 	~String()                          {}
 
+	// Methods.
 	static String format(const char* p_format, ...);
-
 	int to_int() const { return std::stoi(_data); }
 	double to_float() const { return std::stod(_data); }
 
+	// operators.
 	char operator[](size_t p_index) const {
 		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
 		return _data[p_index];
@@ -195,13 +193,17 @@ public:
 	String& operator=(const String& p_other)      { _data = p_other._data;       return *this; }
 	// String& operator=(var& p_obj)               { TODO: }
 
-	// wrappers
+	// Wrappers.
 	size_t size() const                   { return _data.size(); }
 	const char* c_str() const             { return _data.c_str(); }
 	String& append(const String& p_other) { _data.append(p_other); return *this; }
+
+private:
+	friend class var;
+	std::string _data;
 };
 
-// global operations // TODO: implement more
+// Global operators. TODO: implement more
 bool operator==(const char* p_cstr, const String& p_str);
 bool operator!=(const char* p_cstr, const String& p_str);
 
@@ -217,14 +219,9 @@ bool operator!=(const char* p_cstr, const String& p_str);
 
 namespace varh {
 
-class Array
-{
-private:
-	friend class var;
-	ptr<std::vector<var>> _data;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
+class Array {
 public:
-	/* constructors */
+	// Methods.
 	Array() {
 		_data = newptr<stdvec<var>>();
 	}
@@ -253,7 +250,7 @@ public:
 
 	Array copy(bool p_deep = true) const;
 
-	/* wrappers */
+	// Wrappers.
 	// TODO: throw all errors with VarError
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
@@ -271,13 +268,18 @@ public:
 	var& front() { return (*_data).front(); }
 	// TODO: 
 
-	/* cast operators */
+	// Operators.
 	operator bool() const { return empty(); }
 	operator String() const;
 	bool operator ==(const Array& p_other) const;
 	Array& operator=(const Array& p_other);
 	Array operator+(const Array& p_other) const;
 	Array& operator+=(const Array& p_other);
+
+private:
+	friend class var;
+	ptr<std::vector<var>> _data;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
 };
 
 }
@@ -301,17 +303,17 @@ bool operator m_op (const Vect3<T>& p_other) const {   \
 namespace varh {
 
 template<typename T>
-struct Vect2
-{
+struct Vect2 {
 	union { T x, width; };
 	union { T y, height; };
 
-	/* constructors */
+	// Constructors
 	Vect2(T p_x = 0, T p_y = 0) : x(p_x), y(p_y) {}
 	Vect2(const T* p_arr) : x(p_arr[0]), y(p_arr[1]) {}
 	template<typename T2>
 	Vect2(const Vect2<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
 
+	// Methods.
 	real_t get_length() const {
 		return (real_t)sqrtf((real_t)(x * x + y * y));
 	}
@@ -320,7 +322,7 @@ struct Vect2
 		return atanf(y / x);
 	}
 
-	/* math operators */
+	// Operators.
 	Vect2<T> operator+(const Vect2<T>& p_other) const {
 		return Vect2<T>(x + p_other.x, y + p_other.y);
 	}
@@ -372,7 +374,6 @@ struct Vect2
 		return *this;
 	}
 
-	/* cast operators */
 	operator bool() const { return x == 0 && y == 0; }
 	operator String() const { // FIXME
 		return String("Vect2(")
@@ -383,22 +384,23 @@ struct Vect2
 
 
 template<typename T>
-struct Vect3
-{
+struct Vect3 {
 	union { T x, width; };
 	union { T y, height; };
 	union { T z, depth; };
 
-	/* constructors */
+	// Constructors.
 	Vect3(T p_x = 0, T p_y = 0, T p_z = 0) : x(p_x), y(p_y), z(p_z) {}
 	Vect3(const T* p_arr) : x(p_arr[0]), y(p_arr[1]), z(p_arr[2]) {}
 	template<typename T2>
 	Vect3(const Vect3<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y), z((T)p_copy.z) {}
 
+	// Methods.
 	real_t get_length() const {
 		return (real_t)sqrtf((real_t)(x * x + y * y + z * z));
 	}
 
+	// Operators.
 	Vect3<T> operator+(const Vect3<T>& p_other) const {
 		return Vect3<T>(x + p_other.x, y + p_other.y, z + p_other.z);
 	}
@@ -454,7 +456,6 @@ struct Vect3
 		return *this;
 	}
 
-	/* cast operators */
 	operator bool() const { return x == 0 && y == 0 && z == 0; }
 	operator String() const { // FIXME
 		return String("Vect3(")
@@ -488,28 +489,26 @@ typedef Vect2f Point;
 
 #endif //VECTOR_H
 
-#ifndef  DICTIONARY_H
-#define  DICTIONARY_H
+#ifndef  MAP_H
+#define  MAP_H
 
 //include "varhcore.h"
 
 namespace varh {
 
-class Dictionary
-{
-private:
-	friend class var;
-	ptr<std::map<var, var>> _data;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
+class var;
+class String;
+
+class Map {
 public:
-	/* constructors */
-	Dictionary() {
+	// Mehtods.
+	Map() {
 		_data = std::make_shared<std::map<var, var>>();
 	}
-	Dictionary(const ptr<std::map<var, var>>& p_data) {
+	Map(const ptr<std::map<var, var>>& p_data) {
 		_data = p_data;
 	}
-	Dictionary(const Dictionary& p_copy) {
+	Map(const Map& p_copy) {
 		_data = p_copy._data;
 	}
 
@@ -520,9 +519,9 @@ public:
 		return _data.operator->();
 	}
 
-	Dictionary copy(bool p_deep = true) const;
+	Map copy(bool p_deep = true) const;
 
-	/* wrappers */
+	// Wrappers.
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
 	var& operator[](const var& p_key) const;
@@ -531,20 +530,24 @@ public:
 	std::map<var, var>::iterator end() const;
 	std::map<var, var>::iterator find(const var& p_key) const;
 	void clear() { _data->clear(); }
-
 	bool has(const var& p_key) const;
 	// TODO:
 
-	/* operators */
+	// Operators.
 	operator bool() const { return empty(); }
 	operator String() const;
-	bool operator ==(const Dictionary& p_other) const;
-	Dictionary& operator=(const Dictionary& p_other);
+	bool operator ==(const Map& p_other) const;
+	Map& operator=(const Map& p_other);
+
+private:
+	friend class var;
+	ptr<std::map<var, var>> _data;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const Map& p_dict);
 };
 
 }
 
-#endif // DICTIONARY_H
+#endif // MAP_H
 
 #ifndef OBJECT_H
 #define OBJECT_H
@@ -553,11 +556,7 @@ public:
 
 namespace varh {
 
-class Object
-{
-private:
-	friend class var;
-
+class Object {
 public:
 
 	// Operators.
@@ -573,12 +572,15 @@ public:
 	virtual bool operator>(const Object& p_other)  { return this > &p_other; }
 
 
-	// Abstract methods.
-	virtual bool get(const String& p_name, var& r_val)       const = 0;
-	virtual bool set(const String& p_name, const var& p_val)       = 0;
-	virtual bool has(const String& p_name)                   const = 0;
-	virtual ptr<Object> copy(bool p_deep)                    const = 0;
+	// Virtual methods.
+	virtual bool get(const String& p_name, var& r_val)       const { return false; }
+	virtual bool set(const String& p_name, const var& p_val)       { return false; }
+	virtual bool has(const String& p_name)                   const { return false; }
+	virtual ptr<Object> copy(bool p_deep)                    const { throw VarError(VarError::NOT_IMPLEMENTED); }
 	virtual String get_class_name()                          const { return "Object"; }
+
+private:
+	friend class var;
 };
 
 }
@@ -598,11 +600,9 @@ public:
 
 namespace varh {
 
-class var
-{
+class var {
 public:
-	enum Type
-	{
+	enum Type {
 		_NULL,
 		BOOL,
 		INT,
@@ -617,46 +617,11 @@ public:
 
 		// misc types
 		ARRAY,
-		DICTIONARY,
+		MAP,
 		OBJECT,
 
 		TYPE_MAX,
 	};
-
-private:
-	static var tmp;
-	Type type;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
-
-	struct VarData
-	{
-		VarData() : _float(.0f) {}
-		~VarData(){}
-
-		Dictionary _dict;
-		Array _arr;
-		ptr<Object> _obj;
-
-		union {
-			String _string;
-
-			bool _bool;
-			int _int;
-			double _float;
-			uint8_t _mem[DATA_MEM_SIZE];
-		};
-	};
-
-	VarData _data;
-	void copy_data(const var& p_other);
-	void clear_data();
-
-public:
-	/* public api */
-	inline Type get_type() const { return type; }
-	String to_string() const { return operator String(); }
-	void clear();
-	var copy(bool p_deep = false) const;
 
 	/* constructors */
 	var();
@@ -672,31 +637,39 @@ public:
 	var(const Vect3f& p_vect3f);
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
-	var(const Dictionary& p_dict);
+	var(const Map& p_map);
 	var(const ptr<Object>& p_obj);
+	~var();
 	
-	template <typename T>
+	template <typename T=Object>
 	var(const ptr<T>& p_ptr) {
 		type = OBJECT;
 		_data._obj = p_ptr;
 	}
 
-	template<typename T> var(const T& p_enum) {
-		static_assert(std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
-		type = INT;
-		_data._int = (int)p_enum;
-	}
+	// Don't use with enums.
+	//template<typename T> var(const T& p_enum) {
+	//	static_assert(std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
+	//	type = INT;
+	//	_data._int = (int)p_enum;
+	//}
+	//
+	//template<typename T>
+	//T as_enum() const {
+	//	static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
+	//	if (type != INT) {
+	//		VarError(VarError::INVALID_CASTING, "");
+	//	}
+	//	return (T)_data._int;
+	//}
 
-	template<typename T>
-	T as_enum() const {
-		static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
-		if (type != INT) {
-			VarError(VarError::INVALID_CASTING, "");
-		}
-		return (T)_data._int;
-	}
+	// Methods.
+	inline Type get_type() const { return type; }
+	String to_string() const { return operator String(); }
+	void clear();
+	var copy(bool p_deep = false) const;
 
-	/* casting */
+	// Operators.
 	operator bool() const;
 	operator int() const;
 	operator float() const { return (float)operator double(); }
@@ -709,7 +682,7 @@ public:
 	operator Vect3f() const;
 	operator Vect3i() const;
 	operator Array() const;
-	operator Dictionary() const;
+	operator Map() const;
 
 	// make Array Dictionary String as object and use cast<T>()
 	//template<typename T>
@@ -744,8 +717,6 @@ public:
 	//	return false;
 	//}
 
-	/* operator overloading */
-		/* comparison */
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
 	m_ret operator m_op (int p_other) m_access { return operator m_op (var(p_other)); }            \
@@ -762,7 +733,6 @@ public:
 	VAR_OP_DECL(bool, <=, const);
 	VAR_OP_DECL(bool, >=, const);
 
-	//	/* unaray */
 	var operator++();
 	var operator++(int);
 	var operator--();
@@ -770,7 +740,6 @@ public:
 	bool operator !() const { return !operator bool(); }
 	var& operator[](const var& p_key) const;
 
-	//	/* binary */
 	VAR_OP_DECL(var, +, const);
 	VAR_OP_DECL(var, -, const);
 	VAR_OP_DECL(var, *, const);
@@ -786,8 +755,34 @@ public:
 	VAR_OP_DECL(var&, /=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, %=, PLACE_HOLDER_MACRO);
 
-	~var();
+private:
+	struct VarData {
+		VarData() : _float(.0f) {}
+		~VarData() {}
 
+		Map _map;
+		Array _arr;
+		ptr<Object> _obj;
+
+		union {
+			String _string;
+
+			bool _bool;
+			int _int;
+			double _float;
+			uint8_t _mem[DATA_MEM_SIZE];
+		};
+	};
+
+	// Methods.
+	void copy_data(const var& p_other);
+	void clear_data();
+
+	// Members.
+	static var tmp;
+	Type type;
+	VarData _data;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
 };
 
 }
@@ -839,8 +834,8 @@ std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr) {
 	p_ostream << p_arr.operator String();
 	return p_ostream;
 }
-std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict) {
-	p_ostream << p_dict.operator String();
+std::ostream& operator<<(std::ostream& p_ostream, const Map& p_map) {
+	p_ostream << p_map.operator String();
 	return p_ostream;
 }
 
@@ -922,8 +917,8 @@ Array& Array::operator=(const Array& p_other) {
 	return *this;
 }
 
-// Dictionary ----------------------------------------
-Dictionary::operator String() const {
+// Map  ----------------------------------------
+Map::operator String() const {
 	std::stringstream ss;
 	ss << "{ ";
 	for (std::map<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
@@ -934,8 +929,8 @@ Dictionary::operator String() const {
 	return ss.str();
 }
 
-Dictionary Dictionary::copy(bool p_deep) const {
-	Dictionary ret;
+Map Map::copy(bool p_deep) const {
+	Map ret;
 	for (std::map<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
 		if (p_deep)
 			ret[it->first] = it->second.copy(true);
@@ -945,15 +940,15 @@ Dictionary Dictionary::copy(bool p_deep) const {
 	return ret;
 }
 
-var& Dictionary::operator[](const var& p_key) const { return (*_data)[p_key]; }
-var& Dictionary::operator[](const var& p_key) { return (*_data)[p_key]; }
-std::map<var, var>::iterator Dictionary::begin() const { return (*_data).begin(); }
-std::map<var, var>::iterator Dictionary::end() const { return (*_data).end(); }
-std::map<var, var>::iterator Dictionary::find(const var& p_key) const { return (*_data).find(p_key); }
+var& Map::operator[](const var& p_key) const { return (*_data)[p_key]; }
+var& Map::operator[](const var& p_key) { return (*_data)[p_key]; }
+std::map<var, var>::iterator Map::begin() const { return (*_data).begin(); }
+std::map<var, var>::iterator Map::end() const { return (*_data).end(); }
+std::map<var, var>::iterator Map::find(const var& p_key) const { return (*_data).find(p_key); }
 
-bool Dictionary::has(const var& p_key) const { return find(p_key) != end(); }
+bool Map::has(const var& p_key) const { return find(p_key) != end(); }
 
-bool Dictionary::operator ==(const Dictionary& p_other) const {
+bool Map::operator ==(const Map& p_other) const {
 	if (size() != p_other.size())
 		return false;
 	for (std::map<var, var>::iterator it_other = p_other.begin(); it_other != p_other.end(); it_other++) {
@@ -965,7 +960,7 @@ bool Dictionary::operator ==(const Dictionary& p_other) const {
 	return true;
 }
 
-Dictionary& Dictionary::operator=(const Dictionary& p_other) {
+Map& Map::operator=(const Map& p_other) {
 	_data = p_other._data;
 	return *this;
 }
@@ -990,7 +985,7 @@ var var::copy(bool p_deep) const {
 		case VECT3I:
 			return *this;
 		case ARRAY: return _data._arr.copy(p_deep);
-		case DICTIONARY: return _data._dict.copy(p_deep);
+		case MAP: return _data._map.copy(p_deep);
 		case OBJECT: return _data._obj->copy(p_deep);
 			break;
 	}
@@ -1056,9 +1051,9 @@ var::var(const Array& p_array) {
 	_data._arr = p_array;
 }
 
-var::var(const Dictionary& p_dict) {
-	type = DICTIONARY;
-	_data._dict = p_dict;
+var::var(const Map& p_map) {
+	type = MAP;
+	_data._map = p_map;
 }
 
 var::var(const ptr<Object>& p_obj) {
@@ -1119,8 +1114,8 @@ var& var::operator[](const var& p_key) const {
 				return _data._arr[_data._arr.size() + index];
 			throw VarError(VarError::INVALID_INDEX, "");
 		}
-		case DICTIONARY:
-			return _data._dict[p_key];
+		case MAP:
+			return _data._map[p_key];
 	}
 	throw VarError(VarError::NOT_IMPLEMENTED, "operator[] not implemented");
 	return var::tmp;
@@ -1140,7 +1135,7 @@ var::operator bool() const {
 		case VECT3F: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case VECT3I: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case ARRAY: return !_data._arr.empty();
-		case DICTIONARY: return !_data._dict.empty();
+		case MAP: return !_data._map.empty();
 		case OBJECT: return _data._obj.operator bool();
 	}
 	throw VarError(VarError::INVALID_CASTING, "");
@@ -1181,7 +1176,7 @@ var::operator String() const {
 		case VECT3F: return (*DATA_PTR_CONST(Vect3f)).operator String();
 		case VECT3I: return (*DATA_PTR_CONST(Vect3i)).operator String();
 		case ARRAY: return _data._arr.operator String();
-		case DICTIONARY: return _data._dict.operator String();
+		case MAP: return _data._map.operator String();
 		case OBJECT: return _data._obj->operator String();
 	}
 	throw VarError(VarError::INVALID_CASTING, "");
@@ -1211,12 +1206,12 @@ var::operator Array() const {
 	return Array();
 }
 
-var::operator Dictionary() const {
+var::operator Map() const {
 	switch (type) {
-		case DICTIONARY: return _data._dict;
+		case MAP: return _data._map;
 		default: throw VarError(VarError::INVALID_CASTING, "");
 	}
-	return Dictionary();
+	return Map();
 }
 
 /* operator overloading */
@@ -1257,9 +1252,9 @@ bool var::operator==(const var& p_other) const {
 			}
 			break;
 		}
-		case DICTIONARY: {
-			if (p_other.type == DICTIONARY) {
-				return _data._dict == p_other.operator Dictionary();
+		case MAP: {
+			if (p_other.type == MAP) {
+				return _data._map == p_other.operator Map();
 			}
 			break;
 		}
@@ -1296,7 +1291,7 @@ bool var::operator<(const var& p_other) const {
 				return *_data._arr.get_data() < *p_other.operator Array().get_data();
 			break;
 		}
-		case DICTIONARY:
+		case MAP:
 		case OBJECT: {
 			if (p_other.type == OBJECT)
 				return _data._obj < p_other._data._obj;
@@ -1327,7 +1322,7 @@ bool var::operator>(const var& p_other) const {
 				return *_data._arr.get_data() > *p_other.operator Array().get_data();
 			break;
 		}
-		case DICTIONARY:
+		case MAP:
 		case OBJECT: {
 			if (p_other.type == OBJECT)
 				return _data._obj > p_other._data._obj;
@@ -1366,7 +1361,7 @@ var var::operator +(const var& p_other) const {
 			}
 			break;
 		}
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -1407,7 +1402,7 @@ var var::operator *(const var& p_other) const {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, *) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, *) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -1445,7 +1440,7 @@ var var::operator /(const var& p_other) const {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, /) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, /) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -1519,7 +1514,7 @@ var& var::operator+=(const var& p_other) {
 			}
 			break;
 		}
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -1540,7 +1535,7 @@ var& var::operator-=(const var& p_other) {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, -=) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, -=) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -1562,7 +1557,7 @@ var& var::operator*=(const var& p_other) {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, *=) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, *=) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -1600,7 +1595,7 @@ var& var::operator/=(const var& p_other) {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, /=) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, /=) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -1651,8 +1646,8 @@ void var::copy_data(const var& p_other) {
 		case var::ARRAY:
 			_data._arr = p_other._data._arr;
 			break;
-		case var::DICTIONARY:
-			_data._dict = p_other._data._dict;
+		case var::MAP:
+			_data._map = p_other._data._map;
 			break;
 		case var::OBJECT:
 			_data._obj = p_other._data._obj;
@@ -1677,8 +1672,8 @@ void var::clear_data() {
 		case var::ARRAY:
 			_data._arr._data = nullptr;
 			break;
-		case var::DICTIONARY:
-			_data._dict._data = nullptr;
+		case var::MAP:
+			_data._map._data = nullptr;
 			break;
 		case var::OBJECT:
 			_data._obj = nullptr;

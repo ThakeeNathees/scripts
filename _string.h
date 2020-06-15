@@ -33,13 +33,10 @@ namespace varh {
 class var;
 class Object;
 
-class String //: public std::string
-{
-private:
-	friend class var;
-	std::string _data;
-
+class String {
 public:
+
+	// Constructors.
 	String()                           {}
 	String(const std::string& p_copy)  { _data = p_copy; }
 	String(const char* p_copy)         { _data = p_copy; }
@@ -49,11 +46,12 @@ public:
 	String(double p_d)                 { _data = std::to_string(p_d); }
 	~String()                          {}
 
+	// Methods.
 	static String format(const char* p_format, ...);
-
 	int to_int() const { return std::stoi(_data); }
 	double to_float() const { return std::stod(_data); }
 
+	// operators.
 	char operator[](size_t p_index) const {
 		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
 		return _data[p_index];
@@ -91,13 +89,17 @@ public:
 	String& operator=(const String& p_other)      { _data = p_other._data;       return *this; }
 	// String& operator=(var& p_obj)               { TODO: }
 
-	// wrappers
+	// Wrappers.
 	size_t size() const                   { return _data.size(); }
 	const char* c_str() const             { return _data.c_str(); }
 	String& append(const String& p_other) { _data.append(p_other); return *this; }
+
+private:
+	friend class var;
+	std::string _data;
 };
 
-// global operations // TODO: implement more
+// Global operators. TODO: implement more
 bool operator==(const char* p_cstr, const String& p_str);
 bool operator!=(const char* p_cstr, const String& p_str);
 

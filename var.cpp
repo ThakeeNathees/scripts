@@ -43,8 +43,8 @@ std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr) {
 	p_ostream << p_arr.operator String();
 	return p_ostream;
 }
-std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict) {
-	p_ostream << p_dict.operator String();
+std::ostream& operator<<(std::ostream& p_ostream, const Map& p_map) {
+	p_ostream << p_map.operator String();
 	return p_ostream;
 }
 
@@ -126,8 +126,8 @@ Array& Array::operator=(const Array& p_other) {
 	return *this;
 }
 
-// Dictionary ----------------------------------------
-Dictionary::operator String() const {
+// Map  ----------------------------------------
+Map::operator String() const {
 	std::stringstream ss;
 	ss << "{ ";
 	for (std::map<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
@@ -138,8 +138,8 @@ Dictionary::operator String() const {
 	return ss.str();
 }
 
-Dictionary Dictionary::copy(bool p_deep) const {
-	Dictionary ret;
+Map Map::copy(bool p_deep) const {
+	Map ret;
 	for (std::map<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
 		if (p_deep)
 			ret[it->first] = it->second.copy(true);
@@ -149,15 +149,15 @@ Dictionary Dictionary::copy(bool p_deep) const {
 	return ret;
 }
 
-var& Dictionary::operator[](const var& p_key) const { return (*_data)[p_key]; }
-var& Dictionary::operator[](const var& p_key) { return (*_data)[p_key]; }
-std::map<var, var>::iterator Dictionary::begin() const { return (*_data).begin(); }
-std::map<var, var>::iterator Dictionary::end() const { return (*_data).end(); }
-std::map<var, var>::iterator Dictionary::find(const var& p_key) const { return (*_data).find(p_key); }
+var& Map::operator[](const var& p_key) const { return (*_data)[p_key]; }
+var& Map::operator[](const var& p_key) { return (*_data)[p_key]; }
+std::map<var, var>::iterator Map::begin() const { return (*_data).begin(); }
+std::map<var, var>::iterator Map::end() const { return (*_data).end(); }
+std::map<var, var>::iterator Map::find(const var& p_key) const { return (*_data).find(p_key); }
 
-bool Dictionary::has(const var& p_key) const { return find(p_key) != end(); }
+bool Map::has(const var& p_key) const { return find(p_key) != end(); }
 
-bool Dictionary::operator ==(const Dictionary& p_other) const {
+bool Map::operator ==(const Map& p_other) const {
 	if (size() != p_other.size())
 		return false;
 	for (std::map<var, var>::iterator it_other = p_other.begin(); it_other != p_other.end(); it_other++) {
@@ -169,7 +169,7 @@ bool Dictionary::operator ==(const Dictionary& p_other) const {
 	return true;
 }
 
-Dictionary& Dictionary::operator=(const Dictionary& p_other) {
+Map& Map::operator=(const Map& p_other) {
 	_data = p_other._data;
 	return *this;
 }
@@ -194,7 +194,7 @@ var var::copy(bool p_deep) const {
 		case VECT3I:
 			return *this;
 		case ARRAY: return _data._arr.copy(p_deep);
-		case DICTIONARY: return _data._dict.copy(p_deep);
+		case MAP: return _data._map.copy(p_deep);
 		case OBJECT: return _data._obj->copy(p_deep);
 			break;
 	}
@@ -260,9 +260,9 @@ var::var(const Array& p_array) {
 	_data._arr = p_array;
 }
 
-var::var(const Dictionary& p_dict) {
-	type = DICTIONARY;
-	_data._dict = p_dict;
+var::var(const Map& p_map) {
+	type = MAP;
+	_data._map = p_map;
 }
 
 var::var(const ptr<Object>& p_obj) {
@@ -323,8 +323,8 @@ var& var::operator[](const var& p_key) const {
 				return _data._arr[_data._arr.size() + index];
 			throw VarError(VarError::INVALID_INDEX, "");
 		}
-		case DICTIONARY:
-			return _data._dict[p_key];
+		case MAP:
+			return _data._map[p_key];
 	}
 	throw VarError(VarError::NOT_IMPLEMENTED, "operator[] not implemented");
 	return var::tmp;
@@ -344,7 +344,7 @@ var::operator bool() const {
 		case VECT3F: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case VECT3I: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case ARRAY: return !_data._arr.empty();
-		case DICTIONARY: return !_data._dict.empty();
+		case MAP: return !_data._map.empty();
 		case OBJECT: return _data._obj.operator bool();
 	}
 	throw VarError(VarError::INVALID_CASTING, "");
@@ -385,7 +385,7 @@ var::operator String() const {
 		case VECT3F: return (*DATA_PTR_CONST(Vect3f)).operator String();
 		case VECT3I: return (*DATA_PTR_CONST(Vect3i)).operator String();
 		case ARRAY: return _data._arr.operator String();
-		case DICTIONARY: return _data._dict.operator String();
+		case MAP: return _data._map.operator String();
 		case OBJECT: return _data._obj->operator String();
 	}
 	throw VarError(VarError::INVALID_CASTING, "");
@@ -415,12 +415,12 @@ var::operator Array() const {
 	return Array();
 }
 
-var::operator Dictionary() const {
+var::operator Map() const {
 	switch (type) {
-		case DICTIONARY: return _data._dict;
+		case MAP: return _data._map;
 		default: throw VarError(VarError::INVALID_CASTING, "");
 	}
-	return Dictionary();
+	return Map();
 }
 
 /* operator overloading */
@@ -461,9 +461,9 @@ bool var::operator==(const var& p_other) const {
 			}
 			break;
 		}
-		case DICTIONARY: {
-			if (p_other.type == DICTIONARY) {
-				return _data._dict == p_other.operator Dictionary();
+		case MAP: {
+			if (p_other.type == MAP) {
+				return _data._map == p_other.operator Map();
 			}
 			break;
 		}
@@ -500,7 +500,7 @@ bool var::operator<(const var& p_other) const {
 				return *_data._arr.get_data() < *p_other.operator Array().get_data();
 			break;
 		}
-		case DICTIONARY:
+		case MAP:
 		case OBJECT: {
 			if (p_other.type == OBJECT)
 				return _data._obj < p_other._data._obj;
@@ -531,7 +531,7 @@ bool var::operator>(const var& p_other) const {
 				return *_data._arr.get_data() > *p_other.operator Array().get_data();
 			break;
 		}
-		case DICTIONARY:
+		case MAP:
 		case OBJECT: {
 			if (p_other.type == OBJECT)
 				return _data._obj > p_other._data._obj;
@@ -570,7 +570,7 @@ var var::operator +(const var& p_other) const {
 			}
 			break;
 		}
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -611,7 +611,7 @@ var var::operator *(const var& p_other) const {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, *) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, *) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -649,7 +649,7 @@ var var::operator /(const var& p_other) const {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, /) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, /) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -723,7 +723,7 @@ var& var::operator+=(const var& p_other) {
 			}
 			break;
 		}
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -744,7 +744,7 @@ var& var::operator-=(const var& p_other) {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, -=) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, -=) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -766,7 +766,7 @@ var& var::operator*=(const var& p_other) {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, *=) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, *=) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -804,7 +804,7 @@ var& var::operator/=(const var& p_other) {
 		case VECT3F: { VAR_SWITCH_VECT(3, f, /=) }
 		case VECT3I: { VAR_SWITCH_VECT(3, i, /=) }
 		case ARRAY:
-		case DICTIONARY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -855,8 +855,8 @@ void var::copy_data(const var& p_other) {
 		case var::ARRAY:
 			_data._arr = p_other._data._arr;
 			break;
-		case var::DICTIONARY:
-			_data._dict = p_other._data._dict;
+		case var::MAP:
+			_data._map = p_other._data._map;
 			break;
 		case var::OBJECT:
 			_data._obj = p_other._data._obj;
@@ -881,8 +881,8 @@ void var::clear_data() {
 		case var::ARRAY:
 			_data._arr._data = nullptr;
 			break;
-		case var::DICTIONARY:
-			_data._dict._data = nullptr;
+		case var::MAP:
+			_data._map._data = nullptr;
 			break;
 		case var::OBJECT:
 			_data._obj = nullptr;

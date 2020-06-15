@@ -23,28 +23,26 @@
 // SOFTWARE.
 //------------------------------------------------------------------------------
 
-#ifndef  DICTIONARY_H
-#define  DICTIONARY_H
+#ifndef  MAP_H
+#define  MAP_H
 
 #include "varhcore.h"
 
 namespace varh {
 
-class Dictionary
-{
-private:
-	friend class var;
-	ptr<std::map<var, var>> _data;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const Dictionary& p_dict);
+class var;
+class String;
+
+class Map {
 public:
-	/* constructors */
-	Dictionary() {
+	// Mehtods.
+	Map() {
 		_data = std::make_shared<std::map<var, var>>();
 	}
-	Dictionary(const ptr<std::map<var, var>>& p_data) {
+	Map(const ptr<std::map<var, var>>& p_data) {
 		_data = p_data;
 	}
-	Dictionary(const Dictionary& p_copy) {
+	Map(const Map& p_copy) {
 		_data = p_copy._data;
 	}
 
@@ -55,9 +53,9 @@ public:
 		return _data.operator->();
 	}
 
-	Dictionary copy(bool p_deep = true) const;
+	Map copy(bool p_deep = true) const;
 
-	/* wrappers */
+	// Wrappers.
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
 	var& operator[](const var& p_key) const;
@@ -66,17 +64,21 @@ public:
 	std::map<var, var>::iterator end() const;
 	std::map<var, var>::iterator find(const var& p_key) const;
 	void clear() { _data->clear(); }
-
 	bool has(const var& p_key) const;
 	// TODO:
 
-	/* operators */
+	// Operators.
 	operator bool() const { return empty(); }
 	operator String() const;
-	bool operator ==(const Dictionary& p_other) const;
-	Dictionary& operator=(const Dictionary& p_other);
+	bool operator ==(const Map& p_other) const;
+	Map& operator=(const Map& p_other);
+
+private:
+	friend class var;
+	ptr<std::map<var, var>> _data;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const Map& p_dict);
 };
 
 }
 
-#endif // DICTIONARY_H
+#endif // MAP_H

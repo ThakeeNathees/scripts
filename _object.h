@@ -30,11 +30,7 @@
 
 namespace varh {
 
-class Object
-{
-private:
-	friend class var;
-
+class Object {
 public:
 
 	// Operators.
@@ -50,12 +46,15 @@ public:
 	virtual bool operator>(const Object& p_other)  { return this > &p_other; }
 
 
-	// Abstract methods.
-	virtual bool get(const String& p_name, var& r_val)       const = 0;
-	virtual bool set(const String& p_name, const var& p_val)       = 0;
-	virtual bool has(const String& p_name)                   const = 0;
-	virtual ptr<Object> copy(bool p_deep)                    const = 0;
+	// Virtual methods.
+	virtual bool get(const String& p_name, var& r_val)       const { return false; }
+	virtual bool set(const String& p_name, const var& p_val)       { return false; }
+	virtual bool has(const String& p_name)                   const { return false; }
+	virtual ptr<Object> copy(bool p_deep)                    const { throw VarError(VarError::NOT_IMPLEMENTED); }
 	virtual String get_class_name()                          const { return "Object"; }
+
+private:
+	friend class var;
 };
 
 }

@@ -30,14 +30,9 @@
 
 namespace varh {
 
-class Array
-{
-private:
-	friend class var;
-	ptr<std::vector<var>> _data;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
+class Array {
 public:
-	/* constructors */
+	// Methods.
 	Array() {
 		_data = newptr<stdvec<var>>();
 	}
@@ -66,7 +61,7 @@ public:
 
 	Array copy(bool p_deep = true) const;
 
-	/* wrappers */
+	// Wrappers.
 	// TODO: throw all errors with VarError
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
@@ -84,13 +79,18 @@ public:
 	var& front() { return (*_data).front(); }
 	// TODO: 
 
-	/* cast operators */
+	// Operators.
 	operator bool() const { return empty(); }
 	operator String() const;
 	bool operator ==(const Array& p_other) const;
 	Array& operator=(const Array& p_other);
 	Array operator+(const Array& p_other) const;
 	Array& operator+=(const Array& p_other);
+
+private:
+	friend class var;
+	ptr<std::vector<var>> _data;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
 };
 
 }

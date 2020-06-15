@@ -40,17 +40,17 @@ bool operator m_op (const Vect3<T>& p_other) const {   \
 namespace varh {
 
 template<typename T>
-struct Vect2
-{
+struct Vect2 {
 	union { T x, width; };
 	union { T y, height; };
 
-	/* constructors */
+	// Constructors
 	Vect2(T p_x = 0, T p_y = 0) : x(p_x), y(p_y) {}
 	Vect2(const T* p_arr) : x(p_arr[0]), y(p_arr[1]) {}
 	template<typename T2>
 	Vect2(const Vect2<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
 
+	// Methods.
 	real_t get_length() const {
 		return (real_t)sqrtf((real_t)(x * x + y * y));
 	}
@@ -59,7 +59,7 @@ struct Vect2
 		return atanf(y / x);
 	}
 
-	/* math operators */
+	// Operators.
 	Vect2<T> operator+(const Vect2<T>& p_other) const {
 		return Vect2<T>(x + p_other.x, y + p_other.y);
 	}
@@ -111,7 +111,6 @@ struct Vect2
 		return *this;
 	}
 
-	/* cast operators */
 	operator bool() const { return x == 0 && y == 0; }
 	operator String() const { // FIXME
 		return String("Vect2(")
@@ -122,22 +121,23 @@ struct Vect2
 
 
 template<typename T>
-struct Vect3
-{
+struct Vect3 {
 	union { T x, width; };
 	union { T y, height; };
 	union { T z, depth; };
 
-	/* constructors */
+	// Constructors.
 	Vect3(T p_x = 0, T p_y = 0, T p_z = 0) : x(p_x), y(p_y), z(p_z) {}
 	Vect3(const T* p_arr) : x(p_arr[0]), y(p_arr[1]), z(p_arr[2]) {}
 	template<typename T2>
 	Vect3(const Vect3<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y), z((T)p_copy.z) {}
 
+	// Methods.
 	real_t get_length() const {
 		return (real_t)sqrtf((real_t)(x * x + y * y + z * z));
 	}
 
+	// Operators.
 	Vect3<T> operator+(const Vect3<T>& p_other) const {
 		return Vect3<T>(x + p_other.x, y + p_other.y, z + p_other.z);
 	}
@@ -193,7 +193,6 @@ struct Vect3
 		return *this;
 	}
 
-	/* cast operators */
 	operator bool() const { return x == 0 && y == 0 && z == 0; }
 	operator String() const { // FIXME
 		return String("Vect3(")

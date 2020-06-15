@@ -29,7 +29,7 @@
 #include "_string.h"
 #include "_array.h"
 #include "_vector.h"
-#include "_dictionary.h"
+#include "_map.h"
 #include "_object.h"
 
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
@@ -44,11 +44,9 @@
 
 namespace varh {
 
-class var
-{
+class var {
 public:
-	enum Type
-	{
+	enum Type {
 		_NULL,
 		BOOL,
 		INT,
@@ -63,46 +61,11 @@ public:
 
 		// misc types
 		ARRAY,
-		DICTIONARY,
+		MAP,
 		OBJECT,
 
 		TYPE_MAX,
 	};
-
-private:
-	static var tmp;
-	Type type;
-	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
-
-	struct VarData
-	{
-		VarData() : _float(.0f) {}
-		~VarData(){}
-
-		Dictionary _dict;
-		Array _arr;
-		ptr<Object> _obj;
-
-		union {
-			String _string;
-
-			bool _bool;
-			int _int;
-			double _float;
-			uint8_t _mem[DATA_MEM_SIZE];
-		};
-	};
-
-	VarData _data;
-	void copy_data(const var& p_other);
-	void clear_data();
-
-public:
-	/* public api */
-	inline Type get_type() const { return type; }
-	String to_string() const { return operator String(); }
-	void clear();
-	var copy(bool p_deep = false) const;
 
 	/* constructors */
 	var();
@@ -118,31 +81,39 @@ public:
 	var(const Vect3f& p_vect3f);
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
-	var(const Dictionary& p_dict);
+	var(const Map& p_map);
 	var(const ptr<Object>& p_obj);
+	~var();
 	
-	template <typename T>
+	template <typename T=Object>
 	var(const ptr<T>& p_ptr) {
 		type = OBJECT;
 		_data._obj = p_ptr;
 	}
 
-	template<typename T> var(const T& p_enum) {
-		static_assert(std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
-		type = INT;
-		_data._int = (int)p_enum;
-	}
+	// Don't use with enums.
+	//template<typename T> var(const T& p_enum) {
+	//	static_assert(std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
+	//	type = INT;
+	//	_data._int = (int)p_enum;
+	//}
+	//
+	//template<typename T>
+	//T as_enum() const {
+	//	static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
+	//	if (type != INT) {
+	//		VarError(VarError::INVALID_CASTING, "");
+	//	}
+	//	return (T)_data._int;
+	//}
 
-	template<typename T>
-	T as_enum() const {
-		static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
-		if (type != INT) {
-			VarError(VarError::INVALID_CASTING, "");
-		}
-		return (T)_data._int;
-	}
+	// Methods.
+	inline Type get_type() const { return type; }
+	String to_string() const { return operator String(); }
+	void clear();
+	var copy(bool p_deep = false) const;
 
-	/* casting */
+	// Operators.
 	operator bool() const;
 	operator int() const;
 	operator float() const { return (float)operator double(); }
@@ -155,7 +126,7 @@ public:
 	operator Vect3f() const;
 	operator Vect3i() const;
 	operator Array() const;
-	operator Dictionary() const;
+	operator Map() const;
 
 	// make Array Dictionary String as object and use cast<T>()
 	//template<typename T>
@@ -190,8 +161,6 @@ public:
 	//	return false;
 	//}
 
-	/* operator overloading */
-		/* comparison */
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
 	m_ret operator m_op (int p_other) m_access { return operator m_op (var(p_other)); }            \
@@ -208,7 +177,6 @@ public:
 	VAR_OP_DECL(bool, <=, const);
 	VAR_OP_DECL(bool, >=, const);
 
-	//	/* unaray */
 	var operator++();
 	var operator++(int);
 	var operator--();
@@ -216,7 +184,6 @@ public:
 	bool operator !() const { return !operator bool(); }
 	var& operator[](const var& p_key) const;
 
-	//	/* binary */
 	VAR_OP_DECL(var, +, const);
 	VAR_OP_DECL(var, -, const);
 	VAR_OP_DECL(var, *, const);
@@ -232,8 +199,34 @@ public:
 	VAR_OP_DECL(var&, /=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, %=, PLACE_HOLDER_MACRO);
 
-	~var();
+private:
+	struct VarData {
+		VarData() : _float(.0f) {}
+		~VarData() {}
 
+		Map _map;
+		Array _arr;
+		ptr<Object> _obj;
+
+		union {
+			String _string;
+
+			bool _bool;
+			int _int;
+			double _float;
+			uint8_t _mem[DATA_MEM_SIZE];
+		};
+	};
+
+	// Methods.
+	void copy_data(const var& p_other);
+	void clear_data();
+
+	// Members.
+	static var tmp;
+	Type type;
+	VarData _data;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
 };
 
 }
