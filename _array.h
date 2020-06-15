@@ -89,8 +89,8 @@ private:
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
 
 	// va_args constructor internal
-	template <typename... Targs>
-	constexpr void _make_va_arg_array(var p_val, Targs... p_args) {
+	template <typename T, typename... Targs>
+	constexpr void _make_va_arg_array(T p_val, Targs... p_args) {
 		push_back(p_val);
 		_make_va_arg_array(p_args...);
 	}

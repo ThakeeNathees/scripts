@@ -284,8 +284,8 @@ private:
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
 
 	// va_args constructor internal
-	template <typename... Targs>
-	constexpr void _make_va_arg_array(var p_val, Targs... p_args) {
+	template <typename T, typename... Targs>
+	constexpr void _make_va_arg_array(T p_val, Targs... p_args) {
 		push_back(p_val);
 		_make_va_arg_array(p_args...);
 	}
@@ -651,7 +651,6 @@ public:
 	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Map& p_map);
-	var(const ptr<Object>& p_obj);
 	~var();
 	
 	template <typename T=Object>
@@ -761,7 +760,13 @@ public:
 
 	//	/* assignments */
 	var& operator=(const var& p_other);
-	var& operator=(const ptr<Object>& p_other);
+	template<typename T=Object>
+	var& operator=(const ptr<T>& p_other) {
+		clear_data();
+		type = OBJECT;
+		_data._obj = ptrcast<Object>(p_other);
+		return *this;
+	}
 	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, -=, PLACE_HOLDER_MACRO);
 	VAR_OP_DECL(var&, *=, PLACE_HOLDER_MACRO);
@@ -1074,11 +1079,6 @@ var::var(const Map& p_map) {
 	_data._map = p_map;
 }
 
-var::var(const ptr<Object>& p_obj) {
-	type = OBJECT;
-	_data._obj = p_obj;
-}
-
 var::~var() {
 	clear();
 }
@@ -1113,12 +1113,6 @@ VAR_OP_POST_INCR_DECR(--)
 
 var& var::operator=(const var& p_other) {
 	copy_data(p_other);
-	return *this;
-}
-var& var::operator=(const ptr<Object>& p_other) {
-	clear_data();
-	type = OBJECT;
-	_data._obj = p_other;
 	return *this;
 }
 
