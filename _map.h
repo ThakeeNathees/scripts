@@ -58,8 +58,11 @@ public:
 	// Wrappers.
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
+	void insert(const var& p_key, const var& p_value);
 	var& operator[](const var& p_key) const;
 	var& operator[](const var& p_key);
+	var& operator[](const char* p_key) const;
+	var& operator[](const char* p_key);
 	std::map<var, var>::iterator begin() const;
 	std::map<var, var>::iterator end() const;
 	std::map<var, var>::iterator find(const var& p_key) const;

@@ -67,6 +67,9 @@ using ptr = std::shared_ptr<T>;
 template<typename T>
 using stdvec = std::vector<T>;
 
+template<typename T1, typename T2>
+using stdmap = std::map<T1, T2>;
+
 template<typename T, typename... Targs>
 inline ptr<T> newptr(Targs... p_args) {
 	return std::make_shared<T>(p_args...);
@@ -95,9 +98,11 @@ typedef float real_t;
 	printf("DEBUG: %s\n\tat: %s(%s:%li)", m_msg, __FUNCTION__, __FILE__, __LINE__)
 
 #if defined(_DEBUG)
-#define VAR_ASSERT(m_cond, m_msg)  \
-	if (!(m_cond))                 \
-		VAR_ERR(m_msg)
+#define VAR_ASSERT(m_cond)                                                                                            \
+	if (!(m_cond)) {                                                                                                  \
+		printf("ASSERTION FAILED: %s = false\n\tat: %s(%s:%li)", #m_cond, __FUNCTION__, __FILE__, __LINE__);          \
+		DEBUG_BREAK();                                                                                                \
+	} else (void(0))
 #else
 #define VAR_ASSERT
 #endif
@@ -109,6 +114,7 @@ public:
 		OK,
 		NULL_POINTER,
 		INVALID_INDEX,
+		INVALID_KEY,
 		INVALID_CASTING,
 		NOT_IMPLEMENTED,
 		ZERO_DIVISION,
@@ -231,15 +237,11 @@ public:
 	Array(const Array& p_copy) {
 		_data = p_copy._data;
 	}
-
-	// TODO: try implementing with packed variadic template 
-	//template<typename... T> Array(const T&... p_vars) {
-	//	_data = newptr(std::vector<var>);
-	//	var arr[] = { (p_vars)... };
-	//	for (size_t i = 0; i < sizeof(arr); i++) {
-	//		push_back(arr[i]);
-	//	}
-	//}
+	template <typename... Targs>
+	Array(Targs... p_args) {
+		_data = newptr<stdvec<var>>();
+		_make_va_arg_array(p_args...);
+	}
 
 	std::vector<var>* get_data() {
 		return _data.operator->();
@@ -255,8 +257,8 @@ public:
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
 	void push_back(const var& p_var) { _data->push_back(p_var); }
-	void append(const var& p_var) { push_back(p_var); }
 	void pop_back() { _data->pop_back(); }
+	Array& append(const var& p_var) { push_back(p_var); return *this; }
 	var& pop() { var& ret = this->operator[](size() - 1); pop_back(); return ret; } 
 	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
 	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
@@ -280,6 +282,14 @@ private:
 	friend class var;
 	ptr<std::vector<var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr);
+
+	// va_args constructor internal
+	template <typename... Targs>
+	constexpr void _make_va_arg_array(var p_val, Targs... p_args) {
+		push_back(p_val);
+		_make_va_arg_array(p_args...);
+	}
+	void _make_va_arg_array() { return; }
 };
 
 }
@@ -524,8 +534,11 @@ public:
 	// Wrappers.
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
+	void insert(const var& p_key, const var& p_value);
 	var& operator[](const var& p_key) const;
 	var& operator[](const var& p_key);
+	var& operator[](const char* p_key) const;
+	var& operator[](const char* p_key);
 	std::map<var, var>::iterator begin() const;
 	std::map<var, var>::iterator end() const;
 	std::map<var, var>::iterator find(const var& p_key) const;
@@ -864,6 +877,7 @@ bool operator!=(const char* p_cstr, const String& p_str) {
 }
 
 // Array -----------------------------------------------
+
 Array::operator String() const {
 	std::stringstream ss;
 	ss << "[ ";
@@ -921,17 +935,17 @@ Array& Array::operator=(const Array& p_other) {
 Map::operator String() const {
 	std::stringstream ss;
 	ss << "{ ";
-	for (std::map<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
+	for (stdmap<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
+		if (it != (*_data).begin()) ss << ", ";
 		ss << it->first.operator String() << " : " << it->second.operator String();
-		ss << ", ";
 	}
-	ss << "}";
+	ss << " }";
 	return ss.str();
 }
 
 Map Map::copy(bool p_deep) const {
 	Map ret;
-	for (std::map<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
+	for (stdmap<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
 		if (p_deep)
 			ret[it->first] = it->second.copy(true);
 		else
@@ -940,19 +954,23 @@ Map Map::copy(bool p_deep) const {
 	return ret;
 }
 
-var& Map::operator[](const var& p_key) const { return (*_data)[p_key]; }
-var& Map::operator[](const var& p_key) { return (*_data)[p_key]; }
-std::map<var, var>::iterator Map::begin() const { return (*_data).begin(); }
-std::map<var, var>::iterator Map::end() const { return (*_data).end(); }
-std::map<var, var>::iterator Map::find(const var& p_key) const { return (*_data).find(p_key); }
+var& Map::operator[](const var& p_key) const { return (*_data).operator[](p_key); }
+var& Map::operator[](const var& p_key) { return (*_data).operator[](p_key);}
+var& Map::operator[](const char* p_key) const { return (*_data).operator[](p_key); }
+var& Map::operator[](const char* p_key) { return (*_data).operator[](p_key); }
 
+stdmap<var, var>::iterator Map::begin() const { return (*_data).begin(); }
+stdmap<var, var>::iterator Map::end() const { return (*_data).end(); }
+stdmap<var, var>::iterator Map::find(const var& p_key) const { return (*_data).find(p_key); }
+
+void Map::insert(const var& p_key, const var& p_value) { (*_data).insert(std::pair<var, var>(p_key, p_value)); }
 bool Map::has(const var& p_key) const { return find(p_key) != end(); }
 
 bool Map::operator ==(const Map& p_other) const {
 	if (size() != p_other.size())
 		return false;
-	for (std::map<var, var>::iterator it_other = p_other.begin(); it_other != p_other.end(); it_other++) {
-		std::map<var, var>::iterator it_self = find(it_other->first);
+	for (stdmap<var, var>::iterator it_other = p_other.begin(); it_other != p_other.end(); it_other++) {
+		stdmap<var, var>::iterator it_self = find(it_other->first);
 		if (it_self == end()) return false;
 		if (it_self->second != it_other->second) return false;
 
@@ -1234,18 +1252,18 @@ break;
 bool var::operator==(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, ==) }
-		case INT: { VAR_SWITCH_PRIME_TYPES(_int, ==) }
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, ==) }
+		case BOOL:   { VAR_SWITCH_PRIME_TYPES(_bool, ==)  } break;
+		case INT:    { VAR_SWITCH_PRIME_TYPES(_int, ==)   } break;
+		case FLOAT:  { VAR_SWITCH_PRIME_TYPES(_float, ==) } break;
 		case STRING: {
 			if (p_other.type == STRING)
 				return _data._string == p_other._data._string;
 			break;
 		}
-		case VECT2F: { VAR_SWITCH_VECT(2, f, ==) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, ==) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, ==) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, ==) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, ==) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, ==) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, ==) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, ==) } break;
 		case ARRAY: {
 			if (p_other.type == ARRAY) {
 				return _data._arr == p_other.operator Array();
@@ -1274,63 +1292,64 @@ bool var::operator!=(const var& p_other) const {
 bool var::operator<(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, <) }
-		case INT: { VAR_SWITCH_PRIME_TYPES(_int, <) }
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, <) }
+		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, <)  } break;
+		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, <)   } break;
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, <) } break;
 		case STRING: {
 			if (p_other.type == STRING)
 				return _data._string < p_other._data._string;
 			break;
 		}
-		case VECT2F: { VAR_SWITCH_VECT(2, f, < ) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, < ) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, < ) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, < ) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, < ) }  break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, < ) }  break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, < ) }  break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, < ) }  break;
 		case ARRAY: {
 			if (p_other.type == ARRAY)
 				return *_data._arr.get_data() < *p_other.operator Array().get_data();
 			break;
 		}
-		case MAP:
+		case MAP: {
+			break;
+		}
 		case OBJECT: {
 			if (p_other.type == OBJECT)
 				return _data._obj < p_other._data._obj;
 			break;
 		}
 	}
-	throw VarError(VarError::NOT_IMPLEMENTED, "operator < not implemented");
-	return false;
+	return this < &p_other;
 }
 
 bool var::operator>(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, > ) }
-		case INT: { VAR_SWITCH_PRIME_TYPES(_int, > ) }
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, > ) }
+		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, > )  } break;
+		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, > )   } break;
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, > ) } break;
 		case STRING: {
 			if (p_other.type == STRING)
 				return _data._string < p_other._data._string;
 			break;
 		}
-		case VECT2F: { VAR_SWITCH_VECT(2, f, > ) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, > ) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, > ) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, > ) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, > ) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, > ) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, > ) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, > ) } break;
 		case ARRAY: {
 			if (p_other.type == ARRAY)
 				return *_data._arr.get_data() > *p_other.operator Array().get_data();
 			break;
 		}
 		case MAP:
+			break;
 		case OBJECT: {
 			if (p_other.type == OBJECT)
 				return _data._obj > p_other._data._obj;
 			break;
 		}
 	}
-	throw VarError(VarError::NOT_IMPLEMENTED, "operator > not implemented");
-	return false;
+	return this < &p_other;
 }
 
 bool var::operator<=(const var& p_other) const {
@@ -1343,18 +1362,18 @@ bool var::operator>=(const var& p_other) const {
 var var::operator +(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, + ) }
-		case INT: { VAR_SWITCH_PRIME_TYPES(_int, + ) }
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, + ) }
+		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, + )  } break;
+		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, + )   } break;
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, + ) } break;
 		case STRING: {
 			if (p_other.type == STRING)
 				return _data._string + p_other._data._string;
 			break;
 		}
-		case VECT2F: { VAR_SWITCH_VECT(2, f, + ) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, + ) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, + ) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, + ) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, + ) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, + ) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, + ) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, + ) } break;
 		case ARRAY: {
 			if (p_other.type == ARRAY) {
 				return _data._arr + p_other._data._arr;
@@ -1372,16 +1391,17 @@ var var::operator +(const var& p_other) const {
 var var::operator-(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, -) }
-		case INT: { VAR_SWITCH_PRIME_TYPES(_int, -) }
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, -) }
+		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, -)  } break;
+		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, -)   } break;
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, -) } break;
 		case STRING:
 			break;
-		case VECT2F: { VAR_SWITCH_VECT(2, f, -) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, -) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, -) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, -) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, -) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, -) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, -) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, -) } break;
 		case ARRAY:
+		case MAP:
 		case OBJECT:
 			break;
 	}
@@ -1392,15 +1412,15 @@ var var::operator-(const var& p_other) const {
 var var::operator *(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, *) }
-		case INT: { VAR_SWITCH_PRIME_TYPES(_int, *) }
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, *) }
+		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, *)  } break;
+		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, *)   } break;
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, *) } break;
 		case STRING:
-			break; // TODO: maybe python like
-		case VECT2F: { VAR_SWITCH_VECT(2, f, *) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, *) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, *) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, *) }
+			break;
+		case VECT2F: { VAR_SWITCH_VECT(2, f, *) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, *) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, *) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, *) } break;
 		case ARRAY:
 		case MAP:
 		case OBJECT:
@@ -1430,15 +1450,15 @@ switch (p_other.type) {                                                   \
 var var::operator /(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL: { SWITCH_DIV_TYPES(_bool, (int)) }
-		case INT: { SWITCH_DIV_TYPES(_int, +) }
-		case FLOAT: { SWITCH_DIV_TYPES(_float , +) }
+		case BOOL:  { SWITCH_DIV_TYPES(_bool, (int)) } break;
+		case INT:   { SWITCH_DIV_TYPES(_int, +)      } break;
+		case FLOAT: { SWITCH_DIV_TYPES(_float , +)   } break;
 		case STRING:
 			break;
-		case VECT2F: { VAR_SWITCH_VECT(2, f, /) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, /) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, /) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, /) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, /) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, /) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, /) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, /) } break;
 		case ARRAY:
 		case MAP:
 		case OBJECT:
@@ -1492,10 +1512,11 @@ switch (p_other.type) {                                                         
 break;
 var& var::operator+=(const var& p_other) {
 	switch (type) {
-		case _NULL: break;
-		//case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, int, +=) }
-		case INT: { VAR_SWITCH_PRIME_TYPES(_int, int, +=) }
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, +=) }
+		case _NULL:
+		case BOOL:
+			break;
+		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, int, +=)     } break;
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, +=) } break;
 		case STRING: {
 			if (p_other.type == STRING) {
 				_data._string += p_other._data._string;
@@ -1503,10 +1524,10 @@ var& var::operator+=(const var& p_other) {
 			}
 			break;
 		}
-		case VECT2F: { VAR_SWITCH_VECT(2, f, +=) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, +=) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, +=) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, +=) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, +=) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, +=) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, +=) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, +=) } break;
 		case ARRAY: {
 			if (p_other.type == ARRAY) {
 				_data._arr += p_other._data._arr;
@@ -1524,16 +1545,17 @@ var& var::operator+=(const var& p_other) {
 
 var& var::operator-=(const var& p_other) {
 	switch (type) {
-		case _NULL: break;
-		//case BOOL : { VAR_SWITCH_PRIME_TYPES(_bool, int, -=) }
-		case INT: { VAR_SWITCH_PRIME_TYPES(_int, int, -=) }
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, -=) }
+		case _NULL:
+		case BOOL:
+			break;
+		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, int, -=)     } break;
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, -=) } break;
 		case STRING:
 			break;
-		case VECT2F: { VAR_SWITCH_VECT(2, f, -=) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, -=) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, -=) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, -=) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, -=) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, -=) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, -=) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, -=) } break;
 		case ARRAY:
 		case MAP:
 		case OBJECT:
@@ -1546,16 +1568,17 @@ var& var::operator-=(const var& p_other) {
 
 var& var::operator*=(const var& p_other) {
 	switch (type) {
-		case _NULL: break;
-		//case BOOL: { VAR_SWITCH_PRIME_TYPES(_bool, int, *=) }
-		case INT: { VAR_SWITCH_PRIME_TYPES(_int, int, *=) }
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, *=) }
+		case _NULL:
+		case BOOL:
+			break;
+		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, int, *=)     } break;
+		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, *=) } break;
 		case STRING:
 			break;
-		case VECT2F: { VAR_SWITCH_VECT(2, f, *=) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, *=) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, *=) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, *=) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, *=) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, *=) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, *=) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, *=) } break;
 		case ARRAY:
 		case MAP:
 		case OBJECT:
@@ -1584,16 +1607,17 @@ switch (p_other.type) {                                                   \
 }
 var& var::operator/=(const var& p_other) {
 	switch (type) {
-		case _NULL: break;
-		//case BOOL: { SWITCH_DIV_TYPES(_bool, bool) }
-		case INT: { SWITCH_DIV_TYPES(_int, int) }
-		case FLOAT: { SWITCH_DIV_TYPES(_float, float) }
+		case _NULL:
+		case BOOL:
+			break;
+		case INT:   { SWITCH_DIV_TYPES(_int, int)     } break;
+		case FLOAT: { SWITCH_DIV_TYPES(_float, float) } break;
 		case STRING:
 			break;
-		case VECT2F: { VAR_SWITCH_VECT(2, f, /=) }
-		case VECT2I: { VAR_SWITCH_VECT(2, i, /=) }
-		case VECT3F: { VAR_SWITCH_VECT(3, f, /=) }
-		case VECT3I: { VAR_SWITCH_VECT(3, i, /=) }
+		case VECT2F: { VAR_SWITCH_VECT(2, f, /=) } break;
+		case VECT2I: { VAR_SWITCH_VECT(2, i, /=) } break;
+		case VECT3F: { VAR_SWITCH_VECT(3, f, /=) } break;
+		case VECT3I: { VAR_SWITCH_VECT(3, i, /=) } break;
 		case ARRAY:
 		case MAP:
 		case OBJECT:

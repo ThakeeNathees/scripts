@@ -57,6 +57,9 @@ using ptr = std::shared_ptr<T>;
 template<typename T>
 using stdvec = std::vector<T>;
 
+template<typename T1, typename T2>
+using stdmap = std::map<T1, T2>;
+
 template<typename T, typename... Targs>
 inline ptr<T> newptr(Targs... p_args) {
 	return std::make_shared<T>(p_args...);
@@ -85,9 +88,11 @@ typedef float real_t;
 	printf("DEBUG: %s\n\tat: %s(%s:%li)", m_msg, __FUNCTION__, __FILE__, __LINE__)
 
 #if defined(_DEBUG)
-#define VAR_ASSERT(m_cond, m_msg)  \
-	if (!(m_cond))                 \
-		VAR_ERR(m_msg)
+#define VAR_ASSERT(m_cond)                                                                                            \
+	if (!(m_cond)) {                                                                                                  \
+		printf("ASSERTION FAILED: %s = false\n\tat: %s(%s:%li)", #m_cond, __FUNCTION__, __FILE__, __LINE__);          \
+		DEBUG_BREAK();                                                                                                \
+	} else (void(0))
 #else
 #define VAR_ASSERT
 #endif
@@ -99,6 +104,7 @@ public:
 		OK,
 		NULL_POINTER,
 		INVALID_INDEX,
+		INVALID_KEY,
 		INVALID_CASTING,
 		NOT_IMPLEMENTED,
 		ZERO_DIVISION,
