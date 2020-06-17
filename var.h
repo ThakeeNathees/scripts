@@ -88,16 +88,26 @@ typedef double real_t;
 typedef float real_t;
 #endif
 
+#ifndef DEBUG_BUILD
+#if defined(_DEBUG) || defined(DEBUG)
+#define DEBUG_BUILD
+#endif
+#endif
+
+#ifdef DEBUG_BUILD
 #ifdef _MSC_VER
 #define DEBUG_BREAK() __debugbreak()
 #else
 #define DEBUG_BREAK() __builtin_trap()
 #endif
+#else
+#define DEBUG_BREAK()
+#endif
 
 #define DEBUG_PRINT(m_msg, ...) \
 	printf("DEBUG: %s\n\tat: %s(%s:%li)", m_msg, __FUNCTION__, __FILE__, __LINE__)
 
-#if defined(_DEBUG)
+#if defined(DEBUG_BUILD)
 #define VAR_ASSERT(m_cond)                                                                                            \
 	if (!(m_cond)) {                                                                                                  \
 		printf("ASSERTION FAILED: %s = false\n\tat: %s(%s:%li)", #m_cond, __FUNCTION__, __FILE__, __LINE__);          \
@@ -116,7 +126,10 @@ public:
 		INVALID_INDEX,
 		INVALID_KEY,
 		INVALID_CASTING,
+		INVALID_GET_NAME,
+		INVALID_SET_NAME,
 		NOT_IMPLEMENTED,
+		OPERATOR_NOT_SUPPORTED,
 		ZERO_DIVISION,
 	};
 
@@ -573,24 +586,55 @@ class Object {
 public:
 
 	// Operators.
-	virtual String to_string() const { return operator String(); }
-	virtual operator String()  const { return String("[Object:") + String("]"); }
-	virtual Object& operator=(const Object& p_copy) = default;
+	operator String()  const { return to_string(); }
+	Object& operator=(const Object& p_copy) = default;
 
-	virtual bool operator==(const Object& p_other) { return &p_other == this; }
-	virtual bool operator!=(const Object& p_other) { return !operator == (p_other); }
-	virtual bool operator<=(const Object& p_other) { return this <= &p_other; }
-	virtual bool operator>=(const Object& p_other) { return this >= &p_other; }
-	virtual bool operator<(const Object& p_other)  { return this < &p_other; }
-	virtual bool operator>(const Object& p_other)  { return this > &p_other; }
+	bool operator==(const var& p_other) const { return __eq(p_other); }
+	bool operator!=(const var& p_other) const { return !operator == (p_other); }
+	bool operator<=(const var& p_other) const { return __lt(p_other) || __eq(p_other); }
+	bool operator>=(const var& p_other) const { return __gt(p_other) || __eq(p_other); }
+	bool operator< (const var& p_other) const { return __lt(p_other); }
+	bool operator> (const var& p_other) const { return __gt(p_other); }
 
+	var operator+(const var& p_other) const;
+	var operator-(const var& p_other) const;
+	var operator*(const var& p_other) const;
+	var operator/(const var& p_other) const;
+
+	var& operator+=(const var& p_other);
+	var& operator-=(const var& p_other);
+	var& operator*=(const var& p_other);
+	var& operator/=(const var& p_other);
 
 	// Virtual methods.
-	virtual bool get(const String& p_name, var& r_val)       const { return false; }
-	virtual bool set(const String& p_name, const var& p_val)       { return false; }
-	virtual bool has(const String& p_name)                   const { return false; }
-	virtual ptr<Object> copy(bool p_deep)                    const { throw VarError(VarError::NOT_IMPLEMENTED); }
-	virtual String get_class_name()                          const { return "Object"; }
+	// These double underscore methdos will be used as operators callback in the compiler.
+	virtual bool __has(const String& p_name) const;
+	virtual var& __get(const String& p_name);
+	virtual void __set(const String& p_name, const var& p_val);
+
+	virtual bool __has_mapped(const String& p_name) const;
+	virtual var& __get_mapped(const var& p_key) const;
+	virtual void __set_mapped(const var& p_key, const var& p_val);
+
+	virtual var __add(const var& p_other) const;
+	virtual var __sub(const var& p_other) const;
+	virtual var __mul(const var& p_other) const;
+	virtual var __div(const var& p_other) const;
+
+	virtual var& __add_eq(const var& p_other);
+	virtual var& __sub_eq(const var& p_other);
+	virtual var& __mul_eq(const var& p_other);
+	virtual var& __div_eq(const var& p_other);
+
+	virtual bool __gt(const var& p_other) const;
+	virtual bool __lt(const var& p_other) const;
+	virtual bool __eq(const var& p_other) const;
+
+	virtual String to_string() const { return String::format("[Object:%i]", this);  }
+
+	// Methods.
+	virtual ptr<Object> copy(bool p_deep) const { throw VarError(VarError::NOT_IMPLEMENTED); }
+	virtual String get_class_name()       const { return "Object"; }
 
 private:
 	friend class var;
@@ -659,22 +703,6 @@ public:
 		_data._obj = p_ptr;
 	}
 
-	// Don't use with enums.
-	//template<typename T> var(const T& p_enum) {
-	//	static_assert(std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
-	//	type = INT;
-	//	_data._int = (int)p_enum;
-	//}
-	//
-	//template<typename T>
-	//T as_enum() const {
-	//	static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
-	//	if (type != INT) {
-	//		VarError(VarError::INVALID_CASTING, "");
-	//	}
-	//	return (T)_data._int;
-	//}
-
 	// Methods.
 	inline Type get_type() const { return type; }
 	String to_string() const { return operator String(); }
@@ -695,39 +723,7 @@ public:
 	operator Vect3i() const;
 	operator Array() const;
 	operator Map() const;
-
-	// make Array Dictionary String as object and use cast<T>()
-	//template<typename T>
-	//T* as() const {
-	//	switch (type) {
-	//		// TODO: 
-	//		case ARRAY: return (T*)(&_data._arr);
-	//		case DICTIONARY: return (T*)(&_data._dict);
-	//		case OBJECT: return (T*)_data._obj._ptr;
-	//	}
-	//	VAR_ERR("invalid casting");
-	//	return nullptr;
-	//}
-
-	//bool is(const var& p_other) {
-	//	switch (type) {
-	//		case _NULL: return false;
-	//		case BOOL:
-	//		case INT:
-	//		case FLOAT:
-	//		case STRING:
-	//		case VECT2F:
-	//		case VECT2I:
-	//		case VECT3F:
-	//		case VECT3I:
-	//			return operator ==(p_other);
-	//		case ARRAY: return _data._arr._data == p_other._data._arr._data;
-	//		case DICTIONARY: return _data._dict._data == p_other._data._dict._data;
-	//		case OBJECT: return *_data._obj == *p_other._data._obj;
-	//	}
-	//	VAR_ERR("invalid var type");
-	//	return false;
-	//}
+	operator ptr<Object>() const;
 
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
@@ -758,7 +754,7 @@ public:
 	VAR_OP_DECL(var, /, const);
 	VAR_OP_DECL(var, %, const);
 
-	//	/* assignments */
+	/* assignments */
 	var& operator=(const var& p_other);
 	template<typename T=Object>
 	var& operator=(const ptr<T>& p_other) {
@@ -988,6 +984,40 @@ Map& Map::operator=(const Map& p_other) {
 	return *this;
 }
 
+// Object -----------------------------------------------
+
+var Object::operator+(const var& p_other) const { return __add(p_other); }
+var Object::operator-(const var& p_other) const { return __sub(p_other); }
+var Object::operator*(const var& p_other) const { return __mul(p_other); }
+var Object::operator/(const var& p_other) const { return __div(p_other); }
+
+var& Object::operator+=(const var& p_other) { return __add_eq(p_other); }
+var& Object::operator-=(const var& p_other) { return __sub_eq(p_other); }
+var& Object::operator*=(const var& p_other) { return __mul_eq(p_other); }
+var& Object::operator/=(const var& p_other) { return __div_eq(p_other); }
+
+bool Object::__has(const String& p_name) const { return false; }
+var& Object::__get(const String& p_name) { throw VarError(VarError::INVALID_GET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
+void Object::__set(const String& p_name, const var& p_val) { throw VarError(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
+
+bool Object::__has_mapped(const String& p_name) const { return false; }
+var& Object::__get_mapped(const var& p_key) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+void Object::__set_mapped(const var& p_key, const var& p_val) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+
+var Object::__add(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var Object::__sub(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var Object::__mul(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var Object::__div(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+
+var& Object::__add_eq(const var& p_other) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var& Object::__sub_eq(const var& p_other) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var& Object::__mul_eq(const var& p_other) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var& Object::__div_eq(const var& p_other) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+
+bool Object::__gt(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); } // TODO: This will throw if
+bool Object::__lt(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); } // object used as key in a Map.
+bool Object::__eq(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+
 // var -----------------------------------------------
 
 void var::clear() {
@@ -1211,19 +1241,24 @@ VAR_VECT_CAST(3, i)
 #undef VAR_VECT_CAST
 
 var::operator Array() const {
-	switch (type) {
-		case ARRAY: return _data._arr;
-		default: throw VarError(VarError::INVALID_CASTING, "");
+	if (type == ARRAY) {
+		return _data._arr;
 	}
-	return Array();
+	throw VarError(VarError::INVALID_CASTING, "");
 }
 
 var::operator Map() const {
-	switch (type) {
-		case MAP: return _data._map;
-		default: throw VarError(VarError::INVALID_CASTING, "");
+	if (type == MAP) {
+		return _data._map;
 	}
-	return Map();
+	throw VarError(VarError::INVALID_CASTING, "");
+}
+
+var::operator ptr<Object>() const {
+	if (type == OBJECT) {
+		return _data._obj;
+	}
+	throw VarError(VarError::INVALID_CASTING, "");
 }
 
 /* operator overloading */

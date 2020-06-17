@@ -78,16 +78,26 @@ typedef double real_t;
 typedef float real_t;
 #endif
 
+#ifndef DEBUG_BUILD
+#if defined(_DEBUG) || defined(DEBUG)
+#define DEBUG_BUILD
+#endif
+#endif
+
+#ifdef DEBUG_BUILD
 #ifdef _MSC_VER
 #define DEBUG_BREAK() __debugbreak()
 #else
 #define DEBUG_BREAK() __builtin_trap()
 #endif
+#else
+#define DEBUG_BREAK()
+#endif
 
 #define DEBUG_PRINT(m_msg, ...) \
 	printf("DEBUG: %s\n\tat: %s(%s:%li)", m_msg, __FUNCTION__, __FILE__, __LINE__)
 
-#if defined(_DEBUG)
+#if defined(DEBUG_BUILD)
 #define VAR_ASSERT(m_cond)                                                                                            \
 	if (!(m_cond)) {                                                                                                  \
 		printf("ASSERTION FAILED: %s = false\n\tat: %s(%s:%li)", #m_cond, __FUNCTION__, __FILE__, __LINE__);          \
@@ -106,7 +116,10 @@ public:
 		INVALID_INDEX,
 		INVALID_KEY,
 		INVALID_CASTING,
+		INVALID_GET_NAME,
+		INVALID_SET_NAME,
 		NOT_IMPLEMENTED,
+		OPERATOR_NOT_SUPPORTED,
 		ZERO_DIVISION,
 	};
 
