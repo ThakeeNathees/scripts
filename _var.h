@@ -90,22 +90,6 @@ public:
 		_data._obj = p_ptr;
 	}
 
-	// Don't use with enums.
-	//template<typename T> var(const T& p_enum) {
-	//	static_assert(std::is_enum<T>::value, "Use var<T>(const T&) only with enums");
-	//	type = INT;
-	//	_data._int = (int)p_enum;
-	//}
-	//
-	//template<typename T>
-	//T as_enum() const {
-	//	static_assert(std::is_enum<T>::value, "Invalid use of as_enum<T>() T wasn't enum type");
-	//	if (type != INT) {
-	//		VarError(VarError::INVALID_CASTING, "");
-	//	}
-	//	return (T)_data._int;
-	//}
-
 	// Methods.
 	inline Type get_type() const { return type; }
 	String to_string() const { return operator String(); }
@@ -126,39 +110,6 @@ public:
 	operator Vect3i() const;
 	operator Array() const;
 	operator Map() const;
-
-	// make Array Dictionary String as object and use cast<T>()
-	//template<typename T>
-	//T* as() const {
-	//	switch (type) {
-	//		// TODO: 
-	//		case ARRAY: return (T*)(&_data._arr);
-	//		case DICTIONARY: return (T*)(&_data._dict);
-	//		case OBJECT: return (T*)_data._obj._ptr;
-	//	}
-	//	VAR_ERR("invalid casting");
-	//	return nullptr;
-	//}
-
-	//bool is(const var& p_other) {
-	//	switch (type) {
-	//		case _NULL: return false;
-	//		case BOOL:
-	//		case INT:
-	//		case FLOAT:
-	//		case STRING:
-	//		case VECT2F:
-	//		case VECT2I:
-	//		case VECT3F:
-	//		case VECT3I:
-	//			return operator ==(p_other);
-	//		case ARRAY: return _data._arr._data == p_other._data._arr._data;
-	//		case DICTIONARY: return _data._dict._data == p_other._data._dict._data;
-	//		case OBJECT: return *_data._obj == *p_other._data._obj;
-	//	}
-	//	VAR_ERR("invalid var type");
-	//	return false;
-	//}
 
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \

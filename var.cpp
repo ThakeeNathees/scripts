@@ -179,6 +179,40 @@ Map& Map::operator=(const Map& p_other) {
 	return *this;
 }
 
+// Object -----------------------------------------------
+
+var Object::operator+(const var& p_other) const { return __add(p_other); }
+var Object::operator-(const var& p_other) const { return __sub(p_other); }
+var Object::operator*(const var& p_other) const { return __mul(p_other); }
+var Object::operator/(const var& p_other) const { return __div(p_other); }
+
+var& Object::operator+=(const var& p_other) { return __add_eq(p_other); }
+var& Object::operator-=(const var& p_other) { return __sub_eq(p_other); }
+var& Object::operator*=(const var& p_other) { return __mul_eq(p_other); }
+var& Object::operator/=(const var& p_other) { return __div_eq(p_other); }
+
+bool Object::__has(const String& p_name) const { return false; }
+var& Object::__get(const String& p_name) const { throw VarError(VarError::INVALID_GET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
+void Object::__set(const String& p_name, const var& p_val) { throw VarError(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
+
+bool Object::__has_mapped(const String& p_name) const { return false; }
+var& Object::__get_mapped(const var& p_key) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+void Object::__set_mapped(const var& p_key, const var& p_val) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+
+var Object::__add(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var Object::__sub(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var Object::__mul(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var Object::__div(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+
+var& Object::__add_eq(const var& p_other) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var& Object::__sub_eq(const var& p_other) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var& Object::__mul_eq(const var& p_other) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var& Object::__div_eq(const var& p_other) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+
+bool Object::__gt(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); } // TODO: This will throw if
+bool Object::__lt(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); } // object used as key in a Map.
+bool Object::__eq(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+
 // var -----------------------------------------------
 
 void var::clear() {
