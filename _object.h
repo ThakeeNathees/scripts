@@ -57,7 +57,7 @@ public:
 	// Virtual methods.
 	// These double underscore methdos will be used as operators callback in the compiler.
 	virtual bool __has(const String& p_name) const;
-	virtual var& __get(const String& p_name) const;
+	virtual var& __get(const String& p_name);
 	virtual void __set(const String& p_name, const var& p_val);
 
 	virtual bool __has_mapped(const String& p_name) const;

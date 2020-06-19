@@ -192,7 +192,7 @@ var& Object::operator*=(const var& p_other) { return __mul_eq(p_other); }
 var& Object::operator/=(const var& p_other) { return __div_eq(p_other); }
 
 bool Object::__has(const String& p_name) const { return false; }
-var& Object::__get(const String& p_name) const { throw VarError(VarError::INVALID_GET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
+var& Object::__get(const String& p_name) { throw VarError(VarError::INVALID_GET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
 void Object::__set(const String& p_name, const var& p_val) { throw VarError(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
 
 bool Object::__has_mapped(const String& p_name) const { return false; }
@@ -436,19 +436,24 @@ VAR_VECT_CAST(3, i)
 #undef VAR_VECT_CAST
 
 var::operator Array() const {
-	switch (type) {
-		case ARRAY: return _data._arr;
-		default: throw VarError(VarError::INVALID_CASTING, "");
+	if (type == ARRAY) {
+		return _data._arr;
 	}
-	return Array();
+	throw VarError(VarError::INVALID_CASTING, "");
 }
 
 var::operator Map() const {
-	switch (type) {
-		case MAP: return _data._map;
-		default: throw VarError(VarError::INVALID_CASTING, "");
+	if (type == MAP) {
+		return _data._map;
 	}
-	return Map();
+	throw VarError(VarError::INVALID_CASTING, "");
+}
+
+var::operator ptr<Object>() const {
+	if (type == OBJECT) {
+		return _data._obj;
+	}
+	throw VarError(VarError::INVALID_CASTING, "");
 }
 
 /* operator overloading */

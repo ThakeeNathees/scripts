@@ -110,6 +110,7 @@ public:
 	operator Vect3i() const;
 	operator Array() const;
 	operator Map() const;
+	operator ptr<Object>() const;
 
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
@@ -140,7 +141,7 @@ public:
 	VAR_OP_DECL(var, /, const);
 	VAR_OP_DECL(var, %, const);
 
-	//	/* assignments */
+	/* assignments */
 	var& operator=(const var& p_other);
 	template<typename T=Object>
 	var& operator=(const ptr<T>& p_other) {
