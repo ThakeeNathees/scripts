@@ -23,6 +23,35 @@
 // SOFTWARE.
 //------------------------------------------------------------------------------
 
+#ifdef ___________________USAGE___________________
+// USAGE:
+//     Note that you must define VAR_IMPLEMENTATION in exactly one source file. Use
+//     UNDEF_VAR_DEFINES to undef var.h macros (like DEBUG_BREAK, DEBUG_PRINT...)
+//     if you don't want them.
+
+#define VAR_IMPLEMENTATION
+#include "var.h"
+using namespace varh;
+
+// SAMPLES:
+#include <iostream>
+#define print(x) std::cout << (x) << std::endl
+int main() {
+	var v;
+	v = 3.14;           print(v); // prints 3.14 float
+	v = "hello world!"; print(v); // prints the String
+
+	v = String("string"); v = Vect2f(1.2, 3.4); v = Vect2i(1, 2);
+	v = Map(); v = Array(1, 2.3, "hello world!", Array(4, 5, 6));
+
+	class Aclass : public Object {
+	public: String to_string() const { return "Aclass"; }
+	};
+	v = newptr<Aclass>(); print(v); // prints Aclass
+}
+
+#endif // ___________________USAGE___________________
+
 #define VAR_H_HEADER_ONLY
 
 #ifndef _VAR_H
@@ -53,6 +82,8 @@
 #include <math.h>
 #include <vector>
 
+#define func var
+
 #define STRCAT2(m_a, m_b) m_a##m_b
 #define STRCAT3(m_a, m_b, m_c) m_a##m_b##m_c
 #define STRCAT4(m_a, m_b, m_c, m_d) m_a##m_b##m_c##m_d
@@ -61,6 +92,7 @@
 #define STRINGIFY(m_mac) STR(m_mac)
 #define PLACE_HOLDER_MACRO
 
+namespace varh {
 template<typename T>
 using ptr = std::shared_ptr<T>;
 
@@ -87,6 +119,7 @@ typedef double real_t;
 #else
 typedef float real_t;
 #endif
+} // namespace varh
 
 #ifndef DEBUG_BUILD
 #if defined(_DEBUG) || defined(DEBUG)
@@ -219,6 +252,7 @@ public:
 
 private:
 	friend class var;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const String& p_str);
 	std::string _data;
 };
 
@@ -806,13 +840,13 @@ private:
 #if defined(UNDEF_VAR_DEFINES)
 #if !defined(VAR_H_HEADER_ONLY)
 
+#undef func
 #undef STRCAT2
 #undef STRCAT3
 #undef STRCAT4
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newptr
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_PRINT
 #undef DEBUG_BREAK
@@ -1743,13 +1777,13 @@ void var::clear_data() {
 #undef SWITCH_DIV_TYPES
 
 #if defined(UNDEF_VAR_DEFINES)
+#undef func
 #undef STRCAT2
 #undef STRCAT3
 #undef STRCAT4
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newptr
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
 #undef DEBUG_PRINT

@@ -193,13 +193,13 @@ private:
 #if defined(UNDEF_VAR_DEFINES)
 #if !defined(VAR_H_HEADER_ONLY)
 
+#undef func
 #undef STRCAT2
 #undef STRCAT3
 #undef STRCAT4
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newptr
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_PRINT
 #undef DEBUG_BREAK

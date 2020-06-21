@@ -96,6 +96,7 @@ public:
 
 private:
 	friend class var;
+	friend std::ostream& operator<<(std::ostream& p_ostream, const String& p_str);
 	std::string _data;
 };
 

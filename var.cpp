@@ -938,13 +938,13 @@ void var::clear_data() {
 #undef SWITCH_DIV_TYPES
 
 #if defined(UNDEF_VAR_DEFINES)
+#undef func
 #undef STRCAT2
 #undef STRCAT3
 #undef STRCAT4
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
-#undef newptr
 #undef VSNPRINTF_BUFF_SIZE
 #undef DEBUG_BREAK
 #undef DEBUG_PRINT

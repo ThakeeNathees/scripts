@@ -25,6 +25,37 @@ LICENSE = '''\
 //------------------------------------------------------------------------------
 '''
 
+USAGE = '''
+#ifdef ___________________USAGE___________________
+// USAGE:
+//     Note that you must define VAR_IMPLEMENTATION in exactly one source file. Use
+//     UNDEF_VAR_DEFINES to undef var.h macros (like DEBUG_BREAK, DEBUG_PRINT...)
+//     if you don't want them.
+
+#define VAR_IMPLEMENTATION
+#include "var.h"
+using namespace varh;
+
+// SAMPLES:
+#include <iostream>
+#define print(x) std::cout << (x) << std::endl
+int main() {
+	var v;
+	v = 3.14;           print(v); // prints 3.14 float
+	v = "hello world!"; print(v); // prints the String
+
+	v = String("string"); v = Vect2f(1.2, 3.4); v = Vect2i(1, 2);
+	v = Map(); v = Array(1, 2.3, "hello world!", Array(4, 5, 6));
+
+	class Aclass : public Object {
+	public: String to_string() const { return "Aclass"; }
+	};
+	v = newptr<Aclass>(); print(v); // prints Aclass
+}
+
+#endif // ___________________USAGE___________________
+'''
+
 import os, re
 src     = dict() ## file_name : source
 headers = dict() ## file_name : [source, included?]
@@ -61,7 +92,7 @@ gen += '\n#endif // VAR_IMPLEMENTATION'
 
 for include in re.findall(r'#include ".+"', gen):
     gen = gen.replace(include, include.replace('#', '//'))
-gen = '\n#define VAR_H_HEADER_ONLY\n' + gen
+gen = USAGE + '\n#define VAR_H_HEADER_ONLY\n' + gen
 gen = LICENSE + gen.replace(LICENSE, '')
             
 with open('var.h', 'w') as f:

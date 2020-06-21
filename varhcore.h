@@ -43,6 +43,8 @@
 #include <math.h>
 #include <vector>
 
+#define func var
+
 #define STRCAT2(m_a, m_b) m_a##m_b
 #define STRCAT3(m_a, m_b, m_c) m_a##m_b##m_c
 #define STRCAT4(m_a, m_b, m_c, m_d) m_a##m_b##m_c##m_d
@@ -51,6 +53,7 @@
 #define STRINGIFY(m_mac) STR(m_mac)
 #define PLACE_HOLDER_MACRO
 
+namespace varh {
 template<typename T>
 using ptr = std::shared_ptr<T>;
 
@@ -77,6 +80,7 @@ typedef double real_t;
 #else
 typedef float real_t;
 #endif
+} // namespace varh
 
 #ifndef DEBUG_BUILD
 #if defined(_DEBUG) || defined(DEBUG)
