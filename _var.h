@@ -135,6 +135,9 @@ public:
 	bool operator !() const { return !operator bool(); }
 	var& operator[](const var& p_key) const;
 
+	var __get(const String& p_name) const;
+	void __set(const String& p_name, const var& p_value) const;
+
 	VAR_OP_DECL(var, +, const);
 	VAR_OP_DECL(var, -, const);
 	VAR_OP_DECL(var, *, const);

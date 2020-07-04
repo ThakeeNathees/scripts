@@ -54,15 +54,15 @@ public:
 	var& operator*=(const var& p_other);
 	var& operator/=(const var& p_other);
 
+	var& operator[](const var& p_key) { return __get_mapped(p_key); }
+
 	// Virtual methods.
 	// These double underscore methdos will be used as operators callback in the compiler.
 	virtual bool __has(const String& p_name) const;
 	virtual var& __get(const String& p_name);
-	virtual void __set(const String& p_name, const var& p_val);
 
 	virtual bool __has_mapped(const String& p_name) const;
-	virtual var& __get_mapped(const var& p_key) const;
-	virtual void __set_mapped(const var& p_key, const var& p_val);
+	virtual var& __get_mapped(const var& p_key);
 
 	virtual var __add(const var& p_other) const;
 	virtual var __sub(const var& p_other) const;

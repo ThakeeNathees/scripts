@@ -35,6 +35,11 @@ std::ostream& operator<<(std::ostream& p_ostream, const String& p_str) {
 	p_ostream << p_str.c_str();
 	return p_ostream;
 }
+std::istream& operator>>(std::istream& p_istream, const String& p_str) {
+	p_istream >> p_str._data;
+	return p_istream;
+}
+
 std::ostream& operator<<(std::ostream& p_ostream, const var& p_var) {
 	p_ostream << p_var.operator String();
 	return p_ostream;
@@ -193,11 +198,11 @@ var& Object::operator/=(const var& p_other) { return __div_eq(p_other); }
 
 bool Object::__has(const String& p_name) const { return false; }
 var& Object::__get(const String& p_name) { throw VarError(VarError::INVALID_GET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
-void Object::__set(const String& p_name, const var& p_val) { throw VarError(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
+//void Object::__set(const String& p_name, const var& p_val) { throw VarError(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
 
 bool Object::__has_mapped(const String& p_name) const { return false; }
-var& Object::__get_mapped(const var& p_key) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
-void Object::__set_mapped(const var& p_key, const var& p_val) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var& Object::__get_mapped(const var& p_key) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+//void Object::__set_mapped(const var& p_key, const var& p_val) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
 
 var Object::__add(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
 var Object::__sub(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
@@ -353,10 +358,44 @@ var& var::operator[](const var& p_key) const {
 		}
 		case MAP:
 			return _data._map[p_key];
+		case OBJECT:
+			return _data._obj->operator [](p_key);
 	}
 	throw VarError(VarError::NOT_IMPLEMENTED, "operator[] not implemented");
 	return var::tmp;
 }
+
+#define VECT2_GET(m_t)                                            \
+	if (p_name == "x" || p_name == "width") {                     \
+		return (*DATA_PTR_CONST(STRCAT2(Vect2, m_t))).x;          \
+	} else if (p_name == "y" || p_name == "height") {			  \
+		return (*DATA_PTR_CONST(STRCAT2(Vect2, m_t))).y;          \
+	} else throw VarError(VarError::INVALID_GET_NAME)
+
+#define VECT3_GET(m_t)                                            \
+	if (p_name == "x" || p_name == "width") {                     \
+		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).x;          \
+	} else if (p_name == "y" || p_name == "height") {			  \
+		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).y;          \
+	} else if (p_name == "z" || p_name == "depth") {			  \
+		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).y;          \
+	} else throw VarError(VarError::INVALID_GET_NAME)
+
+
+var var::__get(const String& p_name) const {
+	switch (type) {
+		case VECT2F: VECT2_GET(f);
+		case VECT2I: VECT2_GET(i);
+		case VECT3F: VECT3_GET(f);
+		case VECT3I: VECT3_GET(i);
+		case OBJECT: return _data._obj->__get(p_name);
+	}
+	throw VarError(VarError::INVALID_GET_NAME);
+	return var::tmp;
+}
+
+#undef VECT2_GET
+#undef VECT3_GET
 
 /* casting */
 var::operator bool() const {
@@ -542,6 +581,7 @@ bool var::operator<(const var& p_other) const {
 			break;
 		}
 	}
+	// FIXME: a workaround for map keys as vars.
 	return this < &p_other;
 }
 

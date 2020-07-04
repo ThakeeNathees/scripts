@@ -97,6 +97,7 @@ public:
 private:
 	friend class var;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const String& p_str);
+	friend std::istream& operator>>(std::istream& p_ostream, const String& p_str);
 	std::string _data;
 };
 
