@@ -40,6 +40,7 @@
 
 #define _USE_MATH_DEFINES
 #include <map>
+#include <unordered_map>
 #include <math.h>
 #include <vector>
 
@@ -60,6 +61,7 @@ using ptr = std::shared_ptr<T>;
 template<typename T>
 using stdvec = std::vector<T>;
 
+// TODO: refactor map to has table (unordered_map) it require hash<var>() implementation.
 template<typename T1, typename T2>
 using stdmap = std::map<T1, T2>;
 
@@ -121,6 +123,7 @@ public:
 		INVALID_KEY,
 		INVALID_CASTING,
 		INVALID_GET_NAME,
+		INVALID_SET_VALUE,
 		NOT_IMPLEMENTED,
 		OPERATOR_NOT_SUPPORTED,
 		ZERO_DIVISION,

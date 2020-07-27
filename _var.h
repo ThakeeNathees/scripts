@@ -72,6 +72,7 @@ public:
 	var(const var& p_copy);
 	var(bool p_bool);
 	var(int p_int);
+	var(int64_t p_int);
 	var(float p_float);
 	var(double p_double);
 	var(const char* p_cstring);
@@ -98,7 +99,7 @@ public:
 
 	// Operators.
 	operator bool() const;
-	operator int() const;
+	operator int64_t() const;
 	operator float() const { return (float)operator double(); }
 	operator double() const;
 	operator String() const;
@@ -114,8 +115,7 @@ public:
 
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
-	m_ret operator m_op (int p_other) m_access { return operator m_op (var(p_other)); }            \
-	m_ret operator m_op (float p_other) m_access { return operator m_op (var(p_other)); }          \
+	m_ret operator m_op (int64_t p_other) m_access { return operator m_op (var(p_other)); }        \
 	m_ret operator m_op (double p_other) m_access { return operator m_op (var(p_other)); }         \
 	m_ret operator m_op (const char* p_other) m_access { return operator m_op (var(p_other)); }    \
 	m_ret operator m_op (const var& p_other) m_access
@@ -136,7 +136,7 @@ public:
 	var& operator[](const var& p_key) const;
 
 	var __get(const String& p_name) const;
-	void __set(const String& p_name, const var& p_value) const;
+	void __set(const String& p_name, const var& p_value);
 
 	VAR_OP_DECL(var, +, const);
 	VAR_OP_DECL(var, -, const);
@@ -172,7 +172,7 @@ private:
 			String _string;
 
 			bool _bool;
-			int _int;
+			int64_t _int;
 			double _float;
 			uint8_t _mem[DATA_MEM_SIZE];
 		};

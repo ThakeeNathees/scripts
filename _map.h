@@ -28,6 +28,7 @@
 
 #include "varhcore.h"
 
+
 namespace varh {
 
 class var;
@@ -37,19 +38,19 @@ class Map {
 public:
 	// Mehtods.
 	Map() {
-		_data = std::make_shared<std::map<var, var>>();
+		_data = std::make_shared<stdmap<var, var>>();
 	}
-	Map(const ptr<std::map<var, var>>& p_data) {
+	Map(const ptr<stdmap<var, var>>& p_data) {
 		_data = p_data;
 	}
 	Map(const Map& p_copy) {
 		_data = p_copy._data;
 	}
 
-	std::map<var, var>* get_data() {
+	stdmap<var, var>* get_data() {
 		return _data.operator->();
 	}
-	std::map<var, var>* get_data() const {
+	stdmap<var, var>* get_data() const {
 		return _data.operator->();
 	}
 
@@ -63,9 +64,9 @@ public:
 	var& operator[](const var& p_key);
 	var& operator[](const char* p_key) const;
 	var& operator[](const char* p_key);
-	std::map<var, var>::iterator begin() const;
-	std::map<var, var>::iterator end() const;
-	std::map<var, var>::iterator find(const var& p_key) const;
+	stdmap<var, var>::iterator begin() const;
+	stdmap<var, var>::iterator end() const;
+	stdmap<var, var>::iterator find(const var& p_key) const;
 	void clear() { _data->clear(); }
 	bool has(const var& p_key) const;
 	// TODO:
@@ -78,7 +79,7 @@ public:
 
 private:
 	friend class var;
-	ptr<std::map<var, var>> _data;
+	ptr<stdmap<var, var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Map& p_dict);
 };
 

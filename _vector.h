@@ -214,10 +214,10 @@ std::ostream& operator<<(std::ostream& p_ostream, const Vect3<T>& p_vect) {
 }
 
 /* typedefs */
-typedef Vect2<float> Vect2f;
-typedef Vect2<int> Vect2i;
-typedef Vect3<float> Vect3f;
-typedef Vect3<int> Vect3i;
+typedef Vect2<double> Vect2f;
+typedef Vect2<int64_t> Vect2i;
+typedef Vect3<double> Vect3f;
+typedef Vect3<int64_t> Vect3i;
 
 typedef Vect2f Size;
 typedef Vect2f Point;

@@ -35,7 +35,7 @@ std::ostream& operator<<(std::ostream& p_ostream, const String& p_str) {
 	p_ostream << p_str.c_str();
 	return p_ostream;
 }
-std::istream& operator>>(std::istream& p_istream, const String& p_str) {
+std::istream& operator>>(std::istream& p_istream, String& p_str) {
 	p_istream >> p_str._data;
 	return p_istream;
 }
@@ -267,6 +267,11 @@ var::var(int p_int) {
 	_data._int = p_int;
 }
 
+var::var(int64_t p_int) {
+	type = INT;
+	_data._int = p_int;
+}
+
 var::var(float p_float) {
 	type = FLOAT;
 	_data._float = p_float;
@@ -381,6 +386,23 @@ var& var::operator[](const var& p_key) const {
 		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).y;          \
 	} else throw VarError(VarError::INVALID_GET_NAME)
 
+#define VECT2_SET(m_t, m_cast)                                             \
+	if (p_name == "x" || p_name == "width") {                              \
+		(*DATA_PTR(STRCAT2(Vect2, m_t))).x = p_value.operator m_cast();    \
+	} else if (p_name == "y" || p_name == "height") {			           \
+		(*DATA_PTR(STRCAT2(Vect2, m_t))).y = p_value.operator m_cast();    \
+	} else throw VarError(VarError::INVALID_GET_NAME)
+
+#define VECT3_SET(m_t, m_cast)                                             \
+	if (p_name == "x" || p_name == "width") {                              \
+		(*DATA_PTR(STRCAT2(Vect3, m_t))).x = p_value.operator m_cast();    \
+	} else if (p_name == "y" || p_name == "height") {			           \
+		(*DATA_PTR(STRCAT2(Vect3, m_t))).y = p_value.operator m_cast();    \
+	} else if (p_name == "z" || p_name == "depth") {			           \
+		(*DATA_PTR(STRCAT2(Vect3, m_t))).y = p_value.operator m_cast();    \
+	} else throw VarError(VarError::INVALID_GET_NAME)
+
+
 
 var var::__get(const String& p_name) const {
 	switch (type) {
@@ -390,8 +412,33 @@ var var::__get(const String& p_name) const {
 		case VECT3I: VECT3_GET(i);
 		case OBJECT: return _data._obj->__get(p_name);
 	}
-	throw VarError(VarError::INVALID_GET_NAME);
+	throw VarError(VarError::INVALID_GET_NAME); // TODO: more clear error.
 	return var::tmp;
+}
+
+void var::__set(const String& p_name, const var& p_value) {
+	switch (type) {
+		case VECT2F: 
+			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) throw VarError(VarError::INVALID_SET_VALUE);
+			VECT2_SET(f, double);
+			return;
+		case VECT2I:
+			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) throw VarError(VarError::INVALID_SET_VALUE);
+			VECT2_SET(i, int64_t);
+			return;
+		case VECT3F:
+			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) throw VarError(VarError::INVALID_SET_VALUE);
+			VECT3_SET(f, double);
+			return;
+		case VECT3I:
+			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) throw VarError(VarError::INVALID_SET_VALUE);
+			VECT3_SET(i, int64_t);
+			return;
+		case OBJECT: 
+			_data._obj->__get(p_name) = p_value;
+			return;
+	}
+	throw VarError(VarError::INVALID_GET_NAME); // TODO: more clear error.
 }
 
 #undef VECT2_GET
@@ -418,7 +465,7 @@ var::operator bool() const {
 	return false;
 }
 
-var::operator int() const {
+var::operator int64_t() const {
 	switch (type) {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
@@ -431,8 +478,8 @@ var::operator int() const {
 
 var::operator double() const {
 	switch (type) {
-		case BOOL: return _data._bool;
-		case INT: return _data._int;
+		case BOOL: return (double)_data._bool;
+		case INT: return (double)_data._int;
 		case FLOAT: return _data._float;
 		case STRING: return  _data._string.to_float();
 		default: throw VarError(VarError::INVALID_CASTING, "");
@@ -502,7 +549,7 @@ var::operator ptr<Object>() const {
 #define VAR_SWITCH_PRIME_TYPES(m_data, m_op)                              \
 	switch (p_other.type) {                                               \
 		VAR_RET_OP(m_op, m_data, BOOL, _bool, bool);                      \
-		VAR_RET_OP(m_op, m_data, INT, _int, int);                         \
+		VAR_RET_OP(m_op, m_data, INT, _int, int64_t);                     \
 		VAR_RET_OP(m_op, m_data, FLOAT, _float, float);                   \
 	}
 #define VAR_SWITCH_VECT(m_dim, m_t, m_op)                                                                                           \

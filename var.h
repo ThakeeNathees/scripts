@@ -79,6 +79,7 @@ int main() {
 
 #define _USE_MATH_DEFINES
 #include <map>
+#include <unordered_map>
 #include <math.h>
 #include <vector>
 
@@ -99,6 +100,7 @@ using ptr = std::shared_ptr<T>;
 template<typename T>
 using stdvec = std::vector<T>;
 
+// TODO: refactor map to has table (unordered_map) it require hash<var>() implementation.
 template<typename T1, typename T2>
 using stdmap = std::map<T1, T2>;
 
@@ -160,7 +162,7 @@ public:
 		INVALID_KEY,
 		INVALID_CASTING,
 		INVALID_GET_NAME,
-		INVALID_SET_NAME,
+		INVALID_SET_VALUE,
 		NOT_IMPLEMENTED,
 		OPERATOR_NOT_SUPPORTED,
 		ZERO_DIVISION,
@@ -204,7 +206,7 @@ public:
 
 	// Methods.
 	static String format(const char* p_format, ...);
-	int to_int() const { return std::stoi(_data); }
+	int64_t to_int() const { return std::stoll(_data); }
 	double to_float() const { return std::stod(_data); }
 
 	// operators.
@@ -253,6 +255,7 @@ public:
 private:
 	friend class var;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const String& p_str);
+	friend std::istream& operator>>(std::istream& p_ostream, String& p_str);
 	std::string _data;
 };
 
@@ -534,10 +537,10 @@ std::ostream& operator<<(std::ostream& p_ostream, const Vect3<T>& p_vect) {
 }
 
 /* typedefs */
-typedef Vect2<float> Vect2f;
-typedef Vect2<int> Vect2i;
-typedef Vect3<float> Vect3f;
-typedef Vect3<int> Vect3i;
+typedef Vect2<double> Vect2f;
+typedef Vect2<int64_t> Vect2i;
+typedef Vect3<double> Vect3f;
+typedef Vect3<int64_t> Vect3i;
 
 typedef Vect2f Size;
 typedef Vect2f Point;
@@ -551,6 +554,7 @@ typedef Vect2f Point;
 
 //include "varhcore.h"
 
+
 namespace varh {
 
 class var;
@@ -560,19 +564,19 @@ class Map {
 public:
 	// Mehtods.
 	Map() {
-		_data = std::make_shared<std::map<var, var>>();
+		_data = std::make_shared<stdmap<var, var>>();
 	}
-	Map(const ptr<std::map<var, var>>& p_data) {
+	Map(const ptr<stdmap<var, var>>& p_data) {
 		_data = p_data;
 	}
 	Map(const Map& p_copy) {
 		_data = p_copy._data;
 	}
 
-	std::map<var, var>* get_data() {
+	stdmap<var, var>* get_data() {
 		return _data.operator->();
 	}
-	std::map<var, var>* get_data() const {
+	stdmap<var, var>* get_data() const {
 		return _data.operator->();
 	}
 
@@ -586,9 +590,9 @@ public:
 	var& operator[](const var& p_key);
 	var& operator[](const char* p_key) const;
 	var& operator[](const char* p_key);
-	std::map<var, var>::iterator begin() const;
-	std::map<var, var>::iterator end() const;
-	std::map<var, var>::iterator find(const var& p_key) const;
+	stdmap<var, var>::iterator begin() const;
+	stdmap<var, var>::iterator end() const;
+	stdmap<var, var>::iterator find(const var& p_key) const;
 	void clear() { _data->clear(); }
 	bool has(const var& p_key) const;
 	// TODO:
@@ -601,7 +605,7 @@ public:
 
 private:
 	friend class var;
-	ptr<std::map<var, var>> _data;
+	ptr<stdmap<var, var>> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Map& p_dict);
 };
 
@@ -640,15 +644,15 @@ public:
 	var& operator*=(const var& p_other);
 	var& operator/=(const var& p_other);
 
+	var& operator[](const var& p_key) { return __get_mapped(p_key); }
+
 	// Virtual methods.
 	// These double underscore methdos will be used as operators callback in the compiler.
 	virtual bool __has(const String& p_name) const;
 	virtual var& __get(const String& p_name);
-	virtual void __set(const String& p_name, const var& p_val);
 
 	virtual bool __has_mapped(const String& p_name) const;
-	virtual var& __get_mapped(const var& p_key) const;
-	virtual void __set_mapped(const var& p_key, const var& p_val);
+	virtual var& __get_mapped(const var& p_key);
 
 	virtual var __add(const var& p_other) const;
 	virtual var __sub(const var& p_other) const;
@@ -719,6 +723,7 @@ public:
 	var(const var& p_copy);
 	var(bool p_bool);
 	var(int p_int);
+	var(int64_t p_int);
 	var(float p_float);
 	var(double p_double);
 	var(const char* p_cstring);
@@ -745,7 +750,7 @@ public:
 
 	// Operators.
 	operator bool() const;
-	operator int() const;
+	operator int64_t() const;
 	operator float() const { return (float)operator double(); }
 	operator double() const;
 	operator String() const;
@@ -761,8 +766,7 @@ public:
 
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
-	m_ret operator m_op (int p_other) m_access { return operator m_op (var(p_other)); }            \
-	m_ret operator m_op (float p_other) m_access { return operator m_op (var(p_other)); }          \
+	m_ret operator m_op (int64_t p_other) m_access { return operator m_op (var(p_other)); }        \
 	m_ret operator m_op (double p_other) m_access { return operator m_op (var(p_other)); }         \
 	m_ret operator m_op (const char* p_other) m_access { return operator m_op (var(p_other)); }    \
 	m_ret operator m_op (const var& p_other) m_access
@@ -781,6 +785,9 @@ public:
 	var operator--(int);
 	bool operator !() const { return !operator bool(); }
 	var& operator[](const var& p_key) const;
+
+	var __get(const String& p_name) const;
+	void __set(const String& p_name, const var& p_value);
 
 	VAR_OP_DECL(var, +, const);
 	VAR_OP_DECL(var, -, const);
@@ -816,7 +823,7 @@ private:
 			String _string;
 
 			bool _bool;
-			int _int;
+			int64_t _int;
 			double _float;
 			uint8_t _mem[DATA_MEM_SIZE];
 		};
@@ -874,6 +881,11 @@ std::ostream& operator<<(std::ostream& p_ostream, const String& p_str) {
 	p_ostream << p_str.c_str();
 	return p_ostream;
 }
+std::istream& operator>>(std::istream& p_istream, String& p_str) {
+	p_istream >> p_str._data;
+	return p_istream;
+}
+
 std::ostream& operator<<(std::ostream& p_ostream, const var& p_var) {
 	p_ostream << p_var.operator String();
 	return p_ostream;
@@ -1032,11 +1044,11 @@ var& Object::operator/=(const var& p_other) { return __div_eq(p_other); }
 
 bool Object::__has(const String& p_name) const { return false; }
 var& Object::__get(const String& p_name) { throw VarError(VarError::INVALID_GET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
-void Object::__set(const String& p_name, const var& p_val) { throw VarError(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
+//void Object::__set(const String& p_name, const var& p_val) { throw VarError(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
 
 bool Object::__has_mapped(const String& p_name) const { return false; }
-var& Object::__get_mapped(const var& p_key) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
-void Object::__set_mapped(const var& p_key, const var& p_val) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var& Object::__get_mapped(const var& p_key) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+//void Object::__set_mapped(const var& p_key, const var& p_val) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
 
 var Object::__add(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
 var Object::__sub(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
@@ -1097,6 +1109,11 @@ var::var(bool p_bool) {
 }
 
 var::var(int p_int) {
+	type = INT;
+	_data._int = p_int;
+}
+
+var::var(int64_t p_int) {
 	type = INT;
 	_data._int = p_int;
 }
@@ -1192,10 +1209,86 @@ var& var::operator[](const var& p_key) const {
 		}
 		case MAP:
 			return _data._map[p_key];
+		case OBJECT:
+			return _data._obj->operator [](p_key);
 	}
 	throw VarError(VarError::NOT_IMPLEMENTED, "operator[] not implemented");
 	return var::tmp;
 }
+
+#define VECT2_GET(m_t)                                            \
+	if (p_name == "x" || p_name == "width") {                     \
+		return (*DATA_PTR_CONST(STRCAT2(Vect2, m_t))).x;          \
+	} else if (p_name == "y" || p_name == "height") {			  \
+		return (*DATA_PTR_CONST(STRCAT2(Vect2, m_t))).y;          \
+	} else throw VarError(VarError::INVALID_GET_NAME)
+
+#define VECT3_GET(m_t)                                            \
+	if (p_name == "x" || p_name == "width") {                     \
+		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).x;          \
+	} else if (p_name == "y" || p_name == "height") {			  \
+		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).y;          \
+	} else if (p_name == "z" || p_name == "depth") {			  \
+		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).y;          \
+	} else throw VarError(VarError::INVALID_GET_NAME)
+
+#define VECT2_SET(m_t, m_cast)                                             \
+	if (p_name == "x" || p_name == "width") {                              \
+		(*DATA_PTR(STRCAT2(Vect2, m_t))).x = p_value.operator m_cast();    \
+	} else if (p_name == "y" || p_name == "height") {			           \
+		(*DATA_PTR(STRCAT2(Vect2, m_t))).y = p_value.operator m_cast();    \
+	} else throw VarError(VarError::INVALID_GET_NAME)
+
+#define VECT3_SET(m_t, m_cast)                                             \
+	if (p_name == "x" || p_name == "width") {                              \
+		(*DATA_PTR(STRCAT2(Vect3, m_t))).x = p_value.operator m_cast();    \
+	} else if (p_name == "y" || p_name == "height") {			           \
+		(*DATA_PTR(STRCAT2(Vect3, m_t))).y = p_value.operator m_cast();    \
+	} else if (p_name == "z" || p_name == "depth") {			           \
+		(*DATA_PTR(STRCAT2(Vect3, m_t))).y = p_value.operator m_cast();    \
+	} else throw VarError(VarError::INVALID_GET_NAME)
+
+
+
+var var::__get(const String& p_name) const {
+	switch (type) {
+		case VECT2F: VECT2_GET(f);
+		case VECT2I: VECT2_GET(i);
+		case VECT3F: VECT3_GET(f);
+		case VECT3I: VECT3_GET(i);
+		case OBJECT: return _data._obj->__get(p_name);
+	}
+	throw VarError(VarError::INVALID_GET_NAME); // TODO: more clear error.
+	return var::tmp;
+}
+
+void var::__set(const String& p_name, const var& p_value) {
+	switch (type) {
+		case VECT2F: 
+			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) throw VarError(VarError::INVALID_SET_VALUE);
+			VECT2_SET(f, double);
+			return;
+		case VECT2I:
+			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) throw VarError(VarError::INVALID_SET_VALUE);
+			VECT2_SET(i, int64_t);
+			return;
+		case VECT3F:
+			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) throw VarError(VarError::INVALID_SET_VALUE);
+			VECT3_SET(f, double);
+			return;
+		case VECT3I:
+			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) throw VarError(VarError::INVALID_SET_VALUE);
+			VECT3_SET(i, int64_t);
+			return;
+		case OBJECT: 
+			_data._obj->__get(p_name) = p_value;
+			return;
+	}
+	throw VarError(VarError::INVALID_GET_NAME); // TODO: more clear error.
+}
+
+#undef VECT2_GET
+#undef VECT3_GET
 
 /* casting */
 var::operator bool() const {
@@ -1218,7 +1311,7 @@ var::operator bool() const {
 	return false;
 }
 
-var::operator int() const {
+var::operator int64_t() const {
 	switch (type) {
 		case BOOL: return _data._bool;
 		case INT: return _data._int;
@@ -1231,8 +1324,8 @@ var::operator int() const {
 
 var::operator double() const {
 	switch (type) {
-		case BOOL: return _data._bool;
-		case INT: return _data._int;
+		case BOOL: return (double)_data._bool;
+		case INT: return (double)_data._int;
 		case FLOAT: return _data._float;
 		case STRING: return  _data._string.to_float();
 		default: throw VarError(VarError::INVALID_CASTING, "");
@@ -1302,7 +1395,7 @@ var::operator ptr<Object>() const {
 #define VAR_SWITCH_PRIME_TYPES(m_data, m_op)                              \
 	switch (p_other.type) {                                               \
 		VAR_RET_OP(m_op, m_data, BOOL, _bool, bool);                      \
-		VAR_RET_OP(m_op, m_data, INT, _int, int);                         \
+		VAR_RET_OP(m_op, m_data, INT, _int, int64_t);                     \
 		VAR_RET_OP(m_op, m_data, FLOAT, _float, float);                   \
 	}
 #define VAR_SWITCH_VECT(m_dim, m_t, m_op)                                                                                           \
@@ -1381,6 +1474,7 @@ bool var::operator<(const var& p_other) const {
 			break;
 		}
 	}
+	// FIXME: a workaround for map keys as vars.
 	return this < &p_other;
 }
 

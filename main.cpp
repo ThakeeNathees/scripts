@@ -21,7 +21,7 @@ public:
 
 class MyClass : public Object {
 public:
-	virtual operator String() const override {
+	virtual String to_string() const override {
 		return "MyClass";
 	}
 	~MyClass() {

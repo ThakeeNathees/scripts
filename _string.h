@@ -48,7 +48,7 @@ public:
 
 	// Methods.
 	static String format(const char* p_format, ...);
-	int to_int() const { return std::stoi(_data); }
+	int64_t to_int() const { return std::stoll(_data); }
 	double to_float() const { return std::stod(_data); }
 
 	// operators.
@@ -97,7 +97,7 @@ public:
 private:
 	friend class var;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const String& p_str);
-	friend std::istream& operator>>(std::istream& p_ostream, const String& p_str);
+	friend std::istream& operator>>(std::istream& p_ostream, String& p_str);
 	std::string _data;
 };
 
