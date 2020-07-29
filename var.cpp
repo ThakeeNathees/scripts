@@ -70,6 +70,25 @@ String String::format(const char* p_format, ...) {
 	return String(buffer);
 }
 
+String String::get_line(uint64_t p_line) const {
+	const char* source = _data.c_str();
+	uint64_t cur_line = 1;
+	std::stringstream ss_line;
+
+	while (char c = *source) {
+		if (c == '\n') {
+			if (cur_line >= p_line) break;
+			cur_line++;
+		} else if (cur_line == p_line) {
+			ss_line << c;
+		}
+		source++;
+	}
+
+	ss_line << '\n';
+	return ss_line.str();
+}
+
 bool operator==(const char* p_cstr, const String& p_str) {
 	return p_str == String(p_cstr);
 }

@@ -208,6 +208,7 @@ public:
 	static String format(const char* p_format, ...);
 	int64_t to_int() const { return std::stoll(_data); }
 	double to_float() const { return std::stod(_data); }
+	String get_line(uint64_t p_line) const;
 
 	// operators.
 	char operator[](size_t p_index) const {
@@ -914,6 +915,25 @@ String String::format(const char* p_format, ...) {
 	
 	if (len == 0) return String();
 	return String(buffer);
+}
+
+String String::get_line(uint64_t p_line) const {
+	const char* source = _data.c_str();
+	uint64_t cur_line = 1;
+	std::stringstream ss_line;
+
+	while (char c = *source) {
+		if (c == '\n') {
+			if (cur_line >= p_line) break;
+			cur_line++;
+		} else if (cur_line == p_line) {
+			ss_line << c;
+		}
+		source++;
+	}
+
+	ss_line << '\n';
+	return ss_line.str();
 }
 
 bool operator==(const char* p_cstr, const String& p_str) {

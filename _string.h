@@ -50,6 +50,7 @@ public:
 	static String format(const char* p_format, ...);
 	int64_t to_int() const { return std::stoll(_data); }
 	double to_float() const { return std::stod(_data); }
+	String get_line(uint64_t p_line) const;
 
 	// operators.
 	char operator[](size_t p_index) const {
