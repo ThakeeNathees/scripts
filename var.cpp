@@ -89,6 +89,28 @@ String String::get_line(uint64_t p_line) const {
 	return ss_line.str();
 }
 
+String String::substr(size_t p_start, size_t p_end) const {
+	return _data.substr(p_start, p_end - p_start);
+}
+bool String::endswith(const String& p_str) const {
+	if (p_str.size() > _data.size()) return false;
+	for (size_t i = 1; i <= p_str.size(); i++) {
+		if (_data[_data.size() - i] != p_str[p_str.size() - i]) {
+			return false;
+		}
+	}
+	return true;
+}
+bool String::startswith(const String& p_str) const {
+	if (p_str.size() > _data.size()) return false;
+	for (size_t i = 0; i < p_str.size(); i++) {
+		if (_data[i] != p_str[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
 bool operator==(const char* p_cstr, const String& p_str) {
 	return p_str == String(p_cstr);
 }

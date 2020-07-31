@@ -52,6 +52,12 @@ public:
 	double to_float() const { return std::stod(_data); }
 	String get_line(uint64_t p_line) const;
 
+	String substr(size_t p_start, size_t p_end) const;
+	bool endswith(const String& p_str) const;
+	bool startswith(const String& p_str) const;
+	// String strip(p_delemeter = " "); lstrip(); rstrip();
+	// Array split(p_delimeter = " ");
+
 	// operators.
 	char operator[](size_t p_index) const {
 		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }

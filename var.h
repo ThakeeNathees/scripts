@@ -210,6 +210,12 @@ public:
 	double to_float() const { return std::stod(_data); }
 	String get_line(uint64_t p_line) const;
 
+	String substr(size_t p_start, size_t p_end) const;
+	bool endswith(const String& p_str) const;
+	bool startswith(const String& p_str) const;
+	// String strip(p_delemeter = " "); lstrip(); rstrip();
+	// Array split(p_delimeter = " ");
+
 	// operators.
 	char operator[](size_t p_index) const {
 		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
@@ -934,6 +940,28 @@ String String::get_line(uint64_t p_line) const {
 
 	ss_line << '\n';
 	return ss_line.str();
+}
+
+String String::substr(size_t p_start, size_t p_end) const {
+	return _data.substr(p_start, p_end - p_start);
+}
+bool String::endswith(const String& p_str) const {
+	if (p_str.size() > _data.size()) return false;
+	for (size_t i = 1; i <= p_str.size(); i++) {
+		if (_data[_data.size() - i] != p_str[p_str.size() - i]) {
+			return false;
+		}
+	}
+	return true;
+}
+bool String::startswith(const String& p_str) const {
+	if (p_str.size() > _data.size()) return false;
+	for (size_t i = 0; i < p_str.size(); i++) {
+		if (_data[i] != p_str[i]) {
+			return false;
+		}
+	}
+	return true;
 }
 
 bool operator==(const char* p_cstr, const String& p_str) {
