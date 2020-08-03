@@ -42,15 +42,20 @@ public:
 	String(const char* p_copy)         { _data = p_copy; }
 	String(const String& p_copy)       { _data = p_copy._data; }
 	String(char p_char)                { _data = p_char; }
-	String(int p_i)                    { _data = std::to_string(p_i); }
-	String(double p_d)                 { _data = std::to_string(p_d); }
+	explicit String(int p_i)                    { _data = std::to_string(p_i); }
+	explicit String(int64_t p_i)                { _data = std::to_string(p_i); }
+	explicit String(size_t p_i)                 { _data = std::to_string(p_i); }
+	explicit String(double p_d)                 { _data = std::to_string(p_d); }
 	~String()                          {}
 
 	// Methods.
+	var call_method(const String& p_method, const stdvec<var>& p_args);
+
 	static String format(const char* p_format, ...);
-	int64_t to_int() const { return std::stoll(_data); }
+	int64_t to_int() const { return std::stoll(_data); } // TODO: this will throw std::exceptions
 	double to_float() const { return std::stod(_data); }
 	String get_line(uint64_t p_line) const;
+	size_t hash() const { return std::hash<std::string>{}(_data); }
 
 	String substr(size_t p_start, size_t p_end) const;
 	bool endswith(const String& p_str) const;

@@ -65,6 +65,9 @@ using stdvec = std::vector<T>;
 template<typename T1, typename T2>
 using stdmap = std::map<T1, T2>;
 
+template<typename T1, typename T2>
+using stdhashtable = std::unordered_map<T1, T2>;
+
 template<typename T, typename... Targs>
 inline ptr<T> newptr(Targs... p_args) {
 	return std::make_shared<T>(p_args...);

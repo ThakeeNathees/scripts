@@ -37,6 +37,10 @@ bool operator m_op (const Vect3<T>& p_other) const {   \
 	return get_length() m_op p_other.get_length();     \
 }
 
+#define MISSED_ENUM_CHECK(m_max_enum, m_max_value) \
+    static_assert((int)m_max_enum == m_max_value, "MissedEnum: " STRINGIFY(m_max_enum) " != " STRINGIFY(m_value) \
+        "\n\tat: " __FILE__ "(" STRINGIFY(__LINE__) ")")
+
 namespace varh {
 
 template<typename T>

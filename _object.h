@@ -28,6 +28,19 @@
 
 #include "varhcore.h"
 
+#ifndef INHERITS_OBJECT_ADDNL
+#define INHERITS_OBJECT_ADDNL
+#endif //INHERITS_OBJECT_ADDNL
+
+#define INHERITS_OBJECT(m_class, m_inherits)                                                         \
+public:                                                                                              \
+	static  const char* get_class_name_s() { return STR(m_class); }                                  \
+	virtual const char* get_class_name() const override { return get_class_name_s(); }               \
+	static  const char* get_parent_class_name_s() { return STR(m_inherits); }                        \
+	virtual const char* get_parent_class_name() const override { return get_parent_class_name_s(); } \
+	INHERITS_OBJECT_ADDNL(m_class, m_inherits)                                                       \
+private:
+
 namespace varh {
 
 class Object {
@@ -36,6 +49,7 @@ public:
 	// Operators.
 	operator String()  const { return to_string(); }
 	Object& operator=(const Object& p_copy) = default;
+	var operator()(stdvec<var>& p_vars);
 
 	bool operator==(const var& p_other) const { return __eq(p_other); }
 	bool operator!=(const var& p_other) const { return !operator == (p_other); }
@@ -54,15 +68,20 @@ public:
 	var& operator*=(const var& p_other);
 	var& operator/=(const var& p_other);
 
-	var& operator[](const var& p_key) { return __get_mapped(p_key); }
+	var& operator[](const var& p_key);
 
 	// Virtual methods.
 	// These double underscore methdos will be used as operators callback in the compiler.
+
+	static var call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args);  // instance.p_name(args)
+	virtual var __call(stdvec<var>& p_vars);                             // instance(args)
+
 	virtual bool __has(const String& p_name) const;
 	virtual var& __get(const String& p_name);
 
 	virtual bool __has_mapped(const String& p_name) const;
-	virtual var& __get_mapped(const var& p_key);
+	virtual var __get_mapped(const var& p_key);
+	virtual void __set_mapped(const var& p_key, const var& p_val);
 
 	virtual var __add(const var& p_other) const;
 	virtual var __sub(const var& p_other) const;
@@ -81,8 +100,13 @@ public:
 	virtual String to_string() const { return String::format("[Object:%i]", this);  }
 
 	// Methods.
-	virtual ptr<Object> copy(bool p_deep) const { throw VarError(VarError::NOT_IMPLEMENTED); }
-	virtual String get_class_name()       const { return "Object"; }
+	virtual ptr<Object> copy(bool p_deep)         const { throw VarError(VarError::NOT_IMPLEMENTED); }
+	static  const char* get_class_name_s()              { return "Object"; }
+	virtual const char* get_class_name()          const { return get_class_name_s(); }
+	static  const char* get_parent_class_name_s()       { return nullptr; }
+	virtual const char* get_parent_class_name()   const { return get_parent_class_name_s(); }
+
+	static void _bind_data() {} // TODO:
 
 private:
 	friend class var;

@@ -64,8 +64,10 @@ public:
 		MAP,
 		OBJECT,
 
-		TYPE_MAX,
+		_TYPE_MAX_,
 	};
+
+	static String get_type_name(var::Type p_type);
 
 	/* constructors */
 	var();
@@ -93,16 +95,20 @@ public:
 
 	// Methods.
 	inline Type get_type() const { return type; }
-	String to_string() const { return operator String(); }
 	void clear();
 	var copy(bool p_deep = false) const;
+
+	const char* get_class_name() const;
+	const char* get_parent_class_name() const;
 
 	// Operators.
 	operator bool() const;
 	operator int64_t() const;
+	operator int() const { return (int)operator int64_t(); }
 	operator float() const { return (float)operator double(); }
 	operator double() const;
-	operator String() const;
+	operator String() const;   // int.operator String() is invalid casting.
+	String to_string() const;  // int.to_string() is valid.
 	// this treated as: built-in C++ operator[](const char *, int), conflict with operator[](size_t)
 	// operator const char* () const;
 	operator Vect2f() const;
@@ -112,6 +118,11 @@ public:
 	operator Array() const;
 	operator Map() const;
 	operator ptr<Object>() const;
+
+	template <typename T>
+	ptr<T> cast_to() const {
+		return ptrcast<T>(operator ptr<Object>());
+	}
 
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
@@ -133,10 +144,37 @@ public:
 	var operator--();
 	var operator--(int);
 	bool operator !() const { return !operator bool(); }
-	var& operator[](const var& p_key) const;
+	var& operator[](const var& p_key) const; // not work on strings.
 
 	var __get(const String& p_name) const;
 	void __set(const String& p_name, const var& p_value);
+	var __get_mapped(const var& p_key) const;
+	void __set_mapped(const var& p_key, const var& p_value);
+
+	template <typename... Targs>
+	var __call(Targs... p_args) {
+		stdvec<var> args;
+		__build_args_recur(args, p_args...);
+		return __call_internal(args);
+	}
+	template <typename... Targs>
+	var call_method(const String& p_method, Targs... p_args) {
+		stdvec<var> args;
+		__build_args_recur(args, p_args...);
+		return call_method_internal(p_method, args);
+	}
+
+private:
+	var __call_internal(stdvec<var>& p_args);
+	// TODO: call static func in every var classes.
+	var call_method_internal(const String& p_method, stdvec<var>& p_args);
+	template <typename T, typename... Targs>
+	constexpr void __build_args_recur(stdvec<var>& p_args_arr, T p_val, Targs... p_args) {
+		p_args_arr.push_back(p_val);
+		__build_args_recur(p_args_arr, p_args...);
+	}
+	void __build_args_recur(stdvec<var>& p_args_arr) { return; }
+public:
 
 	VAR_OP_DECL(var, +, const);
 	VAR_OP_DECL(var, -, const);
@@ -207,6 +245,7 @@ private:
 #undef DEBUG_PRINT
 #undef DEBUG_BREAK
 #undef VAR_ASSERT
+#undef MISSED_ENUM_CHECK
 #undef UNDEF_VAR_DEFINES
 
 #endif
