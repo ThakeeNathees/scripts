@@ -133,7 +133,7 @@ public:
 	};
 
 	const char* what() const noexcept override { return msg.c_str(); }
-	Type get_Type() const { return type; }
+	Type get_type() const { return type; }
 
 	VarError() {}
 	VarError(Type p_type) { type = p_type; }

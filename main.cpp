@@ -1,7 +1,7 @@
 
-//#define TEST_AUTO_GENERATED
+#define TEST_AUTO_GENERATED
 
-#if (TEST_AUTO_GENERATED)
+#ifdef TEST_AUTO_GENERATED
 #define VAR_IMPLEMENTATION
 #include "var.h"
 #else
@@ -30,6 +30,17 @@ public:
 
 };
 
+
 int main() {
-	return 0;
+	var v;
+	v = 3.14;           print(v); // prints 3.14 float
+	v = "hello world!"; print(v); // prints the String
+
+	v = String("string"); v = Vect2f(1.2, 3.4); v = Vect2i(1, 2);
+	v = Map(); v = Array(1, 2.3, "hello world!", Array(4, 5, 6));
+
+	class Aclass : public Object {
+	public: String to_string() const { return "Aclass"; }
+	};
+	v = newptr<Aclass>(); print(v); // prints Aclass
 }

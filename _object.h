@@ -68,6 +68,7 @@ public:
 	var& operator*=(const var& p_other);
 	var& operator/=(const var& p_other);
 
+	var operator[](const var& p_key) const;
 	var& operator[](const var& p_key);
 
 	// Virtual methods.
@@ -80,7 +81,7 @@ public:
 	virtual var& __get(const String& p_name);
 
 	virtual bool __has_mapped(const String& p_name) const;
-	virtual var __get_mapped(const var& p_key);
+	virtual var __get_mapped(const var& p_key) const;
 	virtual void __set_mapped(const var& p_key, const var& p_val);
 
 	virtual var __add(const var& p_other) const;

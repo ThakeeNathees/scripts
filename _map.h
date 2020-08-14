@@ -73,7 +73,7 @@ public:
 
 	// Operators.
 	operator bool() const { return empty(); }
-	operator String() const;
+	String to_string() const; // operator String() const;
 	bool operator ==(const Map& p_other) const;
 	Map& operator=(const Map& p_other);
 

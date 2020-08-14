@@ -77,7 +77,7 @@ public:
 
 	// Operators.
 	operator bool() const { return empty(); }
-	operator String() const;
+	String to_string() const; // operator String() const;
 	bool operator ==(const Array& p_other) const;
 	Array& operator=(const Array& p_other);
 	Array operator+(const Array& p_other) const;
