@@ -32,7 +32,7 @@ namespace varh {
 var var::tmp;
 
 std::ostream& operator<<(std::ostream& p_ostream, const String& p_str) {
-	p_ostream << p_str.c_str();
+	p_ostream << p_str.operator std::string();
 	return p_ostream;
 }
 std::istream& operator>>(std::istream& p_istream, String& p_str) {
@@ -41,15 +41,15 @@ std::istream& operator>>(std::istream& p_istream, String& p_str) {
 }
 
 std::ostream& operator<<(std::ostream& p_ostream, const var& p_var) {
-	p_ostream << p_var.operator String();
+	p_ostream << p_var.to_string();
 	return p_ostream;
 }
 std::ostream& operator<<(std::ostream& p_ostream, const Array& p_arr) {
-	p_ostream << p_arr.operator String();
+	p_ostream << p_arr.to_string();
 	return p_ostream;
 }
 std::ostream& operator<<(std::ostream& p_ostream, const Map& p_map) {
-	p_ostream << p_map.operator String();
+	p_ostream << p_map.to_string();
 	return p_ostream;
 }
 
@@ -69,7 +69,7 @@ var String::call_method(const String& p_method, const stdvec<var>& p_args) {
 		return (int64_t)hash();
 	} else if (p_method == "substr") {
 		// TODO: check args.size() == 2, type == INT.
-		return substr(p_args[0].operator int64_t(), p_args[1].operator int64_t());
+		return substr((size_t)p_args[0].operator int64_t(), (size_t)p_args[1].operator int64_t());
 	} else if (p_method == "endswith") {
 		// TODO: check args.size() == 1, type == STRING
 		return endswith(p_args[0].operator String());
@@ -146,7 +146,7 @@ bool operator!=(const char* p_cstr, const String& p_str) {
 
 // Array -----------------------------------------------
 
-Array::operator String() const {
+String Array::to_string() const {
 	std::stringstream ss;
 	ss << "[ ";
 	for (unsigned int i = 0; i < _data->size(); i++) {
@@ -200,12 +200,12 @@ Array& Array::operator=(const Array& p_other) {
 }
 
 // Map  ----------------------------------------
-Map::operator String() const {
+String Map::to_string() const {
 	std::stringstream ss;
 	ss << "{ ";
 	for (stdmap<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
 		if (it != (*_data).begin()) ss << ", ";
-		ss << it->first.operator String() << " : " << it->second.operator String();
+		ss << it->first.to_string() << " : " << it->second.to_string();
 	}
 	ss << " }";
 	return ss.str();
@@ -263,12 +263,14 @@ var& Object::operator-=(const var& p_other) { return __sub_eq(p_other); }
 var& Object::operator*=(const var& p_other) { return __mul_eq(p_other); }
 var& Object::operator/=(const var& p_other) { return __div_eq(p_other); }
 
-var& Object::operator[](const var& p_key) { return __get_mapped(p_key); }
+var Object::operator[](const var& p_key) const { return __get_mapped(p_key); }
+var& Object::operator[](const var& p_key) { throw VarError(VarError::NOT_IMPLEMENTED); }
 
-#if 0 // TODO: add carbon build macro here
+#ifndef _VAR_H_EXTERN_IMPLEMENTATIONS
 // call_method() should call it's parent if method not exists.
 var Object::call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args) { throw VarError(VarError::INVALID_GET_NAME); }
 #endif
+
 var Object::__call(stdvec<var>& p_vars) { throw VarError(VarError::NOT_IMPLEMENTED); }
 var Object::operator()(stdvec<var>& p_vars) { return __call(p_vars); }
 
@@ -277,7 +279,7 @@ var& Object::__get(const String& p_name) { throw VarError(VarError::INVALID_GET_
 //void Object::__set(const String& p_name, const var& p_val) { throw VarError(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
 
 bool Object::__has_mapped(const String& p_name) const { return false; }
-var Object::__get_mapped(const var& p_key) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var Object::__get_mapped(const var& p_key) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
 void Object::__set_mapped(const var& p_key, const var& p_val) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
 
 var Object::__add(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
@@ -696,13 +698,13 @@ String var::to_string() const {
 		case INT: return String(_data._int);
 		case FLOAT: return String(_data._float);
 		case STRING: return _data._string;
-		case VECT2F: return (*DATA_PTR_CONST(Vect2f)).operator String();
-		case VECT2I: return (*DATA_PTR_CONST(Vect2i)).operator String();
-		case VECT3F: return (*DATA_PTR_CONST(Vect3f)).operator String();
-		case VECT3I: return (*DATA_PTR_CONST(Vect3i)).operator String();
-		case ARRAY: return _data._arr.operator String();
-		case MAP: return _data._map.operator String();
-		case OBJECT: return _data._obj->operator String();
+		case VECT2F: return (*DATA_PTR_CONST(Vect2f)).to_string();
+		case VECT2I: return (*DATA_PTR_CONST(Vect2i)).to_string();
+		case VECT3F: return (*DATA_PTR_CONST(Vect3f)).to_string();
+		case VECT3I: return (*DATA_PTR_CONST(Vect3i)).to_string();
+		case ARRAY: return _data._arr.to_string();
+		case MAP: return _data._map.to_string();
+		case OBJECT: return _data._obj->to_string();
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
 	DEBUG_BREAK(); // can't be reach here.
