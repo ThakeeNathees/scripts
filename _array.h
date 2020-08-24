@@ -65,8 +65,20 @@ public:
 	void pop_back() { _data->pop_back(); }
 	Array& append(const var& p_var) { push_back(p_var); return *this; }
 	var& pop() { var& ret = this->operator[](size() - 1); pop_back(); return ret; } 
-	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
-	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
+	var& operator[](int64_t p_index) const {
+		if (0 <= p_index && p_index < (int64_t)size())
+			return _data->operator[](p_index);
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return _data->operator[](size() + p_index);
+		throw VarError(VarError::INVALID_INDEX, "");
+	}
+	var& operator[](int64_t p_index) { 
+		if (0 <= p_index && p_index < (int64_t)size())
+			return _data->operator[](p_index);
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return _data->operator[](size() + p_index);
+		throw VarError(VarError::INVALID_INDEX, "");
+	}
 	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
 	std::vector<var>::const_iterator end() const { return (*_data).end(); }
 	void clear() { (*_data).clear(); }

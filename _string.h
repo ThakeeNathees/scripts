@@ -64,13 +64,19 @@ public:
 	// Array split(p_delimeter = " ");
 
 	// operators.
-	char operator[](size_t p_index) const {
-		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
-		return _data[p_index];
+	char operator[](int64_t p_index) const {
+		if (0 <= p_index && p_index < (int64_t)size())
+			return _data[p_index];
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return _data[size() + p_index];
+		throw VarError(VarError::INVALID_INDEX, "");
 	}
-	char& operator[](size_t p_index) {
-		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
-		return _data[p_index];
+	char& operator[](int64_t p_index) {
+		if (0 <= p_index && p_index < (int64_t)size())
+			return _data[p_index];
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return _data[size() + p_index];
+		throw VarError(VarError::INVALID_INDEX, "");
 	}
 
 	operator std::string() const                   { return _data; }

@@ -67,7 +67,8 @@ public:
 		_TYPE_MAX_,
 	};
 
-	static String get_type_name(var::Type p_type);
+	static String get_type_name_s(var::Type p_type);
+	String get_type_name() const;
 
 	/* constructors */
 	var();
@@ -127,6 +128,7 @@ public:
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
 	m_ret operator m_op (int64_t p_other) m_access { return operator m_op (var(p_other)); }        \
+	m_ret operator m_op (int p_other)     m_access { return operator m_op (var(p_other)); }        \
 	m_ret operator m_op (double p_other) m_access { return operator m_op (var(p_other)); }         \
 	m_ret operator m_op (const char* p_other) m_access { return operator m_op (var(p_other)); }    \
 	m_ret operator m_op (const var& p_other) m_access
@@ -144,7 +146,7 @@ public:
 	var operator--();
 	var operator--(int);
 	bool operator !() const { return !operator bool(); }
-	var& operator[](const var& p_key) const; // not work on strings.
+	var& operator[](const var& p_key);
 
 	var __get(const String& p_name) const;
 	void __set(const String& p_name, const var& p_value);

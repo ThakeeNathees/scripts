@@ -127,13 +127,19 @@ public:
 		INVALID_CASTING,
 		INVALID_GET_NAME,
 		INVALID_SET_VALUE,
+		INVALID_ARGUMENT,
+		INVALID_ARG_COUNT,
+
 		NOT_IMPLEMENTED,
 		OPERATOR_NOT_SUPPORTED,
 		ZERO_DIVISION,
+
+		_ERROR_MAX_,
 	};
 
 	const char* what() const noexcept override { return msg.c_str(); }
 	Type get_type() const { return type; }
+	static std::string get_err_name(Type p_type);
 
 	VarError() {}
 	VarError(Type p_type) { type = p_type; }
@@ -141,6 +147,7 @@ public:
 		type = p_type;
 		msg = p_msg;
 	}
+	
 
 private:
 	Type type = OK;

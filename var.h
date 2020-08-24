@@ -166,13 +166,19 @@ public:
 		INVALID_CASTING,
 		INVALID_GET_NAME,
 		INVALID_SET_VALUE,
+		INVALID_ARGUMENT,
+		INVALID_ARG_COUNT,
+
 		NOT_IMPLEMENTED,
 		OPERATOR_NOT_SUPPORTED,
 		ZERO_DIVISION,
+
+		_ERROR_MAX_,
 	};
 
 	const char* what() const noexcept override { return msg.c_str(); }
-	Type get_Type() const { return type; }
+	Type get_type() const { return type; }
+	static std::string get_err_name(Type p_type);
 
 	VarError() {}
 	VarError(Type p_type) { type = p_type; }
@@ -180,6 +186,7 @@ public:
 		type = p_type;
 		msg = p_msg;
 	}
+	
 
 private:
 	Type type = OK;
@@ -225,13 +232,19 @@ public:
 	// Array split(p_delimeter = " ");
 
 	// operators.
-	char operator[](size_t p_index) const {
-		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
-		return _data[p_index];
+	char operator[](int64_t p_index) const {
+		if (0 <= p_index && p_index < (int64_t)size())
+			return _data[p_index];
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return _data[size() + p_index];
+		throw VarError(VarError::INVALID_INDEX, "");
 	}
-	char& operator[](size_t p_index) {
-		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
-		return _data[p_index];
+	char& operator[](int64_t p_index) {
+		if (0 <= p_index && p_index < (int64_t)size())
+			return _data[p_index];
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return _data[size() + p_index];
+		throw VarError(VarError::INVALID_INDEX, "");
 	}
 
 	operator std::string() const                   { return _data; }
@@ -325,8 +338,20 @@ public:
 	void pop_back() { _data->pop_back(); }
 	Array& append(const var& p_var) { push_back(p_var); return *this; }
 	var& pop() { var& ret = this->operator[](size() - 1); pop_back(); return ret; } 
-	var& operator[](size_t p_pos) const { return _data->operator[](p_pos); }
-	var& operator[](size_t p_pos) { return _data->operator[](p_pos); }
+	var& operator[](int64_t p_index) const {
+		if (0 <= p_index && p_index < (int64_t)size())
+			return _data->operator[](p_index);
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return _data->operator[](size() + p_index);
+		throw VarError(VarError::INVALID_INDEX, "");
+	}
+	var& operator[](int64_t p_index) { 
+		if (0 <= p_index && p_index < (int64_t)size())
+			return _data->operator[](p_index);
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return _data->operator[](size() + p_index);
+		throw VarError(VarError::INVALID_INDEX, "");
+	}
 	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
 	std::vector<var>::const_iterator end() const { return (*_data).end(); }
 	void clear() { (*_data).clear(); }
@@ -677,7 +702,7 @@ public:
 	var& operator*=(const var& p_other);
 	var& operator/=(const var& p_other);
 
-	var operator[](const var& p_key) const;
+	var& operator[](const var& p_key) const;
 	var& operator[](const var& p_key);
 
 	// Virtual methods.
@@ -690,8 +715,8 @@ public:
 	virtual var& __get(const String& p_name);
 
 	virtual bool __has_mapped(const String& p_name) const;
-	virtual var __get_mapped(const var& p_key) const;
-	virtual void __set_mapped(const var& p_key, const var& p_val);
+	virtual var& __get_mapped(const var& p_key);
+	//virtual void __set_mapped(const var& p_key, const var& p_val);
 
 	virtual var __add(const var& p_other) const;
 	virtual var __sub(const var& p_other) const;
@@ -762,7 +787,8 @@ public:
 		_TYPE_MAX_,
 	};
 
-	static String get_type_name(var::Type p_type);
+	static String get_type_name_s(var::Type p_type);
+	String get_type_name() const;
 
 	/* constructors */
 	var();
@@ -822,6 +848,7 @@ public:
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
 	m_ret operator m_op (int64_t p_other) m_access { return operator m_op (var(p_other)); }        \
+	m_ret operator m_op (int p_other)     m_access { return operator m_op (var(p_other)); }        \
 	m_ret operator m_op (double p_other) m_access { return operator m_op (var(p_other)); }         \
 	m_ret operator m_op (const char* p_other) m_access { return operator m_op (var(p_other)); }    \
 	m_ret operator m_op (const var& p_other) m_access
@@ -839,7 +866,7 @@ public:
 	var operator--();
 	var operator--(int);
 	bool operator !() const { return !operator bool(); }
-	var& operator[](const var& p_key) const; // not work on strings.
+	var& operator[](const var& p_key);
 
 	var __get(const String& p_name) const;
 	void __set(const String& p_name, const var& p_value);
@@ -954,6 +981,10 @@ private:
 
 //include "_var.h"
 
+// add __FUNCTION__, __LINE__, __FILE__ to VarError.
+#define THROW_ERROR(m_type, m_msg) \
+	throw VarError(m_type, m_msg)
+
 #define D_VEC(m_vect, m_dim, m_t) STRCAT3(m_vect, m_dim, m_t)
 
 namespace varh {
@@ -982,28 +1013,51 @@ std::ostream& operator<<(std::ostream& p_ostream, const Map& p_map) {
 	return p_ostream;
 }
 
+static const char* _error_names[VarError::_ERROR_MAX_] = {
+	"OK",
+	"NULL_POINTER",
+	"INVALID_INDEX",
+	"INVALID_KEY",
+	"INVALID_CASTING",
+	"INVALID_GET_NAME",
+	"INVALID_SET_VALUE",
+	"NOT_IMPLEMENTED",
+	"OPERATOR_NOT_SUPPORTED",
+	"ZERO_DIVISION",
+	//_ERROR_MAX_
+};
+
+std::string VarError::get_err_name(VarError::Type p_type) {
+	return _error_names[p_type];
+}
+
 // String -----------------------------------------------
 var String::call_method(const String& p_method, const stdvec<var>& p_args) {
 	if (p_method == "to_int") {
-		// TODO: check args.size() == 0
+		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
 		return to_int();
 	} else if (p_method == "to_float") {
-		// TODO: check args.size() == 0
+		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
 		return to_float();
 	} else if (p_method == "get_line") {
-		// TODO: check args.size() == 1, type == INT.
+		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
+		if (p_args[0].get_type() != var::INT) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a numeric value at argument 0.");
 		return get_line(p_args[0].operator int64_t());
 	} else if (p_method == "hash") {
-		// TODO: check args.size() == 0
+		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
 		return (int64_t)hash();
 	} else if (p_method == "substr") {
-		// TODO: check args.size() == 2, type == INT.
+		if (p_args.size() != 2) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
+		if (p_args[0].get_type() != var::INT) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a numeric value at argument 0.");
+		if (p_args[1].get_type() != var::INT) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a numeric value at argument 1.");
 		return substr((size_t)p_args[0].operator int64_t(), (size_t)p_args[1].operator int64_t());
 	} else if (p_method == "endswith") {
-		// TODO: check args.size() == 1, type == STRING
+		if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
+		if (p_args[0].get_type() != var::STRING) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a string value at argument 0.");
 		return endswith(p_args[0].operator String());
 	} else if (p_method == "startswith") {
-		// TODO: check args.size() == 1, type == STRING
+		if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
+		if (p_args[0].get_type() != var::STRING) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a string value at argument 0.");
 		return startswith(p_args[0].operator String());
 	}
 	// TODO: more.
@@ -1192,8 +1246,8 @@ var& Object::operator-=(const var& p_other) { return __sub_eq(p_other); }
 var& Object::operator*=(const var& p_other) { return __mul_eq(p_other); }
 var& Object::operator/=(const var& p_other) { return __div_eq(p_other); }
 
-var Object::operator[](const var& p_key) const { return __get_mapped(p_key); }
-var& Object::operator[](const var& p_key) { throw VarError(VarError::NOT_IMPLEMENTED); }
+// TODO: refactor operator[] here and var::operator[] support for string.
+var& Object::operator[](const var& p_key) { return __get_mapped(p_key); }
 
 #ifndef _VAR_H_EXTERN_IMPLEMENTATIONS
 // call_method() should call it's parent if method not exists.
@@ -1208,8 +1262,8 @@ var& Object::__get(const String& p_name) { throw VarError(VarError::INVALID_GET_
 //void Object::__set(const String& p_name, const var& p_val) { throw VarError(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
 
 bool Object::__has_mapped(const String& p_name) const { return false; }
-var Object::__get_mapped(const var& p_key) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
-void Object::__set_mapped(const var& p_key, const var& p_val) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+var& Object::__get_mapped(const var& p_key) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
+//void Object::__set_mapped(const var& p_key, const var& p_val) { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
 
 var Object::__add(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
 var Object::__sub(const var& p_other) const { throw VarError(VarError::OPERATOR_NOT_SUPPORTED); }
@@ -1388,16 +1442,15 @@ var& var::operator=(const var& p_other) {
 	return *this;
 }
 
-var& var::operator[](const var& p_key) const {
+var& var::operator[](const var& p_key) {
 	switch (type) {
 		// strings can't return char as var&
+		case STRING: {
+			// handle operator[] for string seperatly;
+			throw VarError(VarError::NOT_IMPLEMENTED, "yet another BUG!!!");
+		}
 		case ARRAY: {
-			int index = (int)p_key;
-			if (0 <= index && index < (int)_data._arr.size())
-				return _data._arr[index];
-			if ((int)_data._arr.size() * -1 <= index && index < 0)
-				return _data._arr[_data._arr.size() + index];
-			throw VarError(VarError::INVALID_INDEX, "");
+			return _data._arr[p_key.operator int64_t()];
 		}
 		case MAP:
 			return _data._map[p_key];
@@ -1456,7 +1509,7 @@ void var::__set_mapped(const var& p_key, const var& p_value) {
 		case MAP:
 			_data._map[p_key] = p_value;
 		case OBJECT:
-			return _data._obj->__set_mapped(p_key, p_value);
+			_data._obj->__get_mapped(p_key) = p_value; // __set_mapped(p_key, p_value);
 	}
 	throw VarError(VarError::NOT_IMPLEMENTED, "operator[] not implemented");
 }
@@ -1560,12 +1613,12 @@ var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
 		case var::INT:    throw VarError(VarError::INVALID_GET_NAME, String::format("int has no attribute \"%s\"", p_method.c_str()));
 		case var::FLOAT:  throw VarError(VarError::INVALID_GET_NAME, String::format("float has no attribute \"%s\"", p_method.c_str()));
 		case var::STRING: return _data._string.call_method(p_method, p_args);
-		case var::VECT2F: // TODO:
-		case var::VECT2I: // TODO:
-		case var::VECT3F: // TODO:
-		case var::VECT3I: // TODO:
-		case var::ARRAY:  // TODO:
-		case var::MAP:    // TODO:
+		case var::VECT2F: throw "TODO"; // TODO:
+		case var::VECT2I: throw "TODO"; // TODO:
+		case var::VECT3F: throw "TODO"; // TODO:
+		case var::VECT3I: throw "TODO"; // TODO:
+		case var::ARRAY:  throw "TODO"; // TODO:
+		case var::MAP:    throw "TODO"; // TODO:
 		case var::OBJECT: return Object::call_method(_data._obj, p_method, p_args);
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
@@ -1590,7 +1643,7 @@ var::operator bool() const {
 		case OBJECT: return _data._obj.operator bool();
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"BOOL\"", get_type_name(type).c_str()));
+	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"bool\"", get_type_name().c_str()));
 	return false;
 }
 
@@ -1601,7 +1654,7 @@ var::operator int64_t() const {
 		case FLOAT: return (int)_data._float;
 		//case STRING: return  _data._string.to_int(); // throws std::exception
 	}
-	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"INT\"", get_type_name(type).c_str()));
+	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"int\"", get_type_name().c_str()));
 }
 
 var::operator double() const {
@@ -1611,12 +1664,12 @@ var::operator double() const {
 		case FLOAT: return _data._float;
 		//case STRING: return  _data._string.to_float();
 	}
-	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"FLOAT\"", get_type_name(type).c_str()));
+	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"float\"", get_type_name().c_str()));
 }
 
 var::operator String() const {
 	if (type != STRING)
-		throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"STRING\"", get_type_name(type).c_str()));
+		throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"String\"", get_type_name().c_str()));
 	return _data._string;
 }
 
@@ -1645,7 +1698,7 @@ var::operator D_VEC(Vect, m_dim, m_t)() const {                                 
 	switch (type) {                                                                     \
 		case D_VEC(VECT, m_dim, F): return *DATA_PTR_CONST(D_VEC(Vect, m_dim, f));      \
 		case D_VEC(VECT, m_dim, I): return *DATA_PTR_CONST(D_VEC(Vect, m_dim, i));      \
-		default: throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"" STRINGIFY(D_VEC(VECT, m_dim, I)) "\"", get_type_name(type).c_str()));\
+		default: throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"" STRINGIFY(D_VEC(VECT, m_dim, I)) "\"", get_type_name().c_str()));\
 	}                                                                                   \
 	return D_VEC(Vect, m_dim, m_t)();                                                   \
 }
@@ -1659,33 +1712,25 @@ var::operator Array() const {
 	if (type == ARRAY) {
 		return _data._arr;
 	}
-	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"ARRAY\"", get_type_name(type).c_str()));
+	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"Array\"", get_type_name().c_str()));
 }
 
 var::operator Map() const {
 	if (type == MAP) {
 		return _data._map;
 	}
-	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"MAP\"", get_type_name(type).c_str()));
+	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"Map\"", get_type_name().c_str()));
 }
 
 var::operator ptr<Object>() const {
 	if (type == OBJECT) {
 		return _data._obj;
 	}
-	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"OBJECT\"", get_type_name(type).c_str()));
+	throw VarError(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"Object\"", get_type_name().c_str()));
 }
 
 /* operator overloading */
 		/* comparison */
-#define VAR_RET_OP(m_op, m_data1, m_type, m_data2, m_cast) \
-	case m_type: return (m_cast)_data.m_data1 m_op p_other._data.m_data2
-#define VAR_SWITCH_PRIME_TYPES(m_data, m_op)                              \
-	switch (p_other.type) {                                               \
-		VAR_RET_OP(m_op, m_data, BOOL, _bool, bool);                      \
-		VAR_RET_OP(m_op, m_data, INT, _int, int64_t);                     \
-		VAR_RET_OP(m_op, m_data, FLOAT, _float, float);                   \
-	}
 #define VAR_SWITCH_VECT(m_dim, m_t, m_op)                                                                                           \
 switch (p_other.type) {                                                                                                             \
 	case D_VEC(VECT, m_dim, F): return *DATA_PTR_CONST(D_VEC(Vect, m_dim, m_t)) m_op *DATA_PTR_OTHER_CONST(D_VEC(Vect, m_dim, f));  \
@@ -1693,12 +1738,38 @@ switch (p_other.type) {                                                         
 }                                                                                                                                   \
 break;
 
+#define THROW_OPERATOR_NOT_SUPPORTED(m_op)                                                         \
+do {                                                                                               \
+	throw VarError(VarError::OPERATOR_NOT_SUPPORTED,                                               \
+		String::format("operator \"" STR(m_op) "\" not supported on operands \"%s\" and \"%s\"",   \
+			get_type_name().c_str(), p_other.get_type_name().c_str())                              \
+	);                                                                                             \
+} while(false)
+
 bool var::operator==(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL:   { VAR_SWITCH_PRIME_TYPES(_bool, ==)  } break;
-		case INT:    { VAR_SWITCH_PRIME_TYPES(_int, ==)   } break;
-		case FLOAT:  { VAR_SWITCH_PRIME_TYPES(_float, ==) } break;
+		case BOOL:   {
+			switch (p_other.type) {
+				case BOOL:  return _data._bool == p_other._data._bool;
+				case INT:   return _data._bool == (bool) p_other._data._int;
+				case FLOAT: return _data._bool == (bool) p_other._data._float;
+			}
+		} break;
+		case INT:    {
+			switch (p_other.type) {
+				case BOOL:  return (bool) _data._int == p_other._data._bool;
+				case INT:   return _data._int        == p_other._data._int;
+				case FLOAT: return _data._int        == p_other._data._float;
+			}
+		} break;
+		case FLOAT:  {
+			switch (p_other.type) {
+				case BOOL:  return (bool)_data._float == p_other._data._bool;
+				case INT:   return _data._float       == p_other._data._int;
+				case FLOAT: return _data._float       == p_other._data._float;
+			}
+		} break;
 		case STRING: {
 			if (p_other.type == STRING)
 				return _data._string == p_other._data._string;
@@ -1737,9 +1808,27 @@ bool var::operator!=(const var& p_other) const {
 bool var::operator<(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, <)  } break;
-		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, <)   } break;
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, <) } break;
+		case BOOL:  {
+			switch (p_other.type) {
+				case BOOL:  return (int)    _data._bool < (int)p_other._data._bool;
+				case INT:   return (int)    _data._bool < p_other._data._int;
+				case FLOAT: return (double) _data._bool < p_other._data._float;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:  return _data._int < (int)p_other._data._bool;
+				case INT:   return _data._int < p_other._data._int;
+				case FLOAT: return _data._int < p_other._data._float;
+			}
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:  return _data._float < (double) p_other._data._bool;
+				case INT:   return _data._float < p_other._data._int;
+				case FLOAT: return _data._float < p_other._data._float;
+			}
+		} break;
 		case STRING: {
 			if (p_other.type == STRING)
 				return _data._string < p_other._data._string;
@@ -1771,9 +1860,27 @@ bool var::operator<(const var& p_other) const {
 bool var::operator>(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, > )  } break;
-		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, > )   } break;
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, > ) } break;
+		case BOOL:  {
+			switch (p_other.type) {
+				case BOOL:  return (int)    _data._bool > (int) p_other._data._bool;
+				case INT:   return (int)    _data._bool > p_other._data._int;
+				case FLOAT: return (double) _data._bool > p_other._data._float;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:  return _data._int > (int) p_other._data._bool;
+				case INT:   return _data._int > p_other._data._int;
+				case FLOAT: return _data._int > p_other._data._float;
+			}
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:  return _data._float > (int)p_other._data._bool;
+				case INT:   return _data._float > p_other._data._int;
+				case FLOAT: return _data._float > p_other._data._float;
+			}
+		} break;
 		case STRING: {
 			if (p_other.type == STRING)
 				return _data._string < p_other._data._string;
@@ -1810,9 +1917,28 @@ bool var::operator>=(const var& p_other) const {
 var var::operator +(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, + )  } break;
-		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, + )   } break;
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, + ) } break;
+		case BOOL:  {
+			switch (p_other.type) {
+				case BOOL:  return (int64_t) _data._bool + (int64_t) p_other._data._bool;
+				case INT:   return (int64_t) _data._bool + p_other._data._int;
+				case FLOAT: return (double) _data._bool  + p_other._data._float;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:  return _data._int          + (int64_t) p_other._data._bool;
+				case INT:   return _data._int          + p_other._data._int;
+				case FLOAT: return (double) _data._int + p_other._data._float;
+			}
+
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:  return _data._float + (double) p_other._data._bool;
+				case INT:   return _data._float + (double) p_other._data._int;
+				case FLOAT: return _data._float + p_other._data._float;
+			}
+		} break;
 		case STRING: {
 			if (p_other.type == STRING)
 				return _data._string + p_other._data._string;
@@ -1833,16 +1959,33 @@ var var::operator +(const var& p_other) const {
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator + not implemented on \"%s\"", get_type_name(type).c_str()));
-	return false;
+	THROW_OPERATOR_NOT_SUPPORTED(+);
 }
 
 var var::operator-(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, -)  } break;
-		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, -)   } break;
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, -) } break;
+		case BOOL:  {
+			switch (p_other.type) {
+				case BOOL:  return (int64_t) _data._bool - (int64_t) p_other._data._bool;
+				case INT:   return (int64_t) _data._bool - p_other._data._int;
+				case FLOAT: return (double) _data._bool  - p_other._data._float;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:  return _data._int         - (int64_t)p_other._data._bool;
+				case INT:   return _data._int         - p_other._data._int;
+				case FLOAT: return (double)_data._int - p_other._data._float;
+			}
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:  return _data._float - (double)p_other._data._bool;
+				case INT:   return _data._float - (double)p_other._data._int;
+				case FLOAT: return _data._float - p_other._data._float;
+			}
+		} break;
 		case STRING:
 			break;
 		case VECT2F: { VAR_SWITCH_VECT(2, f, -) } break;
@@ -1855,17 +1998,48 @@ var var::operator-(const var& p_other) const {
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator - not implemented on \"%s\"", get_type_name(type).c_str()));
-	return false;
+	THROW_OPERATOR_NOT_SUPPORTED(-);
 }
 
 var var::operator *(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL:  { VAR_SWITCH_PRIME_TYPES(_bool, *)  } break;
-		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, *)   } break;
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, *) } break;
+		case BOOL:  {
+			switch (p_other.type) {
+				case BOOL:  return (int64_t)_data._bool * (int64_t)p_other._data._bool;
+				case INT:   return (int64_t)_data._bool * p_other._data._int;
+				case FLOAT: return (double)_data._bool  * p_other._data._float;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:  return _data._int         * (int64_t)p_other._data._bool;
+				case INT:   return _data._int         * p_other._data._int;
+				case FLOAT: return (double)_data._int * p_other._data._float;
+				case STRING: {
+					String ret;
+					for (int64_t i = 0; i < _data._int; i++) {
+						ret += p_other._data._string;
+					}
+					return ret;
+				}
+			}
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:  return _data._float * (double)p_other._data._bool;
+				case INT:   return _data._float * (double)p_other._data._int;
+				case FLOAT: return _data._float * p_other._data._float;
+			}
+		} break;
 		case STRING:
+			if (p_other.type == INT) {
+				String ret;
+				for (int64_t i = 0; i < p_other._data._int; i++) {
+					ret += _data._string;
+				}
+				return ret;
+			}
 			break;
 		case VECT2F: { VAR_SWITCH_VECT(2, f, *) } break;
 		case VECT2I: { VAR_SWITCH_VECT(2, i, *) } break;
@@ -1877,33 +2051,51 @@ var var::operator *(const var& p_other) const {
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator * not implemented on \"%s\"", get_type_name(type).c_str()));
-	return false;
-}
-
-#define CASE_DIV_DATA(m_data1, m_data2)                                   \
-{                                                                         \
-if (m_data2 == 0)                                                         \
-	throw VarError(VarError::ZERO_DIVISION, "");                          \
-return m_data1 / m_data2;                                                 \
-}
-
-#define SWITCH_DIV_TYPES(m_data, m_cast)                                  \
-switch (p_other.type) {                                                   \
-	case BOOL:                                                            \
-		CASE_DIV_DATA(m_cast _data.m_data, (int)p_other._data._bool)      \
-	case INT:                                                             \
-		CASE_DIV_DATA(m_cast _data.m_data, p_other._data._int)            \
-	case FLOAT:                                                           \
-		CASE_DIV_DATA(m_cast _data.m_data, p_other._data._float)          \
+	THROW_OPERATOR_NOT_SUPPORTED(*);
 }
 
 var var::operator /(const var& p_other) const {
 	switch (type) {
 		case _NULL: return false;
-		case BOOL:  { SWITCH_DIV_TYPES(_bool, (int)) } break;
-		case INT:   { SWITCH_DIV_TYPES(_int, +)      } break;
-		case FLOAT: { SWITCH_DIV_TYPES(_float , +)   } break;
+		case BOOL:  {
+			switch (p_other.type) {
+				case BOOL:
+					if (p_other._data._bool == false) throw VarError(VarError::ZERO_DIVISION, "");
+					return (int64_t)_data._bool / (int64_t)p_other._data._bool;
+				case INT:
+					if (p_other._data._int == 0) throw VarError(VarError::ZERO_DIVISION, "");
+					return (int64_t)_data._bool / p_other._data._int;
+				case FLOAT:
+					if (p_other._data._float == 0.0) throw VarError(VarError::ZERO_DIVISION, "");
+					return (double)_data._bool  / p_other._data._float;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:
+					if (p_other._data._bool == false) throw VarError(VarError::ZERO_DIVISION, "");
+					return _data._int         / (int64_t)p_other._data._bool;
+				case INT:
+					if (p_other._data._int == 0) throw VarError(VarError::ZERO_DIVISION, "");
+					return _data._int         / p_other._data._int;
+				case FLOAT:
+					if (p_other._data._float == 0.0) throw VarError(VarError::ZERO_DIVISION, "");
+					return (double)_data._int / p_other._data._float;
+			}
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:
+					if (p_other._data._bool == false) throw VarError(VarError::ZERO_DIVISION, "");
+					return _data._float / (double)p_other._data._bool;
+				case INT:
+					if (p_other._data._int == 0) throw VarError(VarError::ZERO_DIVISION, "");
+					return _data._float / (double)p_other._data._int;
+				case FLOAT:
+					if (p_other._data._float == 0.0) throw VarError(VarError::ZERO_DIVISION, "");
+					return _data._float / p_other._data._float;
+			}
+		} break;
 		case STRING:
 			break;
 		case VECT2F: { VAR_SWITCH_VECT(2, f, /) } break;
@@ -1916,11 +2108,8 @@ var var::operator /(const var& p_other) const {
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator / not implemented on \"%s\"", get_type_name(type).c_str()));
-	return false;
+	THROW_OPERATOR_NOT_SUPPORTED(/);
 }
-#undef SWITCH_DIV_TYPES
-#undef CASE_DIV_DATA
 
 var var::operator %(const var& p_other) const {
 	switch (type) {
@@ -1939,37 +2128,42 @@ var var::operator %(const var& p_other) const {
 		}
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator % not implemented on \"%s\"", get_type_name(type).c_str()));
-	return false;
+	THROW_OPERATOR_NOT_SUPPORTED(%);
 }
 #undef VAR_RET_EQUAL
-#undef VAR_SWITCH_PRIME_TYPES
 #undef VAR_SWITCH_VECT
-#undef SWITCH_DIV_TYPES
-#undef CASE_DIV_DATA
 
-
-#define VAR_CASE_OP(m_op, m_data1, m_type, m_data2, m_cast) \
-	case m_type: _data.m_data1 m_op (m_cast)p_other._data.m_data2; return *this
-#define VAR_SWITCH_PRIME_TYPES(m_data, m_cast, m_op)                               \
-	switch (p_other.type) {                                                        \
-		VAR_CASE_OP(m_op, m_data, BOOL, _bool , m_cast);                           \
-		VAR_CASE_OP(m_op, m_data, INT, _int, m_cast);                              \
-		VAR_CASE_OP(m_op, m_data, FLOAT, _float, m_cast);                          \
-	}
 #define VAR_SWITCH_VECT(m_dim, m_t, m_op)                                                                                               \
 switch (p_other.type) {                                                                                                                 \
 	case D_VEC(VECT, m_dim, F): *DATA_PTR(D_VEC(Vect, m_dim, m_t)) m_op *DATA_PTR_OTHER_CONST(D_VEC(Vect, m_dim, f)); return *this;     \
 	case D_VEC(VECT, m_dim, I): *DATA_PTR(D_VEC(Vect, m_dim, m_t)) m_op *DATA_PTR_OTHER_CONST(D_VEC(Vect, m_dim, i)); return *this;     \
 }                                                                                                                                       \
 break;
+
 var& var::operator+=(const var& p_other) {
 	switch (type) {
 		case _NULL:
-		case BOOL:
-			break;
-		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, int, +=)     } break;
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, +=) } break;
+		case BOOL: {
+			switch (p_other.type) {
+				case BOOL:  type = INT;   _data._int   = (int)_data._bool    + (int)p_other._data._bool; return *this;
+				case INT:   type = INT;   _data._int   = (int)_data._bool    + p_other._data._int;       return *this;
+				case FLOAT: type = FLOAT; _data._float = (double)_data._bool + p_other._data._float;     return *this;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:                _data._int   =         _data._int + (int)p_other._data._bool;  return *this;
+				case INT:                 _data._int   =         _data._int + p_other._data._int;        return *this;
+				case FLOAT: type = FLOAT; _data._float = (double)_data._int + p_other._data._float;      return *this;
+			}
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:  _data._float = _data._float + (double)p_other._data._bool;  return *this;
+				case INT:   _data._float = _data._float + (double)p_other._data._int;   return *this;
+				case FLOAT: _data._float = _data._float + p_other._data._float;         return *this;
+			}
+		} break;
 		case STRING: {
 			if (p_other.type == STRING) {
 				_data._string += p_other._data._string;
@@ -1993,17 +2187,33 @@ var& var::operator+=(const var& p_other) {
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator += not implemented on \"%s\"", get_type_name(type).c_str()));
-	return *this;
+	THROW_OPERATOR_NOT_SUPPORTED(+=);
 }
 
 var& var::operator-=(const var& p_other) {
 	switch (type) {
 		case _NULL:
-		case BOOL:
-			break;
-		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, int, -=)     } break;
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, -=) } break;
+		case BOOL: {
+			switch (p_other.type) {
+				case BOOL:  type = INT;   _data._int   = (int)_data._bool    - (int)p_other._data._bool; return *this;
+				case INT:   type = INT;   _data._int   = (int)_data._bool    - p_other._data._int;       return *this;
+				case FLOAT: type = FLOAT; _data._float = (double)_data._bool - p_other._data._float;     return *this;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:                _data._int   = (int)   _data._int - (int)p_other._data._bool;  return *this;
+				case INT:                 _data._int   =         _data._int - p_other._data._int;        return *this;
+				case FLOAT: type = FLOAT; _data._float = (double)_data._int - p_other._data._float;      return *this;
+			}
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:  _data._float = _data._float - (double)p_other._data._bool;  return *this;
+				case INT:   _data._float = _data._float - (double)p_other._data._int;   return *this;
+				case FLOAT: _data._float = _data._float - p_other._data._float;         return *this;
+			}
+		} break;
 		case STRING:
 			break;
 		case VECT2F: { VAR_SWITCH_VECT(2, f, -=) } break;
@@ -2016,19 +2226,49 @@ var& var::operator-=(const var& p_other) {
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator -= not implemented on \"%s\"", get_type_name(type).c_str()));
-	return *this;
+	THROW_OPERATOR_NOT_SUPPORTED(-=);
 }
 
 
 var& var::operator*=(const var& p_other) {
 	switch (type) {
 		case _NULL:
-		case BOOL:
-			break;
-		case INT:   { VAR_SWITCH_PRIME_TYPES(_int, int, *=)     } break;
-		case FLOAT: { VAR_SWITCH_PRIME_TYPES(_float, float, *=) } break;
+		case BOOL: {
+			switch (p_other.type) {
+				case BOOL:  type = INT;   _data._int   = (int)_data._bool    * (int)p_other._data._bool; return *this;
+				case INT:   type = INT;   _data._int   = (int)_data._bool    * p_other._data._int;       return *this;
+				case FLOAT: type = FLOAT; _data._float = (double)_data._bool * p_other._data._float;     return *this;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:                _data._int   = (int)   _data._int * (int)p_other._data._bool;  return *this;
+				case INT:                 _data._int   =         _data._int * p_other._data._int;        return *this;
+				case FLOAT: type = FLOAT; _data._float = (double)_data._int * p_other._data._float;      return *this;
+				case STRING: {
+					String self;
+					for (int64_t i = 0; i < _data._int; i++) {
+						self += p_other._data._string;
+					}
+					type = STRING; new(&_data._string) String(self); return *this;
+				}
+			}
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:  _data._float = _data._float * (double)p_other._data._bool;  return *this;
+				case INT:   _data._float = _data._float * (double)p_other._data._int;   return *this;
+				case FLOAT: _data._float = _data._float * p_other._data._float;         return *this;
+			}
+		} break;
 		case STRING:
+			if (p_other.type == INT) {
+				String self;
+				for (int64_t i = 0; i < p_other._data._int; i++) {
+					self += _data._string;
+				}
+				_data._string = self; return *this;
+			}
 			break;
 		case VECT2F: { VAR_SWITCH_VECT(2, f, *=) } break;
 		case VECT2I: { VAR_SWITCH_VECT(2, i, *=) } break;
@@ -2040,34 +2280,51 @@ var& var::operator*=(const var& p_other) {
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator *= not implemented on \"%s\"", get_type_name(type).c_str()));
-	return *this;
+	THROW_OPERATOR_NOT_SUPPORTED(*=);
 }
 
-#define CASE_DIV_DATA(m_data1, m_data2)                                   \
-{                                                                         \
-if (m_data2 == 0)                                                         \
-	throw VarError(VarError::ZERO_DIVISION, "");                          \
-m_data1 /= m_data2;                                                       \
-return *this;                                                             \
-}
-
-#define SWITCH_DIV_TYPES(m_data, m_cast)                                  \
-switch (p_other.type) {                                                   \
-	case BOOL:                                                            \
-		CASE_DIV_DATA(_data.m_data, (int)p_other._data._bool)             \
-	case INT:                                                             \
-		CASE_DIV_DATA(_data.m_data, (m_cast)p_other._data._int)           \
-	case FLOAT:                                                           \
-		CASE_DIV_DATA(_data.m_data, (m_cast)p_other._data._float)         \
-}
 var& var::operator/=(const var& p_other) {
 	switch (type) {
 		case _NULL:
-		case BOOL:
-			break;
-		case INT:   { SWITCH_DIV_TYPES(_int, int)     } break;
-		case FLOAT: { SWITCH_DIV_TYPES(_float, float) } break;
+		case BOOL: {
+			switch (p_other.type) {
+				case BOOL:
+					if (p_other._data._bool == false) throw VarError(VarError::ZERO_DIVISION, "");
+					type = INT;   _data._int   = (int)_data._bool    / (int)p_other._data._bool; return *this;
+				case INT:
+					if (p_other._data._int == 0) throw VarError(VarError::ZERO_DIVISION, "");
+					type = INT;   _data._int   = (int)_data._bool    / p_other._data._int;       return *this;
+				case FLOAT:
+					if (p_other._data._float == 0.0) throw VarError(VarError::ZERO_DIVISION, "");
+					type = FLOAT; _data._float = (double)_data._bool / p_other._data._float;     return *this;
+			}
+		} break;
+		case INT:   {
+			switch (p_other.type) {
+				case BOOL:
+					if (p_other._data._bool == false) throw VarError(VarError::ZERO_DIVISION, "");
+					_data._int   = (int)   _data._int / (int)p_other._data._bool;  return *this;
+				case INT:
+					if (p_other._data._int == 0) throw VarError(VarError::ZERO_DIVISION, "");
+					_data._int   =         _data._int / p_other._data._int;        return *this;
+				case FLOAT:
+					if (p_other._data._float == 0.0) throw VarError(VarError::ZERO_DIVISION, "");
+					type = FLOAT; _data._float = (double)_data._int / p_other._data._float;      return *this;
+			}
+		} break;
+		case FLOAT: {
+			switch (p_other.type) {
+				case BOOL:
+					if (p_other._data._bool == false) throw VarError(VarError::ZERO_DIVISION, "");
+					_data._float = _data._float / (double)p_other._data._bool;  return *this;
+				case INT:
+					if (p_other._data._int == 0) throw VarError(VarError::ZERO_DIVISION, "");
+					_data._float = _data._float / (double)p_other._data._int;   return *this;
+				case FLOAT:
+					if (p_other._data._float == 0.0) throw VarError(VarError::ZERO_DIVISION, "");
+					_data._float = _data._float / p_other._data._float;         return *this;
+			}
+		} break;
 		case STRING:
 			break;
 		case VECT2F: { VAR_SWITCH_VECT(2, f, /=) } break;
@@ -2080,8 +2337,7 @@ var& var::operator/=(const var& p_other) {
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator /= not implemented on \"%s\"", get_type_name(type).c_str()));
-	return *this;
+	THROW_OPERATOR_NOT_SUPPORTED(/=);
 }
 
 var& var::operator %=(const var& p_other) {
@@ -2095,8 +2351,7 @@ var& var::operator %=(const var& p_other) {
 			}
 		}
 	}
-	throw VarError(VarError::NOT_IMPLEMENTED, String::format("operator %= not implemented on \"%s\"", get_type_name(type).c_str()));
-	return *this;
+	THROW_OPERATOR_NOT_SUPPORTED(%=);
 }
 
 void var::copy_data(const var& p_other) {
@@ -2165,33 +2420,38 @@ void var::clear_data() {
 }
 
 
-String var::get_type_name(var::Type p_type) {
+String var::get_type_name_s(var::Type p_type) {
 	static const char* _type_names[_TYPE_MAX_] = {
-		"_NULL",
-		"BOOL",
-		"INT",
-		"FLOAT",
-		"STRING",
-		"VECT2F",
-		"VECT2I",
-		"VECT3F",
-		"VECT3I",
-		"ARRAY",
-		"MAP",
-		"OBJECT",
+		"null",
+		"bool",
+		"int",
+		"float",
+		"String",
+		"Vect2f",
+		"Vect2i",
+		"Vect3f",
+		"Vect3i",
+		"Array",
+		"Map",
+		"Object",
 		//_TYPE_MAX_
 	};
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
 	return _type_names[p_type];
 }
 
+String var::get_type_name() const {
+	if (type == OBJECT) {
+		return _data._obj->get_class_name();
+	} else {
+		return get_type_name_s(type);
+	}
+}
+
 }
 
 #undef VAR_CASE_OP
-#undef VAR_SWITCH_PRIME_TYPES
 #undef VAR_SWITCH_VECT
-#undef CASE_DIV_DATA
-#undef SWITCH_DIV_TYPES
 
 #if defined(UNDEF_VAR_DEFINES)
 #undef func
