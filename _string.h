@@ -69,14 +69,14 @@ public:
 			return _data[p_index];
 		if ((int64_t)size() * -1 <= p_index && p_index < 0)
 			return _data[size() + p_index];
-		throw VarError(VarError::INVALID_INDEX, "");
+		throw VarError(VarError::INVALID_INDEX, ""); // TODO: better error message.
 	}
 	char& operator[](int64_t p_index) {
 		if (0 <= p_index && p_index < (int64_t)size())
 			return _data[p_index];
 		if ((int64_t)size() * -1 <= p_index && p_index < 0)
 			return _data[size() + p_index];
-		throw VarError(VarError::INVALID_INDEX, "");
+		throw VarError(VarError::INVALID_INDEX, ""); // TODO: better error message.
 	}
 
 	operator std::string() const                   { return _data; }

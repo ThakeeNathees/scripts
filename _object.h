@@ -28,18 +28,13 @@
 
 #include "varhcore.h"
 
-#ifndef INHERITS_OBJECT_ADDNL
-#define INHERITS_OBJECT_ADDNL
-#endif //INHERITS_OBJECT_ADDNL
-
-#define INHERITS_OBJECT(m_class, m_inherits)                                                         \
+#define REGISTER_CLASS(m_class, m_inherits)                                                          \
 public:                                                                                              \
 	static  const char* get_class_name_s() { return STR(m_class); }                                  \
 	virtual const char* get_class_name() const override { return get_class_name_s(); }               \
 	static  const char* get_parent_class_name_s() { return STR(m_inherits); }                        \
 	virtual const char* get_parent_class_name() const override { return get_parent_class_name_s(); } \
-	INHERITS_OBJECT_ADDNL(m_class, m_inherits)                                                       \
-private:
+	static void _bind_data()
 
 namespace varh {
 
@@ -75,10 +70,11 @@ public:
 	// These double underscore methdos will be used as operators callback in the compiler.
 
 	static var call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args);  // instance.p_name(args)
-	virtual var __call(stdvec<var>& p_vars);                             // instance(args)
+	virtual var __call(stdvec<var>& p_vars);                                                // instance(args)
 
-	virtual bool __has(const String& p_name) const;
-	virtual var& __get(const String& p_name);
+	static var& get_member(ptr<Object> p_self, const String& p_name);
+	virtual bool __has(const String& p_name) const; // TODO: remove __get(), __has() and add static bool has_member();
+	virtual var& __get(const String& p_name);	    //       and use static var& get_member()
 
 	virtual bool __has_mapped(const String& p_name) const;
 	virtual var& __get_mapped(const var& p_key);
@@ -104,7 +100,7 @@ public:
 	virtual ptr<Object> copy(bool p_deep)         const { throw VarError(VarError::NOT_IMPLEMENTED); }
 	static  const char* get_class_name_s()              { return "Object"; }
 	virtual const char* get_class_name()          const { return get_class_name_s(); }
-	static  const char* get_parent_class_name_s()       { return nullptr; }
+	static  const char* get_parent_class_name_s()       { return ""; }
 	virtual const char* get_parent_class_name()   const { return get_parent_class_name_s(); }
 
 	static void _bind_data() {} // TODO:

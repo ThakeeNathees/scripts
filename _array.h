@@ -32,7 +32,6 @@ namespace varh {
 
 class Array {
 public:
-	// Methods.
 	Array() {
 		_data = newptr<stdvec<var>>();
 	}
@@ -55,6 +54,8 @@ public:
 		return _data.operator->();
 	}
 
+	// Methods.
+	var call_method(const String& p_method, const stdvec<var>& p_args);
 	Array copy(bool p_deep = true) const;
 
 	// Wrappers.
@@ -82,7 +83,13 @@ public:
 	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
 	std::vector<var>::const_iterator end() const { return (*_data).end(); }
 	void clear() { (*_data).clear(); }
-	var& at(size_t p_pos) { return (*_data).at(p_pos); }
+	var& at(int64_t p_index) {
+		if (0 <= p_index && p_index < (int64_t)size())
+			return (*_data).at(p_index);
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return (*_data).at(size() + p_index);
+		throw VarError(VarError::INVALID_INDEX, "");
+	}
 	var& back() { return (*_data).back(); }
 	var& front() { return (*_data).front(); }
 	// TODO: 

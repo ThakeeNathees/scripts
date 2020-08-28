@@ -67,9 +67,6 @@ public:
 		_TYPE_MAX_,
 	};
 
-	static String get_type_name_s(var::Type p_type);
-	String get_type_name() const;
-
 	/* constructors */
 	var();
 	var(const var& p_copy);
@@ -96,11 +93,12 @@ public:
 
 	// Methods.
 	inline Type get_type() const { return type; }
+	static String get_type_name_s(var::Type p_type);
+	String get_type_name() const;
+	//const char* get_parent_class_name() const;
 	void clear();
 	var copy(bool p_deep = false) const;
 
-	const char* get_class_name() const;
-	const char* get_parent_class_name() const;
 
 	// Operators.
 	operator bool() const;
@@ -165,6 +163,8 @@ public:
 		__build_args_recur(args, p_args...);
 		return call_method_internal(p_method, args);
 	}
+
+	var& get_member(const String& p_name);
 
 private:
 	var __call_internal(stdvec<var>& p_args);

@@ -134,6 +134,8 @@ public:
 		OPERATOR_NOT_SUPPORTED,
 		ZERO_DIVISION,
 
+		BUG,
+
 		_ERROR_MAX_,
 	};
 
