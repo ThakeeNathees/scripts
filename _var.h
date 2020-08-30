@@ -146,8 +146,6 @@ public:
 	bool operator !() const { return !operator bool(); }
 	var& operator[](const var& p_key);
 
-	var __get(const String& p_name) const;
-	void __set(const String& p_name, const var& p_value);
 	var __get_mapped(const var& p_key) const;
 	void __set_mapped(const var& p_key, const var& p_value);
 
@@ -164,7 +162,8 @@ public:
 		return call_method_internal(p_method, args);
 	}
 
-	var& get_member(const String& p_name);
+	var get_member(const String& p_name);
+	void set_member(const String& p_name, var& p_value);
 
 private:
 	var __call_internal(stdvec<var>& p_args);

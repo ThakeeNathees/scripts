@@ -107,7 +107,6 @@ var String::call_method(const String& p_method, const stdvec<var>& p_args) {
 		return startswith(p_args[0].operator String());
 	}
 	// TODO: more.
-	// TODO: "__get_mapped" "string"[0]
 	THROW_ERROR(VarError::INVALID_GET_NAME, ""); // TODO: more clear error msg.
 }
 
@@ -330,19 +329,15 @@ var& Object::operator[](const var& p_key) { return __get_mapped(p_key); }
 #ifndef _VAR_H_EXTERN_IMPLEMENTATIONS
 // call_method() should call it's parent if method not exists.
 var Object::call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args) { THROW_ERROR(VarError::INVALID_GET_NAME, ""); }
-var& Object::get_member(ptr<Object> p_self, const String& p_name) { THROW_ERROR(VarError::INVALID_GET_NAME, ""); }
+var Object::get_member(ptr<Object> p_self, const String& p_name) { THROW_ERROR(VarError::INVALID_GET_NAME, ""); }
+void Object::set_member(ptr<Object> p_self, const String& p_name, var& p_value);
 #endif
 
 var Object::__call(stdvec<var>& p_vars) { THROW_ERROR(VarError::NOT_IMPLEMENTED, ""); }
 var Object::operator()(stdvec<var>& p_vars) { return __call(p_vars); }
 
-bool Object::__has(const String& p_name) const { return false; }
-var& Object::__get(const String& p_name) { THROW_ERROR(VarError::INVALID_GET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
-//void Object::__set(const String& p_name, const var& p_val) { THROW_ERROR(VarError::INVALID_SET_NAME, String::format("Name \"%s\" not exists in object.", p_name)); }
-
-bool Object::__has_mapped(const String& p_name) const { return false; }
-var& Object::__get_mapped(const var& p_key) { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
-//void Object::__set_mapped(const var& p_key, const var& p_val) { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED); }
+var Object::__get_mapped(const var& p_key) { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
+void Object::__set_mapped(const var& p_key, const var& p_val) { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
 
 var Object::__add(const var& p_other) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
 var Object::__sub(const var& p_other) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
@@ -541,106 +536,25 @@ var var::__get_mapped(const var& p_key) const {
 	THROW_ERROR(VarError::NOT_IMPLEMENTED, "operator[] not implemented");
 }
 
-// TODO: refactor get, set, get_mapped, set_mapped.
 void var::__set_mapped(const var& p_key, const var& p_value) {
 	switch (type) {
 		case STRING: {
-			int index = (int)p_key; // TODO: check key is int.
-			// TODO: check value is string, size = 1.
-			if (0 <= index && index < (int)_data._string.size())
-				_data._string[index] = p_value.operator String()[0];
-			if ((int)_data._string.size() * -1 <= index && index < 0)
-				_data._string[_data._string.size() + index] = p_value.operator String()[0];
-			THROW_ERROR(VarError::INVALID_INDEX, ""); // TODO: better error msg
+			if (p_key.get_type() != var::INT) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a numeric value for indexing.");
+			if (p_value.get_type() != var::STRING) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a string value to assign");
+			if (p_value.operator String().size() != 1) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a string of size 1 to assign");
+			_data._string[p_key.operator int64_t()] = p_value.operator String()[0];
 		} break;
 		case ARRAY: {
-			int index = (int)p_key; // TODO: check key is int.
-			if (0 <= index && index < (int)_data._arr.size())
-				_data._arr[index] = p_value;
-			if ((int)_data._arr.size() * -1 <= index && index < 0)
-				_data._arr[_data._arr.size() + index] = p_value;
-			THROW_ERROR(VarError::INVALID_INDEX, ""); // TODO: better error msg
+			if (p_key.get_type() != var::INT) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a numeric value for indexing.");
+			_data._arr[p_key.operator int64_t()] = p_value;
 		} break;
 		case MAP:
-			_data._map[p_key] = p_value;
+			_data._map[p_key] = p_value; // TODO: refactor map.
 		case OBJECT:
-			_data._obj->__get_mapped(p_key) = p_value; // __set_mapped(p_key, p_value);
+			_data._obj->__set_mapped(p_key, p_value);
 	}
 	THROW_ERROR(VarError::NOT_IMPLEMENTED, "operator[] not implemented");
 }
-
-#define VECT2_GET(m_t)                                            \
-	if (p_name == "x" || p_name == "width") {                     \
-		return (*DATA_PTR_CONST(STRCAT2(Vect2, m_t))).x;          \
-	} else if (p_name == "y" || p_name == "height") {			  \
-		return (*DATA_PTR_CONST(STRCAT2(Vect2, m_t))).y;          \
-	} else THROW_ERROR(VarError::INVALID_GET_NAME, "")
-
-#define VECT3_GET(m_t)                                            \
-	if (p_name == "x" || p_name == "width") {                     \
-		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).x;          \
-	} else if (p_name == "y" || p_name == "height") {			  \
-		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).y;          \
-	} else if (p_name == "z" || p_name == "depth") {			  \
-		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).y;          \
-	} else THROW_ERROR(VarError::INVALID_GET_NAME, "")
-
-#define VECT2_SET(m_t, m_cast)                                             \
-	if (p_name == "x" || p_name == "width") {                              \
-		(*DATA_PTR(STRCAT2(Vect2, m_t))).x = p_value.operator m_cast();    \
-	} else if (p_name == "y" || p_name == "height") {			           \
-		(*DATA_PTR(STRCAT2(Vect2, m_t))).y = p_value.operator m_cast();    \
-	} else THROW_ERROR(VarError::INVALID_GET_NAME, "")
-
-#define VECT3_SET(m_t, m_cast)                                             \
-	if (p_name == "x" || p_name == "width") {                              \
-		(*DATA_PTR(STRCAT2(Vect3, m_t))).x = p_value.operator m_cast();    \
-	} else if (p_name == "y" || p_name == "height") {			           \
-		(*DATA_PTR(STRCAT2(Vect3, m_t))).y = p_value.operator m_cast();    \
-	} else if (p_name == "z" || p_name == "depth") {			           \
-		(*DATA_PTR(STRCAT2(Vect3, m_t))).y = p_value.operator m_cast();    \
-	} else THROW_ERROR(VarError::INVALID_GET_NAME, "")
-
-
-
-var var::__get(const String& p_name) const {
-	switch (type) {
-		case VECT2F: VECT2_GET(f);
-		case VECT2I: VECT2_GET(i);
-		case VECT3F: VECT3_GET(f);
-		case VECT3I: VECT3_GET(i);
-		case OBJECT: return _data._obj->__get(p_name);
-	}
-	THROW_ERROR(VarError::INVALID_GET_NAME, ""); // TODO: more clear error.
-}
-
-void var::__set(const String& p_name, const var& p_value) {
-	switch (type) {
-		case VECT2F: 
-			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) THROW_ERROR(VarError::INVALID_SET_VALUE, "");
-			VECT2_SET(f, double);
-			return;
-		case VECT2I:
-			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) THROW_ERROR(VarError::INVALID_SET_VALUE, "");
-			VECT2_SET(i, int64_t);
-			return;
-		case VECT3F:
-			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) THROW_ERROR(VarError::INVALID_SET_VALUE, "");
-			VECT3_SET(f, double);
-			return;
-		case VECT3I:
-			if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) THROW_ERROR(VarError::INVALID_SET_VALUE, "");
-			VECT3_SET(i, int64_t);
-			return;
-		case OBJECT: 
-			_data._obj->__get(p_name) = p_value;
-			return;
-	}
-	THROW_ERROR(VarError::INVALID_GET_NAME, ""); // TODO: more clear error.
-}
-
-#undef VECT2_GET
-#undef VECT3_GET
 
 var var::__call_internal(stdvec<var>& p_args) {
 	switch (type) {
@@ -670,7 +584,15 @@ var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
 	} else if (p_method == "get_type_name") {
 		return get_type_name();
 		// TODO: get_type() should return the integer enum value of the type.
-	}
+
+	// Operators.
+	} else if (p_method == "__get_mapped") {
+		if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+		return __get_mapped(p_args[0]);
+	} else if (p_method == "__set_mapped") {
+		if (p_args.size() != 2) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+		__set_mapped(p_args[0], p_args[1]); return var();
+	} // TODO: implement __add(), __div(), ...
 
 	switch (type) {
 		case var::_NULL:  THROW_ERROR(VarError::NULL_POINTER, "");
@@ -690,18 +612,33 @@ var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
 	THROW_ERROR(VarError::BUG, "");
 }
 
-// TODO: remove __get(), __set() methods from Objects, no runtime attributes.
-var& var::get_member(const String& p_name) {
 
+#define VECT2_GET(m_t)                                            \
+	if (p_name == "x" || p_name == "width") {                     \
+		return (*DATA_PTR_CONST(STRCAT2(Vect2, m_t))).x;          \
+	} else if (p_name == "y" || p_name == "height") {			  \
+		return (*DATA_PTR_CONST(STRCAT2(Vect2, m_t))).y;          \
+	} else THROW_ERROR(VarError::INVALID_GET_NAME, "")
+
+#define VECT3_GET(m_t)                                            \
+	if (p_name == "x" || p_name == "width") {                     \
+		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).x;          \
+	} else if (p_name == "y" || p_name == "height") {			  \
+		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).y;          \
+	} else if (p_name == "z" || p_name == "depth") {			  \
+		return (*DATA_PTR_CONST(STRCAT2(Vect3, m_t))).y;          \
+	} else THROW_ERROR(VarError::INVALID_GET_NAME, "")
+
+var var::get_member(const String& p_name) {
 	switch (type) {
-		case var::_NULL:  THROW_ERROR(VarError::NULL_POINTER, "");
-		case var::BOOL:   THROW_ERROR(VarError::INVALID_GET_NAME, String::format("boolean has no attribute \"%s\"", p_name.c_str()));
-		case var::INT:    THROW_ERROR(VarError::INVALID_GET_NAME, String::format("int has no attribute \"%s\"", p_name.c_str()));
-		case var::FLOAT:  THROW_ERROR(VarError::INVALID_GET_NAME, String::format("float has no attribute \"%s\"", p_name.c_str()));
-		case var::VECT2F: throw "TODO"; // TODO: 
-		case var::VECT2I: throw "TODO"; // TODO: since carbon won't use these as built in types
-		case var::VECT3F: throw "TODO"; // TODO: I'm not going to implement it anytime soon.
-		case var::VECT3I: throw "TODO"; // TODO: 
+		case var::_NULL:   THROW_ERROR(VarError::NULL_POINTER, "");
+		case var::BOOL:    THROW_ERROR(VarError::INVALID_GET_NAME, String::format("boolean has no attribute \"%s\"", p_name.c_str()));
+		case var::INT:     THROW_ERROR(VarError::INVALID_GET_NAME, String::format("int has no attribute \"%s\"", p_name.c_str()));
+		case var::FLOAT:   THROW_ERROR(VarError::INVALID_GET_NAME, String::format("float has no attribute \"%s\"", p_name.c_str()));
+		case var::VECT2F:  VECT2_GET(f);
+		case var::VECT2I:  VECT2_GET(i);
+		case var::VECT3F:  VECT3_GET(f);
+		case var::VECT3I:  VECT3_GET(i);
 		case var::STRING:
 		case var::ARRAY:
 		case var::MAP:
@@ -711,6 +648,49 @@ var& var::get_member(const String& p_name) {
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
 	THROW_ERROR(VarError::BUG, "");
 }
+#undef VECT2_GET
+#undef VECT3_GET
+
+#define VECT2_SET(m_t, m_cast)                                                                                      \
+	if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) THROW_ERROR(VarError::INVALID_SET_VALUE, ""); \
+	if (p_name == "x" || p_name == "width") {                                                                       \
+		(*DATA_PTR(STRCAT2(Vect2, m_t))).x = p_value.operator m_cast();                                             \
+	} else if (p_name == "y" || p_name == "height") {			                                                    \
+		(*DATA_PTR(STRCAT2(Vect2, m_t))).y = p_value.operator m_cast();                                             \
+	} else THROW_ERROR(VarError::INVALID_GET_NAME, "")
+
+#define VECT3_SET(m_t, m_cast)                                                                                      \
+	if (p_value.type != var::FLOAT || p_value.get_type() != var::INT) THROW_ERROR(VarError::INVALID_SET_VALUE, ""); \
+	if (p_name == "x" || p_name == "width") {                                                                       \
+		(*DATA_PTR(STRCAT2(Vect3, m_t))).x = p_value.operator m_cast();                                             \
+	} else if (p_name == "y" || p_name == "height") {			                                                    \
+		(*DATA_PTR(STRCAT2(Vect3, m_t))).y = p_value.operator m_cast();                                             \
+	} else if (p_name == "z" || p_name == "depth") {			                                                    \
+		(*DATA_PTR(STRCAT2(Vect3, m_t))).y = p_value.operator m_cast();                                             \
+	} else THROW_ERROR(VarError::INVALID_GET_NAME, "")
+
+void var::set_member(const String& p_name, var& p_value) {
+	switch (type) {
+		case var::_NULL:  THROW_ERROR(VarError::NULL_POINTER, "");
+		case var::BOOL:   THROW_ERROR(VarError::INVALID_GET_NAME, String::format("boolean has no attribute \"%s\"", p_name.c_str()));
+		case var::INT:    THROW_ERROR(VarError::INVALID_GET_NAME, String::format("int has no attribute \"%s\"", p_name.c_str()));
+		case var::FLOAT:  THROW_ERROR(VarError::INVALID_GET_NAME, String::format("float has no attribute \"%s\"", p_name.c_str()));
+		case var::VECT2F: VECT2_SET(f, double); return;
+		case var::VECT2I: VECT2_SET(i, int64_t); return;
+		case var::VECT3F: VECT3_SET(f, double); return;
+		case var::VECT3I: VECT3_SET(i, int64_t); return;
+		case var::STRING:
+		case var::ARRAY:
+		case var::MAP:
+			THROW_ERROR(VarError::INVALID_GET_NAME, String::format("member \"%s\" does not exists on \"%s\"", p_name.c_str(), get_type_name().c_str()));
+		case var::OBJECT: Object::set_member(_data._obj, p_name, p_value);
+			break;
+	}
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	THROW_ERROR(VarError::BUG, "");
+}
+#undef VECT2_SET
+#undef VECT3_SET
 
 /* casting */
 var::operator bool() const {

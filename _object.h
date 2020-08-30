@@ -72,13 +72,11 @@ public:
 	static var call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args);  // instance.p_name(args)
 	virtual var __call(stdvec<var>& p_vars);                                                // instance(args)
 
-	static var& get_member(ptr<Object> p_self, const String& p_name);
-	virtual bool __has(const String& p_name) const; // TODO: remove __get(), __has() and add static bool has_member();
-	virtual var& __get(const String& p_name);	    //       and use static var& get_member()
+	static var get_member(ptr<Object> p_self, const String& p_name);
+	static void set_member(ptr<Object> p_self, const String& p_name, var& p_value);
 
-	virtual bool __has_mapped(const String& p_name) const;
-	virtual var& __get_mapped(const var& p_key);
-	//virtual void __set_mapped(const var& p_key, const var& p_val);
+	virtual var __get_mapped(const var& p_key);
+	virtual void __set_mapped(const var& p_key, const var& p_val);
 
 	virtual var __add(const var& p_other) const;
 	virtual var __sub(const var& p_other) const;
