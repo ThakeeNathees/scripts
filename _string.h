@@ -50,9 +50,9 @@ public:
 
 	// reflection methods.
 	var call_method(const String& p_method, const stdvec<var>& p_args);
-	static const stdmap<String, const MemberInfo*>& get_member_info();
+	static const stdmap<String, const MemberInfo*>& get_member_info_list();
 	static bool has_member(const String& p_member);
-	static const MemberInfo* get_member(const String& p_member);
+	static const MemberInfo* get_member_info(const String& p_member);
 
 	static String format(const char* p_format, ...);
 	int64_t to_int() const { return std::stoll(_data); } // TODO: this will throw std::exceptions

@@ -101,7 +101,6 @@ public:
 	void clear();
 	var copy(bool p_deep = false) const;
 
-
 	// Operators.
 	operator bool() const;
 	operator int64_t() const;
@@ -164,6 +163,7 @@ public:
 		__build_args_recur(args, p_args...);
 		return call_method_internal(p_method, args);
 	}
+	var call_method(const String& p_method, stdvec<var>& p_args) { return call_method_internal(p_method, p_args); }
 
 	var get_member(const String& p_name);
 	void set_member(const String& p_name, var& p_value);
@@ -233,6 +233,19 @@ private:
 
 // ******** MEMBER INFO IMPLEMENTATIONS ******************* //
 
+struct VarTypeInfo {
+	var::Type type;
+	const char* class_name;
+	VarTypeInfo(var::Type p_type = var::VAR) : type(p_type) {}
+	VarTypeInfo(var::Type p_type, const char* p_class_name) : type(p_type), class_name(p_class_name) {}
+
+	bool operator==(const VarTypeInfo p_other) const {
+		if (type != var::OBJECT) return type == p_other.type;
+		return strcmp(class_name, p_other.class_name) == 0;
+	}
+	bool operator!=(const VarTypeInfo p_other) const { return !(operator==(p_other)); }
+};
+
 class MethodInfo : public MemberInfo {
 private:
 	String name;
@@ -240,8 +253,8 @@ private:
 	int arg_count = 0; // -1 means static
 	stdvec<String> arg_names;
 	stdvec<var> default_args;
-	stdvec<var::Type> arg_types;
-	var::Type return_type;
+	stdvec<VarTypeInfo> arg_types;
+	VarTypeInfo return_type;
 
 public:
 	virtual Type get_type() const override { return Type::METHOD; }
@@ -251,8 +264,8 @@ public:
 	MethodInfo(
 		String p_name,
 		stdvec<String> p_arg_names,
-		stdvec<var::Type> p_arg_types = stdvec<var::Type>(),
-		var::Type p_return_type = var::_NULL,
+		stdvec<VarTypeInfo> p_arg_types = stdvec<VarTypeInfo>(),
+		VarTypeInfo p_return_type = var::_NULL,
 		bool p__is_static = false,
 		stdvec<var> p_default_args = stdvec<var>(),
 		int p_arg_count = -2
@@ -272,7 +285,7 @@ public:
 	// zero parameter constructor
 	MethodInfo(
 		String p_name,
-		var::Type p_return_type = var::_NULL,
+		VarTypeInfo p_return_type = var::_NULL,
 		bool p__is_static = false
 	) {
 		name = p_name;
@@ -285,23 +298,39 @@ public:
 	bool is_static() const { return _is_static; }
 	const stdvec<String>& get_arg_names() const { return arg_names; }
 	const stdvec<var>& get_default_args() const { return default_args; }
-	const stdvec<var::Type>& get_arg_types() const { return arg_types; }
-	var::Type get_return_type() const { return return_type; }
+	const stdvec<VarTypeInfo>& get_arg_types() const { return arg_types; }
+	VarTypeInfo get_return_type() const { return return_type; }
 };
 
 class PropertyInfo : public MemberInfo {
 private:
 	String name;
-	bool _is_static = false;
-	bool _is_const = false;
+	VarTypeInfo datatype;
 	var value;
+	bool _is_const = false;
+	bool _is_static = false;
 
 public:
 	virtual Type get_type() const override { return Type::PROPERTY; }
 	virtual const String& get_name() const override { return name; }
 
+	PropertyInfo(
+		const String& p_name,
+		VarTypeInfo p_datatype = var::VAR,
+		var p_value = var(),
+		bool p__is_const = false,
+		bool p__is_static = false
+	) {
+		name = p_name;
+		datatype = p_datatype;
+		value = p_value;
+		_is_const = p__is_const;
+		_is_static = p__is_static;
+	}
+
 	bool is_static() const { return _is_static; }
 	bool is_const() const { return _is_const; }
+	VarTypeInfo get_datatype() const { return datatype; }
 	const var& get_value() const { return value; }         // value for constants.
 	const var& get_default_value() const { return value; } // defalut_value for variables.
 };
@@ -309,25 +338,35 @@ public:
 class EnumInfo : public MemberInfo {
 private:
 	String name;
-	stdvec<std::pair<String, uint64_t>> values;
+	stdvec<std::pair<String, int64_t>> values;
 
 public:
 	virtual Type get_type() const override { return Type::ENUM; }
 	virtual const String& get_name() const override { return name; }
 
-	const stdvec<std::pair<String, uint64_t>>& get_values() const { return values; }
+	EnumInfo(String p_name, const stdvec<std::pair<String, int64_t>>& p_values) {
+		name = p_name;
+		values = p_values;
+	}
+
+	const stdvec<std::pair<String, int64_t>>& get_values() const { return values; }
 };
 
 class EnumValueInfo : public MemberInfo {
 private:
 	String name;
-	uint64_t value;
+	int64_t value;
 
 public:
 	virtual Type get_type() const override { return Type::ENUM_VALUE; }
 	virtual const String& get_name() const override { return name; }
 
-	uint64_t get_value() const { return value; }
+	EnumValueInfo(const String& p_name, int64_t p_value) {
+		name = p_name;
+		value = p_value;
+	}
+
+	int64_t get_value() const { return value; }
 };
 
 }

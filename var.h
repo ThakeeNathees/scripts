@@ -326,9 +326,9 @@ public:
 
 	// reflection methods.
 	var call_method(const String& p_method, const stdvec<var>& p_args);
-	static const stdmap<String, const MemberInfo*>& get_member_info();
+	static const stdmap<String, const MemberInfo*>& get_member_info_list();
 	static bool has_member(const String& p_member);
-	static const MemberInfo* get_member(const String& p_member);
+	static const MemberInfo* get_member_info(const String& p_member);
 
 	static String format(const char* p_format, ...);
 	int64_t to_int() const { return std::stoll(_data); } // TODO: this will throw std::exceptions
@@ -443,9 +443,9 @@ public:
 
 	// reflection methods.
 	var call_method(const String& p_method, const stdvec<var>& p_args);
-	static const stdmap<String, const MemberInfo*>& get_member_info();
+	static const stdmap<String, const MemberInfo*>& get_member_info_list();
 	static bool has_member(const String& p_member);
-	static const MemberInfo* get_member(const String& p_member);
+	static const MemberInfo* get_member_info(const String& p_member);
 
 	// Wrappers.
 	// TODO: throw all errors with VarError
@@ -454,7 +454,7 @@ public:
 	void push_back(const var& p_var) { _data->push_back(p_var); }
 	void pop_back() { _data->pop_back(); }
 	Array& append(const var& p_var) { push_back(p_var); return *this; }
-	var& pop() { var& ret = this->operator[](size() - 1); pop_back(); return ret; } 
+	var pop();
 	var& operator[](int64_t p_index) const {
 		if (0 <= p_index && p_index < (int64_t)size())
 			return _data->operator[](p_index);
@@ -751,9 +751,9 @@ public:
 
 	// reflection methods.
 	var call_method(const String& p_method, const stdvec<var>& p_args);
-	static const stdmap<String, const MemberInfo*>& get_member_info();
+	static const stdmap<String, const MemberInfo*>& get_member_info_list();
 	static bool has_member(const String& p_member);
-	static const MemberInfo* get_member(const String& p_member);
+	static const MemberInfo* get_member_info(const String& p_member);
 
 	// Wrappers.
 	size_t size() const { return _data->size(); }
@@ -793,9 +793,9 @@ private:
 
 #define REGISTER_CLASS(m_class, m_inherits)                                                          \
 public:                                                                                              \
-	static  const char* get_class_name_s() { return STR(m_class); }                                  \
+	static constexpr const char* get_class_name_s() { return STR(m_class); }                         \
 	virtual const char* get_class_name() const override { return get_class_name_s(); }               \
-	static  const char* get_parent_class_name_s() { return STR(m_inherits); }                        \
+	static constexpr const char* get_parent_class_name_s() { return STR(m_inherits); }               \
 	virtual const char* get_parent_class_name() const override { return get_parent_class_name_s(); } \
 	static void _bind_data()
 
@@ -944,7 +944,6 @@ public:
 	void clear();
 	var copy(bool p_deep = false) const;
 
-
 	// Operators.
 	operator bool() const;
 	operator int64_t() const;
@@ -1007,6 +1006,7 @@ public:
 		__build_args_recur(args, p_args...);
 		return call_method_internal(p_method, args);
 	}
+	var call_method(const String& p_method, stdvec<var>& p_args) { return call_method_internal(p_method, p_args); }
 
 	var get_member(const String& p_name);
 	void set_member(const String& p_name, var& p_value);
@@ -1076,6 +1076,19 @@ private:
 
 // ******** MEMBER INFO IMPLEMENTATIONS ******************* //
 
+struct VarTypeInfo {
+	var::Type type;
+	const char* class_name;
+	VarTypeInfo(var::Type p_type = var::VAR) : type(p_type) {}
+	VarTypeInfo(var::Type p_type, const char* p_class_name) : type(p_type), class_name(p_class_name) {}
+
+	bool operator==(const VarTypeInfo p_other) const {
+		if (type != var::OBJECT) return type == p_other.type;
+		return strcmp(class_name, p_other.class_name) == 0;
+	}
+	bool operator!=(const VarTypeInfo p_other) const { return !(operator==(p_other)); }
+};
+
 class MethodInfo : public MemberInfo {
 private:
 	String name;
@@ -1083,8 +1096,8 @@ private:
 	int arg_count = 0; // -1 means static
 	stdvec<String> arg_names;
 	stdvec<var> default_args;
-	stdvec<var::Type> arg_types;
-	var::Type return_type;
+	stdvec<VarTypeInfo> arg_types;
+	VarTypeInfo return_type;
 
 public:
 	virtual Type get_type() const override { return Type::METHOD; }
@@ -1094,8 +1107,8 @@ public:
 	MethodInfo(
 		String p_name,
 		stdvec<String> p_arg_names,
-		stdvec<var::Type> p_arg_types = stdvec<var::Type>(),
-		var::Type p_return_type = var::_NULL,
+		stdvec<VarTypeInfo> p_arg_types = stdvec<VarTypeInfo>(),
+		VarTypeInfo p_return_type = var::_NULL,
 		bool p__is_static = false,
 		stdvec<var> p_default_args = stdvec<var>(),
 		int p_arg_count = -2
@@ -1115,7 +1128,7 @@ public:
 	// zero parameter constructor
 	MethodInfo(
 		String p_name,
-		var::Type p_return_type = var::_NULL,
+		VarTypeInfo p_return_type = var::_NULL,
 		bool p__is_static = false
 	) {
 		name = p_name;
@@ -1128,23 +1141,39 @@ public:
 	bool is_static() const { return _is_static; }
 	const stdvec<String>& get_arg_names() const { return arg_names; }
 	const stdvec<var>& get_default_args() const { return default_args; }
-	const stdvec<var::Type>& get_arg_types() const { return arg_types; }
-	var::Type get_return_type() const { return return_type; }
+	const stdvec<VarTypeInfo>& get_arg_types() const { return arg_types; }
+	VarTypeInfo get_return_type() const { return return_type; }
 };
 
 class PropertyInfo : public MemberInfo {
 private:
 	String name;
-	bool _is_static = false;
-	bool _is_const = false;
+	VarTypeInfo datatype;
 	var value;
+	bool _is_const = false;
+	bool _is_static = false;
 
 public:
 	virtual Type get_type() const override { return Type::PROPERTY; }
 	virtual const String& get_name() const override { return name; }
 
+	PropertyInfo(
+		const String& p_name,
+		VarTypeInfo p_datatype = var::VAR,
+		var p_value = var(),
+		bool p__is_const = false,
+		bool p__is_static = false
+	) {
+		name = p_name;
+		datatype = p_datatype;
+		value = p_value;
+		_is_const = p__is_const;
+		_is_static = p__is_static;
+	}
+
 	bool is_static() const { return _is_static; }
 	bool is_const() const { return _is_const; }
+	VarTypeInfo get_datatype() const { return datatype; }
 	const var& get_value() const { return value; }         // value for constants.
 	const var& get_default_value() const { return value; } // defalut_value for variables.
 };
@@ -1152,25 +1181,35 @@ public:
 class EnumInfo : public MemberInfo {
 private:
 	String name;
-	stdvec<std::pair<String, uint64_t>> values;
+	stdvec<std::pair<String, int64_t>> values;
 
 public:
 	virtual Type get_type() const override { return Type::ENUM; }
 	virtual const String& get_name() const override { return name; }
 
-	const stdvec<std::pair<String, uint64_t>>& get_values() const { return values; }
+	EnumInfo(String p_name, const stdvec<std::pair<String, int64_t>>& p_values) {
+		name = p_name;
+		values = p_values;
+	}
+
+	const stdvec<std::pair<String, int64_t>>& get_values() const { return values; }
 };
 
 class EnumValueInfo : public MemberInfo {
 private:
 	String name;
-	uint64_t value;
+	int64_t value;
 
 public:
 	virtual Type get_type() const override { return Type::ENUM_VALUE; }
 	virtual const String& get_name() const override { return name; }
 
-	uint64_t get_value() const { return value; }
+	EnumValueInfo(const String& p_name, int64_t p_value) {
+		name = p_name;
+		value = p_value;
+	}
+
+	int64_t get_value() const { return value; }
 };
 
 }
@@ -1261,9 +1300,9 @@ std::string VarError::get_err_name(VarError::Type p_type) {
 #define CHECK_METHOD_AND_ARGS()                                                                                                                         \
 do {                                                                                                                                                    \
 	if (has_member(p_method)) {																															\
-		if (get_member(p_method)->get_type() != MemberInfo::METHOD)																						\
+		if (get_member_info(p_method)->get_type() != MemberInfo::METHOD)																						\
 			THROW_ERROR(VarError::INVALID_GET_NAME, String::format("member \"%s\" is not callable.", p_method.c_str()));								\
-		const MethodInfo* mp = (MethodInfo*)get_member(p_method);																						\
+		const MethodInfo* mp = (MethodInfo*)get_member_info(p_method);																						\
 		int arg_count = mp->get_arg_count();																											\
 		int default_arg_count = mp->get_default_arg_count();																							\
 		if (arg_count != -1) {																															\
@@ -1277,11 +1316,11 @@ do {                                                                            
 			}																																			\
 		}																																				\
 		for (int j = 0; j < mp->get_arg_types().size(); j++) {																							\
-			if (mp->get_arg_types()[j] == var::VAR) continue; /* can't be _NULL. */																		\
+			if (mp->get_arg_types()[j] == VarTypeInfo(var::VAR)) continue; /* can't be _NULL. */														\
 			if (p_args.size() == j) break; /* rest are default args. */																					\
-			if (mp->get_arg_types()[j] != p_args[j].get_type())																							\
+			if (mp->get_arg_types()[j] != VarTypeInfo(p_args[j].get_type(), p_args[j].get_type_name().c_str()))								            \
 				THROW_ERROR(VarError::INVALID_ARGUMENT, String::format(																					\
-					"expected type \"%s\" at argument %i.", var::get_type_name_s(mp->get_arg_types()[j]), j));											\
+					"expected type \"%s\" at argument %i.", var::get_type_name_s(mp->get_arg_types()[j].type), j));										\
 		}																																				\
 	} else {																																			\
 		THROW_ERROR(VarError::INVALID_GET_NAME, ""); /* TODO: more clear message. */																	\
@@ -1290,19 +1329,21 @@ do {                                                                            
 
 #define MEMBER_INFO_IMPLEMENTATION(m_type)                                                                                                              \
 bool m_type::has_member(const String& p_member) {																										\
-	return get_member_info().find(p_member) != get_member_info().end();																					\
+	return get_member_info_list().find(p_member) != get_member_info_list().end();																					\
 }																																						\
-const MemberInfo* m_type::get_member(const String& p_member) {																							\
+const MemberInfo* m_type::get_member_info(const String& p_member) {																							\
 	if (!has_member(p_member)) THROW_ERROR(VarError::INVALID_KEY, String::format("member \"%s\" not exists on base " #m_type , p_member.c_str()));		\
-	const stdmap<String, const MemberInfo*>& member_info = get_member_info();																			\
+	const stdmap<String, const MemberInfo*>& member_info = get_member_info_list();																			\
 	return member_info.at(p_member);																													\
 }																																						\
-const stdmap<String, const MemberInfo*>& m_type::get_member_info()
+const stdmap<String, const MemberInfo*>& m_type::get_member_info_list()
 
 // String -----------------------------------------------
 
 MEMBER_INFO_IMPLEMENTATION(String) {
 	static const stdmap<String, const MemberInfo*> member_info = {
+		{ "size",           new MethodInfo("size", var::INT),								                },
+		{ "length",         new MethodInfo("length", var::INT),								                },
 		{ "to_int",         new MethodInfo("to_int", var::INT),								                },
 		{ "to_float",       new MethodInfo("to_float", var::FLOAT),							                },
 		{ "get_line",       new MethodInfo("get_line", {"line"}, {var::INT}, var::STRING),                  },
@@ -1315,8 +1356,12 @@ MEMBER_INFO_IMPLEMENTATION(String) {
 }
 
 var String::call_method(const String& p_method, const stdvec<var>& p_args) {
+
 	CHECK_METHOD_AND_ARGS();
+
 	switch (p_method.const_hash()) {
+		case "size"_hash:        // [[fallthrough]]
+		case "length"_hash:      return (int64_t)size();
 		case "to_int"_hash :     return to_int();
 		case "to_float"_hash :   return to_float();
 		case "get_line"_hash :   return get_line(p_args[0].operator int64_t());
@@ -1396,13 +1441,13 @@ bool operator!=(const char* p_cstr, const String& p_str) {
 
 MEMBER_INFO_IMPLEMENTATION(Array) {
 	static const stdmap<String, const MemberInfo*> member_info = {
-		{ "size",      new MethodInfo("size", var::INT),								     },
-		{ "empty",     new MethodInfo("empty", var::BOOL),							         },
+		{ "size",      new MethodInfo("size", var::INT),                                     },
+		{ "empty",     new MethodInfo("empty", var::BOOL),                                   },
 		{ "push_back", new MethodInfo("push_back", {"element"}, {var::VAR}, var::_NULL),     },
-		{ "pop_back",  new MethodInfo("pop_back", var::_NULL),							     },
-		{ "append",    new MethodInfo("append", {"element"}, {var::VAR}, var::ARRAY),	     },
-		{ "pop",       new MethodInfo("pop", var::VAR),									     },
-		{ "clear",     new MethodInfo("clear", var::_NULL),								     },
+		{ "pop_back",  new MethodInfo("pop_back", var::_NULL),                               },
+		{ "append",    new MethodInfo("append", {"element"}, {var::VAR}, var::ARRAY),        },
+		{ "pop",       new MethodInfo("pop", var::VAR),                                      },
+		{ "clear",     new MethodInfo("clear", var::_NULL),                                  },
 		{ "at",        new MethodInfo("at", {"index"}, {var::INT}, var::VAR),                },
 	};
 	return member_info;
@@ -1425,6 +1470,7 @@ var Array::call_method(const String& p_method, const stdvec<var>& p_args) {
 }
 
 String Array::to_string() const {
+	// TODO: if the array contains itself it'll stack overflow.
 	std::stringstream ss;
 	ss << "[ ";
 	for (unsigned int i = 0; i < _data->size(); i++) {
@@ -1435,6 +1481,8 @@ String Array::to_string() const {
 	ss << "]";
 	return ss.str();
 }
+
+var Array::pop(){ var ret = this->operator[](size() - 1); pop_back(); return ret; }
 
 bool Array::operator ==(const Array& p_other) const {
 	if (size() != p_other.size())
@@ -1808,6 +1856,7 @@ var var::__call_internal(stdvec<var>& p_args) {
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_ERROR(VarError::BUG, "");
 }
+
 var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
 
 	// check var methods.
@@ -1965,18 +2014,18 @@ void var::set_member(const String& p_name, var& p_value) {
 /* casting */
 var::operator bool() const {
 	switch (type) {
-		case _NULL: return false;
-		case BOOL: return _data._bool;
-		case INT: return _data._int != 0;
-		case FLOAT: return _data._float != 0;
+		case _NULL:  return false;
+		case BOOL:   return _data._bool;
+		case INT:    return _data._int != 0;
+		case FLOAT:  return _data._float != 0;
 		case STRING: return _data._string.size() != 0;
 
 		case VECT2F: return *DATA_PTR_CONST(Vect2f) == Vect2f();
 		case VECT2I: return *DATA_PTR_CONST(Vect2i) == Vect2i();
 		case VECT3F: return *DATA_PTR_CONST(Vect3f) == Vect3f();
 		case VECT3I: return *DATA_PTR_CONST(Vect3f) == Vect3f();
-		case ARRAY: return !_data._arr.empty();
-		case MAP: return !_data._map.empty();
+		case ARRAY:  return !_data._arr.empty();
+		case MAP:    return !_data._map.empty();
 		case OBJECT: return _data._obj.operator bool();
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
@@ -2760,7 +2809,7 @@ void var::clear_data() {
 String var::get_type_name_s(var::Type p_type) {
 	static const char* _type_names[_TYPE_MAX_] = {
 		"null",
-		"var"
+		"var",
 		"bool",
 		"int",
 		"float",

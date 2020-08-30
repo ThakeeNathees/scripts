@@ -30,9 +30,9 @@
 
 #define REGISTER_CLASS(m_class, m_inherits)                                                          \
 public:                                                                                              \
-	static  const char* get_class_name_s() { return STR(m_class); }                                  \
+	static constexpr const char* get_class_name_s() { return STR(m_class); }                         \
 	virtual const char* get_class_name() const override { return get_class_name_s(); }               \
-	static  const char* get_parent_class_name_s() { return STR(m_inherits); }                        \
+	static constexpr const char* get_parent_class_name_s() { return STR(m_inherits); }               \
 	virtual const char* get_parent_class_name() const override { return get_parent_class_name_s(); } \
 	static void _bind_data()
 

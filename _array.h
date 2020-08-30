@@ -58,9 +58,9 @@ public:
 
 	// reflection methods.
 	var call_method(const String& p_method, const stdvec<var>& p_args);
-	static const stdmap<String, const MemberInfo*>& get_member_info();
+	static const stdmap<String, const MemberInfo*>& get_member_info_list();
 	static bool has_member(const String& p_member);
-	static const MemberInfo* get_member(const String& p_member);
+	static const MemberInfo* get_member_info(const String& p_member);
 
 	// Wrappers.
 	// TODO: throw all errors with VarError
@@ -69,7 +69,7 @@ public:
 	void push_back(const var& p_var) { _data->push_back(p_var); }
 	void pop_back() { _data->pop_back(); }
 	Array& append(const var& p_var) { push_back(p_var); return *this; }
-	var& pop() { var& ret = this->operator[](size() - 1); pop_back(); return ret; } 
+	var pop();
 	var& operator[](int64_t p_index) const {
 		if (0 <= p_index && p_index < (int64_t)size())
 			return _data->operator[](p_index);
