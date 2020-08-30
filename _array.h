@@ -54,9 +54,13 @@ public:
 		return _data.operator->();
 	}
 
-	// Methods.
-	var call_method(const String& p_method, const stdvec<var>& p_args);
 	Array copy(bool p_deep = true) const;
+
+	// reflection methods.
+	var call_method(const String& p_method, const stdvec<var>& p_args);
+	static const stdmap<String, const MemberInfo*>& get_member_info();
+	static bool has_member(const String& p_member);
+	static const MemberInfo* get_member(const String& p_member);
 
 	// Wrappers.
 	// TODO: throw all errors with VarError

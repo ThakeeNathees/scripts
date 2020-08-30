@@ -63,7 +63,7 @@ public:
 	var& operator*=(const var& p_other);
 	var& operator/=(const var& p_other);
 
-	var& operator[](const var& p_key) const;
+	var operator[](const var& p_key) const;
 	var& operator[](const var& p_key);
 
 	// Virtual methods.
@@ -75,7 +75,7 @@ public:
 	static var get_member(ptr<Object> p_self, const String& p_name);
 	static void set_member(ptr<Object> p_self, const String& p_name, var& p_value);
 
-	virtual var __get_mapped(const var& p_key);
+	virtual var __get_mapped(const var& p_key) const;
 	virtual void __set_mapped(const var& p_key, const var& p_val);
 
 	virtual var __add(const var& p_other) const;
@@ -101,7 +101,7 @@ public:
 	static  const char* get_parent_class_name_s()       { return ""; }
 	virtual const char* get_parent_class_name()   const { return get_parent_class_name_s(); }
 
-	static void _bind_data() {} // TODO:
+	static void _bind_data();
 
 private:
 	friend class var;

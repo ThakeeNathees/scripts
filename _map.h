@@ -56,6 +56,12 @@ public:
 
 	Map copy(bool p_deep = true) const;
 
+	// reflection methods.
+	var call_method(const String& p_method, const stdvec<var>& p_args);
+	static const stdmap<String, const MemberInfo*>& get_member_info();
+	static bool has_member(const String& p_member);
+	static const MemberInfo* get_member(const String& p_member);
+
 	// Wrappers.
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }

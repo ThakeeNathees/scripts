@@ -47,7 +47,9 @@ namespace varh {
 class var {
 public:
 	enum Type {
-		_NULL,
+		_NULL, // not initialized.
+		VAR,   // any type used only for member info.
+
 		BOOL,
 		INT,
 		FLOAT,
@@ -144,7 +146,8 @@ public:
 	var operator--();
 	var operator--(int);
 	bool operator !() const { return !operator bool(); }
-	var& operator[](const var& p_key);
+	var operator[](const var& p_key) const;
+	// var& operator[](const var& p_key); // TODO:
 
 	var __get_mapped(const var& p_key) const;
 	void __set_mapped(const var& p_key, const var& p_value);
@@ -226,6 +229,105 @@ private:
 	Type type;
 	VarData _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
+};
+
+// ******** MEMBER INFO IMPLEMENTATIONS ******************* //
+
+class MethodInfo : public MemberInfo {
+private:
+	String name;
+	bool _is_static = false;
+	int arg_count = 0; // -1 means static
+	stdvec<String> arg_names;
+	stdvec<var> default_args;
+	stdvec<var::Type> arg_types;
+	var::Type return_type;
+
+public:
+	virtual Type get_type() const override { return Type::METHOD; }
+	virtual const String& get_name() const override { return name; }
+
+	// complete constructor.
+	MethodInfo(
+		String p_name,
+		stdvec<String> p_arg_names,
+		stdvec<var::Type> p_arg_types = stdvec<var::Type>(),
+		var::Type p_return_type = var::_NULL,
+		bool p__is_static = false,
+		stdvec<var> p_default_args = stdvec<var>(),
+		int p_arg_count = -2
+	) {
+		name = p_name;
+		arg_names = p_arg_names;
+		arg_types = p_arg_types;
+		return_type = p_return_type;
+		_is_static = p__is_static;
+		default_args = p_default_args;
+
+		// if va_arg it should be set manually to -1
+		if (p_arg_count == -2) arg_count = (int)arg_names.size();
+		else arg_count = p_arg_count;
+	}
+
+	// zero parameter constructor
+	MethodInfo(
+		String p_name,
+		var::Type p_return_type = var::_NULL,
+		bool p__is_static = false
+	) {
+		name = p_name;
+		return_type = p_return_type;
+		_is_static = p__is_static;
+	}
+
+	int get_arg_count() const { return arg_count; }
+	int get_default_arg_count() const { return (int)default_args.size(); }
+	bool is_static() const { return _is_static; }
+	const stdvec<String>& get_arg_names() const { return arg_names; }
+	const stdvec<var>& get_default_args() const { return default_args; }
+	const stdvec<var::Type>& get_arg_types() const { return arg_types; }
+	var::Type get_return_type() const { return return_type; }
+};
+
+class PropertyInfo : public MemberInfo {
+private:
+	String name;
+	bool _is_static = false;
+	bool _is_const = false;
+	var value;
+
+public:
+	virtual Type get_type() const override { return Type::PROPERTY; }
+	virtual const String& get_name() const override { return name; }
+
+	bool is_static() const { return _is_static; }
+	bool is_const() const { return _is_const; }
+	const var& get_value() const { return value; }         // value for constants.
+	const var& get_default_value() const { return value; } // defalut_value for variables.
+};
+
+class EnumInfo : public MemberInfo {
+private:
+	String name;
+	stdvec<std::pair<String, uint64_t>> values;
+
+public:
+	virtual Type get_type() const override { return Type::ENUM; }
+	virtual const String& get_name() const override { return name; }
+
+	const stdvec<std::pair<String, uint64_t>>& get_values() const { return values; }
+};
+
+class EnumValueInfo : public MemberInfo {
+private:
+	String name;
+	uint64_t value;
+
+public:
+	virtual Type get_type() const override { return Type::ENUM_VALUE; }
+	virtual const String& get_name() const override { return name; }
+
+	uint64_t get_value() const { return value; }
 };
 
 }

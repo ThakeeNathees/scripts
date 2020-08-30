@@ -44,6 +44,18 @@
 #include <math.h>
 #include <vector>
 
+// Reference : https://stackoverflow.com/questions/2111667/compile-time-string-hashing
+#include "compile_time_crc32.inc"
+
+unsigned constexpr __const_hash(char const* input) {
+	return *input ? static_cast<unsigned int>(*input) + 33 * __const_hash(input + 1) : 5381;
+}
+
+std::size_t constexpr operator "" _hash(const char* s, size_t) {
+	return __const_hash(s);
+}
+// -----------------------------------------------------------------------------------
+
 #define func var
 
 #define STRCAT2(m_a, m_b) m_a##m_b
@@ -117,6 +129,26 @@ typedef float real_t;
 #endif
 
 namespace varh {
+
+class String;
+
+class MemberInfo {
+public:
+	enum Type {
+		METHOD,
+		PROPERTY,
+		ENUM,
+		ENUM_VALUE,
+	};
+
+	virtual Type get_type() const = 0;
+	virtual const String& get_name() const = 0;
+
+protected:
+	Type type;
+};
+
+
 class VarError : public std::exception {
 public:
 	enum Type {

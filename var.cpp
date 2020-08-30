@@ -24,6 +24,7 @@
 //------------------------------------------------------------------------------
 
 #include "_var.h"
+#include <functional>
 
 // add __FUNCTION__, __LINE__, __FILE__ to VarError.
 #define THROW_ERROR(m_type, m_msg) \
@@ -77,37 +78,75 @@ std::string VarError::get_err_name(VarError::Type p_type) {
 	return _error_names[p_type];
 }
 
+#define CHECK_METHOD_AND_ARGS()                                                                                                                         \
+do {                                                                                                                                                    \
+	if (has_member(p_method)) {																															\
+		if (get_member(p_method)->get_type() != MemberInfo::METHOD)																						\
+			THROW_ERROR(VarError::INVALID_GET_NAME, String::format("member \"%s\" is not callable.", p_method.c_str()));								\
+		const MethodInfo* mp = (MethodInfo*)get_member(p_method);																						\
+		int arg_count = mp->get_arg_count();																											\
+		int default_arg_count = mp->get_default_arg_count();																							\
+		if (arg_count != -1) {																															\
+			if (p_args.size() + default_arg_count < arg_count) { /* Args not enough. */																    \
+				if (default_arg_count == 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, String::format("expected at exactly %i argument(s).", arg_count));	\
+				else THROW_ERROR(VarError::INVALID_ARG_COUNT, String::format("expected at least %i argument(s).", arg_count - default_arg_count));		\
+			} else if (p_args.size() > arg_count) { /* More args proveded.	*/																			\
+				if (default_arg_count == 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, String::format("expected at exactly %i argument(s).", arg_count));	\
+				else THROW_ERROR(VarError::INVALID_ARG_COUNT, String::format(																			\
+					"expected minimum of %i argument(s) and maximum of %i argument(s).", arg_count - default_arg_count, arg_count));					\
+			}																																			\
+		}																																				\
+		for (int j = 0; j < mp->get_arg_types().size(); j++) {																							\
+			if (mp->get_arg_types()[j] == var::VAR) continue; /* can't be _NULL. */																		\
+			if (p_args.size() == j) break; /* rest are default args. */																					\
+			if (mp->get_arg_types()[j] != p_args[j].get_type())																							\
+				THROW_ERROR(VarError::INVALID_ARGUMENT, String::format(																					\
+					"expected type \"%s\" at argument %i.", var::get_type_name_s(mp->get_arg_types()[j]), j));											\
+		}																																				\
+	} else {																																			\
+		THROW_ERROR(VarError::INVALID_GET_NAME, ""); /* TODO: more clear message. */																	\
+	}																																					\
+} while (false)
+
+#define MEMBER_INFO_IMPLEMENTATION(m_type)                                                                                                              \
+bool m_type::has_member(const String& p_member) {																										\
+	return get_member_info().find(p_member) != get_member_info().end();																					\
+}																																						\
+const MemberInfo* m_type::get_member(const String& p_member) {																							\
+	if (!has_member(p_member)) THROW_ERROR(VarError::INVALID_KEY, String::format("member \"%s\" not exists on base " #m_type , p_member.c_str()));		\
+	const stdmap<String, const MemberInfo*>& member_info = get_member_info();																			\
+	return member_info.at(p_member);																													\
+}																																						\
+const stdmap<String, const MemberInfo*>& m_type::get_member_info()
+
 // String -----------------------------------------------
+
+MEMBER_INFO_IMPLEMENTATION(String) {
+	static const stdmap<String, const MemberInfo*> member_info = {
+		{ "to_int",         new MethodInfo("to_int", var::INT),								                },
+		{ "to_float",       new MethodInfo("to_float", var::FLOAT),							                },
+		{ "get_line",       new MethodInfo("get_line", {"line"}, {var::INT}, var::STRING),                  },
+		{ "hash",           new MethodInfo("hash", var::INT),							                    },
+		{ "substr",         new MethodInfo("substr", {"start", "end"}, {var::INT, var::INT}, var::STRING),	},
+		{ "endswith",       new MethodInfo("endswith", {"what"}, {var::STRING}),							},
+		{ "startswith",     new MethodInfo("startswith", {"what"}, {var::STRING}),                          },
+	};
+	return member_info;
+}
+
 var String::call_method(const String& p_method, const stdvec<var>& p_args) {
-	if (p_method == "to_int") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		return to_int();
-	} else if (p_method == "to_float") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		return to_float();
-	} else if (p_method == "get_line") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		if (p_args[0].get_type() != var::INT) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a numeric value at argument 0.");
-		return get_line(p_args[0].operator int64_t());
-	} else if (p_method == "hash") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		return (int64_t)hash();
-	} else if (p_method == "substr") {
-		if (p_args.size() != 2) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		if (p_args[0].get_type() != var::INT) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a numeric value at argument 0.");
-		if (p_args[1].get_type() != var::INT) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a numeric value at argument 1.");
-		return substr((size_t)p_args[0].operator int64_t(), (size_t)p_args[1].operator int64_t());
-	} else if (p_method == "endswith") {
-		if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		if (p_args[0].get_type() != var::STRING) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a string value at argument 0.");
-		return endswith(p_args[0].operator String());
-	} else if (p_method == "startswith") {
-		if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		if (p_args[0].get_type() != var::STRING) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a string value at argument 0.");
-		return startswith(p_args[0].operator String());
+	CHECK_METHOD_AND_ARGS();
+	switch (p_method.const_hash()) {
+		case "to_int"_hash :     return to_int();
+		case "to_float"_hash :   return to_float();
+		case "get_line"_hash :   return get_line(p_args[0].operator int64_t());
+		case "hash"_hash :       return (int64_t)hash();
+		case "substr"_hash :     return substr((size_t)p_args[0].operator int64_t(), (size_t)p_args[1].operator int64_t());
+		case "endswith"_hash :   return endswith(p_args[0].operator String());
+		case "startswith"_hash : return startswith(p_args[0].operator String());
 	}
 	// TODO: more.
-	THROW_ERROR(VarError::INVALID_GET_NAME, ""); // TODO: more clear error msg.
+	THROW_ERROR(VarError::BUG, "!!! BUG !!! It can't reach here.");
 }
 
 String String::format(const char* p_format, ...) {
@@ -174,36 +213,35 @@ bool operator!=(const char* p_cstr, const String& p_str) {
 }
 
 // Array -----------------------------------------------
+
+MEMBER_INFO_IMPLEMENTATION(Array) {
+	static const stdmap<String, const MemberInfo*> member_info = {
+		{ "size",      new MethodInfo("size", var::INT),								     },
+		{ "empty",     new MethodInfo("empty", var::BOOL),							         },
+		{ "push_back", new MethodInfo("push_back", {"element"}, {var::VAR}, var::_NULL),     },
+		{ "pop_back",  new MethodInfo("pop_back", var::_NULL),							     },
+		{ "append",    new MethodInfo("append", {"element"}, {var::VAR}, var::ARRAY),	     },
+		{ "pop",       new MethodInfo("pop", var::VAR),									     },
+		{ "clear",     new MethodInfo("clear", var::_NULL),								     },
+		{ "at",        new MethodInfo("at", {"index"}, {var::INT}, var::VAR),                },
+	};
+	return member_info;
+}
+
 var Array::call_method(const String& p_method, const stdvec<var>& p_args) {
-	if (p_method == "size") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		return (int64_t)size();
-	} else if (p_method == "empty") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		return empty();
-	} else if (p_method == "push_back") {
-		if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
-		push_back(p_args[0]); return var();
-	} else if (p_method == "pop_back") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		pop_back(); return var();
-	} else if (p_method == "append") {
-		if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
-		return append(p_args[0]);
-	} else if (p_method == "pop") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		return pop();
-	} else if (p_method == "clear") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		clear(); return var();
-	} else if (p_method == "at") {
-		if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
-		if (p_args[0].get_type() != var::INT) THROW_ERROR(VarError::INVALID_ARGUMENT, "Expected a numeric value at argument 0.");
-		return at(p_args[0].operator int64_t());
+	CHECK_METHOD_AND_ARGS();
+	switch (p_method.const_hash()) {
+		case "size"_hash:      return (int64_t)size();
+		case "empty"_hash:     return empty();
+		case "push_back"_hash: { push_back(p_args[0]); return var(); }
+		case "pop_back"_hash:  { pop_back(); return var(); }
+		case "append"_hash:    return append(p_args[0]);
+		case "pop"_hash:       return pop();
+		case "clear"_hash:     { clear(); return var(); }
+		case "at"_hash:        return at(p_args[0].operator int64_t());
 	}
 	// TODO: add more.
-	// TODO: "__get_mapped" {1, 2, 3}[0]
-	THROW_ERROR(VarError::INVALID_GET_NAME, ""); // TODO: more clear error msg.
+	THROW_ERROR(VarError::BUG, "!!! BUG !!! It can't reach here.");
 }
 
 String Array::to_string() const {
@@ -260,6 +298,36 @@ Array& Array::operator=(const Array& p_other) {
 }
 
 // Map  ----------------------------------------
+
+
+MEMBER_INFO_IMPLEMENTATION(Map) {
+	static const stdmap<String, const MemberInfo*> member_info = {
+		//{ "to_int",         new MethodInfo("to_int", var::INT),								              },
+		//{ "to_float",       new MethodInfo("to_float", var::FLOAT),							              },
+		//{ "get_line",       new MethodInfo("get_line", {"line"}, {var::INT}, var::STRING),                  },
+		//{ "hash",           new MethodInfo("hash", var::INT),							                      },
+		//{ "substr",         new MethodInfo("substr", {"start", "end"}, {var::INT, var::INT}, var::STRING),  },
+		//{ "endswith",       new MethodInfo("endswith", {"what"}, {var::STRING}),							  },
+		//{ "startswith",     new MethodInfo("startswith", {"what"}, {var::STRING}),                          },
+	};
+	return member_info;
+}
+
+var Map::call_method(const String& p_method, const stdvec<var>& p_args) {
+	CHECK_METHOD_AND_ARGS();
+	//switch (p_method.const_hash()) {
+	//	case "to_int"_hash:     return to_int();
+	//	case "to_float"_hash:   return to_float();
+	//	case "get_line"_hash:   return get_line(p_args[0].operator int64_t());
+	//	case "hash"_hash:       return (int64_t)hash();
+	//	case "substr"_hash:     return substr((size_t)p_args[0].operator int64_t(), (size_t)p_args[1].operator int64_t());
+	//	case "endswith"_hash:   return endswith(p_args[0].operator String());
+	//	case "startswith"_hash: return startswith(p_args[0].operator String());
+	//}
+	// TODO: more.
+	THROW_ERROR(VarError::BUG, "!!! BUG !!! It can't reach here.");
+}
+
 String Map::to_string() const {
 	std::stringstream ss;
 	ss << "{ ";
@@ -323,20 +391,21 @@ var& Object::operator-=(const var& p_other) { return __sub_eq(p_other); }
 var& Object::operator*=(const var& p_other) { return __mul_eq(p_other); }
 var& Object::operator/=(const var& p_other) { return __div_eq(p_other); }
 
-// operator[] doesn't work with string so I need to handle them as a special case.
-var& Object::operator[](const var& p_key) { return __get_mapped(p_key); }
+var Object::operator[](const var& p_key) const { return __get_mapped(p_key); }
+var& Object::operator[](const var& p_key) { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, "use __set_mapped() instead"); }
 
 #ifndef _VAR_H_EXTERN_IMPLEMENTATIONS
+void Object::_bind_data() {}
 // call_method() should call it's parent if method not exists.
 var Object::call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args) { THROW_ERROR(VarError::INVALID_GET_NAME, ""); }
 var Object::get_member(ptr<Object> p_self, const String& p_name) { THROW_ERROR(VarError::INVALID_GET_NAME, ""); }
-void Object::set_member(ptr<Object> p_self, const String& p_name, var& p_value);
+void Object::set_member(ptr<Object> p_self, const String& p_name, var& p_value) { THROW_ERROR(VarError::INVALID_GET_NAME, ""); } // TODO: error name.
 #endif
 
 var Object::__call(stdvec<var>& p_vars) { THROW_ERROR(VarError::NOT_IMPLEMENTED, ""); }
 var Object::operator()(stdvec<var>& p_vars) { return __call(p_vars); }
 
-var Object::__get_mapped(const var& p_key) { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
+var Object::__get_mapped(const var& p_key) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
 void Object::__set_mapped(const var& p_key, const var& p_val) { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
 
 var Object::__add(const var& p_other) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
@@ -351,7 +420,10 @@ var& Object::__div_eq(const var& p_other) { THROW_ERROR(VarError::OPERATOR_NOT_S
 
 bool Object::__gt(const var& p_other) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); } // TODO: This will throw if
 bool Object::__lt(const var& p_other) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); } // object used as key in a Map.
-bool Object::__eq(const var& p_other) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
+bool Object::__eq(const var& p_other) const {
+	if (p_other.get_type() != var::OBJECT) return false;
+	return this == p_other.operator varh::ptr<varh::Object>().get();
+}
 
 // var -----------------------------------------------
 
@@ -377,19 +449,9 @@ var var::copy(bool p_deep) const {
 		case OBJECT: return _data._obj->copy(p_deep);
 			break;
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
-			// TODO:
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	return *this;
 }
-
-//const char* var::get_parent_class_name() const {
-//	switch (type) {
-//		case var::OBJECT:
-//			return _data._obj->get_parent_class_name();
-//		default:
-//			return nullptr;
-//	}
-//}
 
 
 /* constructors */
@@ -497,23 +559,15 @@ var& var::operator=(const var& p_other) {
 	return *this;
 }
 
-var& var::operator[](const var& p_key) {
+var var::operator[](const var& p_key) const {
 	switch (type) {
 		// strings can't return char as var&
-		case STRING: {
-			// handle operator[] for string seperatly;
-			THROW_ERROR(VarError::NOT_IMPLEMENTED, "yet another BUG!!!");
-		}
-		case ARRAY: {
-			return _data._arr[p_key.operator int64_t()];
-		}
-		case MAP:
-			return _data._map[p_key];
-		case OBJECT:
-			return _data._obj->operator [](p_key);
+		case STRING: return _data._string[p_key.operator int64_t()];
+		case ARRAY:  return _data._arr[p_key.operator int64_t()];
+		case MAP:    return _data._map[p_key];
+		case OBJECT: return _data._obj->__get_mapped(p_key);
 	}
 	THROW_ERROR(VarError::NOT_IMPLEMENTED, "operator[] not implemented");
-	return var::tmp;
 }
 
 var var::__get_mapped(const var& p_key) const {
@@ -571,44 +625,80 @@ var var::__call_internal(stdvec<var>& p_args) {
 		case var::MAP:    THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, "Map is not callable");
 		case var::OBJECT: return _data._obj->__call(p_args);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_ERROR(VarError::BUG, "");
 }
 var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
 
-	if (p_method == "to_string") {
-		if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
-		return to_string();
-	} else if (p_method == "copy") {
-		return copy();
-	} else if (p_method == "get_type_name") {
-		return get_type_name();
-		// TODO: get_type() should return the integer enum value of the type.
+	// check var methods.
+	switch (p_method.const_hash()) {
+		case "to_string"_hash :
+			if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
+			return to_string();
+		case "copy"_hash:  return copy();
+		case "get_type_name"_hash: return get_type_name();
 
-	// Operators.
-	} else if (p_method == "__get_mapped") {
-		if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
-		return __get_mapped(p_args[0]);
-	} else if (p_method == "__set_mapped") {
-		if (p_args.size() != 2) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
-		__set_mapped(p_args[0], p_args[1]); return var();
-	} // TODO: implement __add(), __div(), ...
+		// operators.
+		case "__get_mapped"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return __get_mapped(p_args[0]);
+		case "__set_mapped"_hash:
+			if (p_args.size() != 2) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			__set_mapped(p_args[0], p_args[1]); return var();
+		case "__add"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator +(p_args[0]);
+		case "__sub"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator -(p_args[0]);
+		case "__mul"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator *(p_args[0]);
+		case "__div"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator /(p_args[0]);
+		case "__add_eq"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator +=(p_args[0]);
+		case "__sub_eq"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator -=(p_args[0]);
+		case "__mul_eq"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator *=(p_args[0]);
+		case "__div_eq"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator /=(p_args[0]);
+		case "__gt"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator >(p_args[0]);
+		case "__lt"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator <(p_args[0]);
+		case "__eq"_hash:
+			if (p_args.size() != 1) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 1 argument.");
+			return operator ==(p_args[0]);
 
+		case "__call"_hash :
+			return __call_internal(p_args);
+	}
+
+	// type methods.
 	switch (type) {
 		case var::_NULL:  THROW_ERROR(VarError::NULL_POINTER, "");
 		case var::BOOL:   THROW_ERROR(VarError::INVALID_GET_NAME, String::format("boolean has no attribute \"%s\"", p_method.c_str()));
 		case var::INT:    THROW_ERROR(VarError::INVALID_GET_NAME, String::format("int has no attribute \"%s\"", p_method.c_str()));
 		case var::FLOAT:  THROW_ERROR(VarError::INVALID_GET_NAME, String::format("float has no attribute \"%s\"", p_method.c_str()));
 		case var::STRING: return _data._string.call_method(p_method, p_args);
-		case var::VECT2F: throw "TODO"; // TODO:
-		case var::VECT2I: throw "TODO"; // TODO:
-		case var::VECT3F: throw "TODO"; // TODO:
-		case var::VECT3I: throw "TODO"; // TODO:
-		case var::ARRAY:  throw "TODO"; // TODO:
-		case var::MAP:    throw "TODO"; // TODO:
+		case var::VECT2F: throw "TODO"; // TODO: 
+		case var::VECT2I: throw "TODO"; // TODO: 
+		case var::VECT3F: throw "TODO"; // TODO: 
+		case var::VECT3I: throw "TODO"; // TODO: 
+		case var::ARRAY:  return _data._arr.call_method(p_method, p_args);
+		case var::MAP:    return _data._map.call_method(p_method, p_args);
 		case var::OBJECT: return Object::call_method(_data._obj, p_method, p_args);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_ERROR(VarError::BUG, "");
 }
 
@@ -645,7 +735,7 @@ var var::get_member(const String& p_name) {
 			THROW_ERROR(VarError::INVALID_GET_NAME, String::format("member %s does not exists on %s", p_name.c_str(), get_type_name().c_str()));
 		case var::OBJECT: return Object::get_member(_data._obj, p_name);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_ERROR(VarError::BUG, "");
 }
 #undef VECT2_GET
@@ -686,7 +776,7 @@ void var::set_member(const String& p_name, var& p_value) {
 		case var::OBJECT: Object::set_member(_data._obj, p_name, p_value);
 			break;
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_ERROR(VarError::BUG, "");
 }
 #undef VECT2_SET
@@ -709,7 +799,7 @@ var::operator bool() const {
 		case MAP: return !_data._map.empty();
 		case OBJECT: return _data._obj.operator bool();
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_ERROR(VarError::INVALID_CASTING, String::format("can't cast \"%s\" to \"bool\"", get_type_name().c_str()));
 }
 
@@ -754,7 +844,7 @@ String var::to_string() const {
 		case MAP: return _data._map.to_string();
 		case OBJECT: return _data._obj->to_string();
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_ERROR(VarError::BUG, "");
 }
 
@@ -857,12 +947,10 @@ bool var::operator==(const var& p_other) const {
 			break;
 		}
 		case OBJECT: {
-			if (p_other.type == OBJECT)
-				return _data._obj == p_other._data._obj;
-			break;
+			return _data._obj->__eq(p_other);
 		}
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_ERROR(VarError::BUG, "");
 }
 
@@ -912,12 +1000,10 @@ bool var::operator<(const var& p_other) const {
 			break;
 		}
 		case OBJECT: {
-			if (p_other.type == OBJECT)
-				return _data._obj < p_other._data._obj;
-			break;
+			return _data._obj->__lt(p_other);
 		}
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	// FIXME: a workaround for map keys as vars.
 	return this < &p_other;
 }
@@ -963,12 +1049,10 @@ bool var::operator>(const var& p_other) const {
 		case MAP:
 			break;
 		case OBJECT: {
-			if (p_other.type == OBJECT)
-				return _data._obj > p_other._data._obj;
-			break;
+			return _data._obj->__gt(p_other);
 		}
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	return this < &p_other;
 }
 
@@ -1020,10 +1104,11 @@ var var::operator +(const var& p_other) const {
 			break;
 		}
 		case MAP:
-		case OBJECT:
 			break;
+		case OBJECT:
+			return _data._obj->__add(p_other);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_OPERATOR_NOT_SUPPORTED(+);
 }
 
@@ -1059,10 +1144,11 @@ var var::operator-(const var& p_other) const {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, -) } break;
 		case ARRAY:
 		case MAP:
-		case OBJECT:
 			break;
+		case OBJECT:
+			return _data._obj->__sub(p_other);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_OPERATOR_NOT_SUPPORTED(-);
 }
 
@@ -1112,10 +1198,11 @@ var var::operator *(const var& p_other) const {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, *) } break;
 		case ARRAY:
 		case MAP:
-		case OBJECT:
 			break;
+		case OBJECT:
+			return _data._obj->__mul(p_other);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_OPERATOR_NOT_SUPPORTED(*);
 }
 
@@ -1169,10 +1256,11 @@ var var::operator /(const var& p_other) const {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, /) } break;
 		case ARRAY:
 		case MAP:
-		case OBJECT:
 			break;
+		case OBJECT:
+			return _data._obj->__div(p_other);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_OPERATOR_NOT_SUPPORTED(/);
 }
 
@@ -1192,7 +1280,7 @@ var var::operator %(const var& p_other) const {
 			}
 		}
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_OPERATOR_NOT_SUPPORTED(%);
 }
 #undef VAR_RET_EQUAL
@@ -1248,10 +1336,11 @@ var& var::operator+=(const var& p_other) {
 			break;
 		}
 		case MAP:
-		case OBJECT:
 			break;
+		case OBJECT:
+			return _data._obj->__add_eq(p_other);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_OPERATOR_NOT_SUPPORTED(+=);
 }
 
@@ -1287,10 +1376,11 @@ var& var::operator-=(const var& p_other) {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, -=) } break;
 		case ARRAY:
 		case MAP:
-		case OBJECT:
 			break;
+		case OBJECT:
+			return _data._obj->__sub_eq(p_other);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_OPERATOR_NOT_SUPPORTED(-=);
 }
 
@@ -1341,10 +1431,11 @@ var& var::operator*=(const var& p_other) {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, *=) } break;
 		case ARRAY:
 		case MAP:
-		case OBJECT:
 			break;
+		case OBJECT:
+			return _data._obj->__mul_eq(p_other);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_OPERATOR_NOT_SUPPORTED(*=);
 }
 
@@ -1398,10 +1489,11 @@ var& var::operator/=(const var& p_other) {
 		case VECT3I: { VAR_SWITCH_VECT(3, i, /=) } break;
 		case ARRAY:
 		case MAP:
-		case OBJECT:
 			break;
+		case OBJECT:
+			return _data._obj->__mul_eq(p_other);
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	THROW_OPERATOR_NOT_SUPPORTED(/=);
 }
 
@@ -1454,7 +1546,7 @@ void var::copy_data(const var& p_other) {
 			_data._obj = p_other._data._obj;
 			return;
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 }
 
 void var::clear_data() {
@@ -1481,13 +1573,14 @@ void var::clear_data() {
 			_data._obj = nullptr;
 			break;
 	}
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 }
 
 
 String var::get_type_name_s(var::Type p_type) {
 	static const char* _type_names[_TYPE_MAX_] = {
 		"null",
+		"var"
 		"bool",
 		"int",
 		"float",
@@ -1501,7 +1594,7 @@ String var::get_type_name_s(var::Type p_type) {
 		"Object",
 		//_TYPE_MAX_
 	};
-	MISSED_ENUM_CHECK(_TYPE_MAX_, 12);
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
 	return _type_names[p_type];
 }
 

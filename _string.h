@@ -48,14 +48,18 @@ public:
 	explicit String(double p_d)                 { _data = std::to_string(p_d); }
 	~String()                          {}
 
-	// Methods.
+	// reflection methods.
 	var call_method(const String& p_method, const stdvec<var>& p_args);
+	static const stdmap<String, const MemberInfo*>& get_member_info();
+	static bool has_member(const String& p_member);
+	static const MemberInfo* get_member(const String& p_member);
 
 	static String format(const char* p_format, ...);
 	int64_t to_int() const { return std::stoll(_data); } // TODO: this will throw std::exceptions
 	double to_float() const { return std::stod(_data); }
 	String get_line(uint64_t p_line) const;
 	size_t hash() const { return std::hash<std::string>{}(_data); }
+	size_t const_hash() const { return __const_hash(_data.c_str()); }
 
 	String substr(size_t p_start, size_t p_end) const;
 	bool endswith(const String& p_str) const;

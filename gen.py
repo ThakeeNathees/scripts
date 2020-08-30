@@ -65,7 +65,7 @@ for dir in os.listdir('.'):
         if dir.endswith('.cpp'):
             with open(dir, 'r') as f:
                 src[dir] = f.read()
-        elif dir.endswith('.h'):
+        elif dir.endswith('.h') or dir.endswith('.inc'):
             with open(dir, 'r') as f:
                 headers[dir] = [f.read(), False]
 
