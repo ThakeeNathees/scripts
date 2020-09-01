@@ -98,6 +98,7 @@ public:
 	static String get_type_name_s(var::Type p_type);
 	String get_type_name() const;
 	//const char* get_parent_class_name() const;
+	size_t hash() const;
 	void clear();
 	var copy(bool p_deep = false) const;
 

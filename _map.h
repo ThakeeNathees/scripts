@@ -36,23 +36,16 @@ class String;
 
 class Map {
 public:
-	// Mehtods.
-	Map() {
-		_data = std::make_shared<stdmap<var, var>>();
-	}
-	Map(const ptr<stdmap<var, var>>& p_data) {
-		_data = p_data;
-	}
-	Map(const Map& p_copy) {
-		_data = p_copy._data;
-	}
+	struct _KeyValue;
+	typedef stdhashtable<size_t, _KeyValue> _map_internal_t;
 
-	stdmap<var, var>* get_data() {
-		return _data.operator->();
-	}
-	stdmap<var, var>* get_data() const {
-		return _data.operator->();
-	}
+	// Mehtods.
+	Map();
+	Map(const ptr<_map_internal_t>& p_data);
+	Map(const Map& p_copy);
+
+	_map_internal_t* get_data() { return  _data.operator->(); }
+	_map_internal_t* get_data() const { return _data.operator->(); }
 
 	Map copy(bool p_deep = true) const;
 
@@ -70,12 +63,13 @@ public:
 	var& operator[](const var& p_key);
 	var& operator[](const char* p_key) const;
 	var& operator[](const char* p_key);
-	stdmap<var, var>::iterator begin() const;
-	stdmap<var, var>::iterator end() const;
-	stdmap<var, var>::iterator find(const var& p_key) const;
-	void clear() { _data->clear(); }
+	_map_internal_t::iterator begin() const;
+	_map_internal_t::iterator end() const;
+	_map_internal_t::iterator find(const var& p_key) const;
+	void clear();
 	bool has(const var& p_key) const;
-	// TODO:
+	// TODO: abstract iteration in var and implement here.
+	// TODO: add more
 
 	// Operators.
 	operator bool() const { return empty(); }
@@ -85,7 +79,9 @@ public:
 
 private:
 	friend class var;
-	ptr<stdmap<var, var>> _data;
+	
+	//ptr<stdmap<var, var>> _data;
+	ptr<_map_internal_t> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Map& p_dict);
 };
 
