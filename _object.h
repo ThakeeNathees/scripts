@@ -77,6 +77,7 @@ public:
 
 	virtual var __get_mapped(const var& p_key) const;
 	virtual void __set_mapped(const var& p_key, const var& p_val);
+	virtual int64_t __hash() const;
 
 	virtual var __add(const var& p_other) const;
 	virtual var __sub(const var& p_other) const;

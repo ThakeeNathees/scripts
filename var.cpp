@@ -110,28 +110,32 @@ do {                                                                            
 
 #define MEMBER_INFO_IMPLEMENTATION(m_type)                                                                                                              \
 bool m_type::has_member(const String& p_member) {																										\
-	return get_member_info_list().find(p_member) != get_member_info_list().end();																					\
+	return get_member_info_list().find(p_member) != get_member_info_list().end();																		\
 }																																						\
-const MemberInfo* m_type::get_member_info(const String& p_member) {																							\
+const MemberInfo* m_type::get_member_info(const String& p_member) {																						\
 	if (!has_member(p_member)) THROW_ERROR(VarError::INVALID_KEY, String::format("member \"%s\" not exists on base " #m_type , p_member.c_str()));		\
-	const stdmap<String, const MemberInfo*>& member_info = get_member_info_list();																			\
+	const stdmap<String, const MemberInfo*>& member_info = get_member_info_list();																		\
 	return member_info.at(p_member);																													\
 }																																						\
 const stdmap<String, const MemberInfo*>& m_type::get_member_info_list()
+
+// TODO: eventhought the method should be alive all the time it needs to be cleaned
+//       delete or use shared pointers.
+#define MEMBER_INFO(m_name, ...) { m_name,      new MethodInfo(m_name, __VA_ARGS__) }
 
 // String -----------------------------------------------
 
 MEMBER_INFO_IMPLEMENTATION(String) {
 	static const stdmap<String, const MemberInfo*> member_info = {
-		{ "size",           new MethodInfo("size", var::INT),								                },
-		{ "length",         new MethodInfo("length", var::INT),								                },
-		{ "to_int",         new MethodInfo("to_int", var::INT),								                },
-		{ "to_float",       new MethodInfo("to_float", var::FLOAT),							                },
-		{ "get_line",       new MethodInfo("get_line", {"line"}, {var::INT}, var::STRING),                  },
-		{ "hash",           new MethodInfo("hash", var::INT),							                    },
-		{ "substr",         new MethodInfo("substr", {"start", "end"}, {var::INT, var::INT}, var::STRING),	},
-		{ "endswith",       new MethodInfo("endswith", {"what"}, {var::STRING}),							},
-		{ "startswith",     new MethodInfo("startswith", {"what"}, {var::STRING}),                          },
+		MEMBER_INFO("size",                                               var::INT      ),
+		MEMBER_INFO("length",                                             var::INT      ),
+		MEMBER_INFO("to_int",                                             var::INT      ),
+		MEMBER_INFO("to_float",                                           var::FLOAT    ),
+		MEMBER_INFO("get_line",   {"line"}, {var::INT},                   var::STRING   ),
+		MEMBER_INFO("hash",                                               var::INT      ),
+		MEMBER_INFO("substr",     {"start", "end"}, {var::INT, var::INT}, var::STRING   ),
+		MEMBER_INFO("endswith",   {"what"}, {var::STRING},                var::BOOL     ),
+		MEMBER_INFO("startswith", {"what"}, {var::STRING},                var::BOOL     ),
 	};
 	return member_info;
 }
@@ -222,14 +226,14 @@ bool operator!=(const char* p_cstr, const String& p_str) {
 
 MEMBER_INFO_IMPLEMENTATION(Array) {
 	static const stdmap<String, const MemberInfo*> member_info = {
-		{ "size",      new MethodInfo("size", var::INT),                                     },
-		{ "empty",     new MethodInfo("empty", var::BOOL),                                   },
-		{ "push_back", new MethodInfo("push_back", {"element"}, {var::VAR}, var::_NULL),     },
-		{ "pop_back",  new MethodInfo("pop_back", var::_NULL),                               },
-		{ "append",    new MethodInfo("append", {"element"}, {var::VAR}, var::ARRAY),        },
-		{ "pop",       new MethodInfo("pop", var::VAR),                                      },
-		{ "clear",     new MethodInfo("clear", var::_NULL),                                  },
-		{ "at",        new MethodInfo("at", {"index"}, {var::INT}, var::VAR),                },
+		MEMBER_INFO("size",                                   var::INT    ),
+		MEMBER_INFO("empty",                                  var::BOOL   ),
+		MEMBER_INFO("push_back", {"element"}, {var::VAR},     var::_NULL  ),
+		MEMBER_INFO("pop_back",                               var::_NULL  ),
+		MEMBER_INFO("append",    {"element"}, {var::VAR},     var::ARRAY  ),
+		MEMBER_INFO("pop",                                    var::VAR    ),
+		MEMBER_INFO("clear",                                  var::_NULL  ),
+		MEMBER_INFO("at",        {"index"}, {var::INT},       var::VAR    ),
 	};
 	return member_info;
 }
@@ -311,38 +315,51 @@ Array& Array::operator=(const Array& p_other) {
 
 MEMBER_INFO_IMPLEMENTATION(Map) {
 	static const stdmap<String, const MemberInfo*> member_info = {
-		//{ "to_int",         new MethodInfo("to_int", var::INT),								              },
-		//{ "to_float",       new MethodInfo("to_float", var::FLOAT),							              },
-		//{ "get_line",       new MethodInfo("get_line", {"line"}, {var::INT}, var::STRING),                  },
-		//{ "hash",           new MethodInfo("hash", var::INT),							                      },
-		//{ "substr",         new MethodInfo("substr", {"start", "end"}, {var::INT, var::INT}, var::STRING),  },
-		//{ "endswith",       new MethodInfo("endswith", {"what"}, {var::STRING}),							  },
-		//{ "startswith",     new MethodInfo("startswith", {"what"}, {var::STRING}),                          },
+		MEMBER_INFO("size",                           var::INT       ),
+		MEMBER_INFO("empty",                          var::BOOL      ),
+		MEMBER_INFO("insert", {"what"}, {var::VAR},   var::_NULL     ),
+		MEMBER_INFO("clear",                          var::_NULL     ),
+		MEMBER_INFO("has",                            var::BOOL      ),
 	};
 	return member_info;
 }
 
 var Map::call_method(const String& p_method, const stdvec<var>& p_args) {
 	CHECK_METHOD_AND_ARGS();
-	//switch (p_method.const_hash()) {
-	//	case "to_int"_hash:     return to_int();
-	//	case "to_float"_hash:   return to_float();
-	//	case "get_line"_hash:   return get_line(p_args[0].operator int64_t());
-	//	case "hash"_hash:       return (int64_t)hash();
-	//	case "substr"_hash:     return substr((size_t)p_args[0].operator int64_t(), (size_t)p_args[1].operator int64_t());
-	//	case "endswith"_hash:   return endswith(p_args[0].operator String());
-	//	case "startswith"_hash: return startswith(p_args[0].operator String());
-	//}
+	switch (p_method.const_hash()) {
+		case "size"_hash:   return (int64_t)size();
+		case "empty"_hash:  return empty();
+		case "insert"_hash: insert(p_args[0], p_args[1]); return var();
+		case "clear"_hash:  clear(); return var();
+		case "has"_hash:    return has(p_args[0]);
+	}
 	// TODO: more.
 	THROW_ERROR(VarError::BUG, "!!! BUG !!! It can't reach here.");
+}
+
+struct Map::_KeyValue {
+	var key;
+	var value;
+	_KeyValue() {}
+	_KeyValue(const var& p_key, const var& p_value) : key(p_key), value(p_value) {}
+};
+
+Map::Map() {
+	_data = newptr<_map_internal_t>();
+}
+Map::Map(const ptr<_map_internal_t>& p_data) {
+	_data = p_data;
+}
+Map::Map(const Map& p_copy) {
+	_data = p_copy._data;
 }
 
 String Map::to_string() const {
 	std::stringstream ss;
 	ss << "{ ";
-	for (stdmap<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
+	for (_map_internal_t::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
 		if (it != (*_data).begin()) ss << ", ";
-		ss << it->first.to_string() << " : " << it->second.to_string();
+		ss << it->second.key.to_string() << " : " << it->second.value.to_string();
 	}
 	ss << " }";
 	return ss.str();
@@ -350,34 +367,39 @@ String Map::to_string() const {
 
 Map Map::copy(bool p_deep) const {
 	Map ret;
-	for (stdmap<var, var>::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
-		if (p_deep)
-			ret[it->first] = it->second.copy(true);
-		else
-			ret[it->first] = it->second;
+	for (_map_internal_t::iterator it = (*_data).begin(); it != (*_data).end(); it++) {
+		if (p_deep) {
+			ret[(int64_t)it->first] = it->second.value.copy(true);
+		} else {
+			ret[(int64_t)it->first] = it->second.value;
+		}
 	}
 	return ret;
 }
 
-var& Map::operator[](const var& p_key) const { return (*_data).operator[](p_key); }
-var& Map::operator[](const var& p_key) { return (*_data).operator[](p_key);}
-var& Map::operator[](const char* p_key) const { return (*_data).operator[](p_key); }
-var& Map::operator[](const char* p_key) { return (*_data).operator[](p_key); }
+// TODO: error message.
+var& Map::operator[](const var& p_key) const  { return (*_data).operator[](p_key.hash()).value; }
+var& Map::operator[](const var& p_key)        { return (*_data).operator[](p_key.hash()).value; }
+var& Map::operator[](const char* p_key) const { return (*_data).operator[](var(p_key).hash()).value; }
+var& Map::operator[](const char* p_key)       { return (*_data).operator[](var(p_key).hash()).value; }
 
-stdmap<var, var>::iterator Map::begin() const { return (*_data).begin(); }
-stdmap<var, var>::iterator Map::end() const { return (*_data).end(); }
-stdmap<var, var>::iterator Map::find(const var& p_key) const { return (*_data).find(p_key); }
+Map::_map_internal_t::iterator Map::begin() const { return (*_data).begin(); }
+Map::_map_internal_t::iterator Map::end() const { return (*_data).end(); }
+Map::_map_internal_t::iterator Map::find(const var& p_key) const { return (*_data).find(p_key.hash()); }
 
-void Map::insert(const var& p_key, const var& p_value) { (*_data).insert(std::pair<var, var>(p_key, p_value)); }
+void Map::insert(const var& p_key, const var& p_value) {
+	(*_data).insert(std::pair<size_t, _KeyValue>(p_key.hash(), _KeyValue(p_key, p_value)));
+}
 bool Map::has(const var& p_key) const { return find(p_key) != end(); }
+void Map::clear() { _data->clear(); }
 
 bool Map::operator ==(const Map& p_other) const {
 	if (size() != p_other.size())
 		return false;
-	for (stdmap<var, var>::iterator it_other = p_other.begin(); it_other != p_other.end(); it_other++) {
-		stdmap<var, var>::iterator it_self = find(it_other->first);
+	for (_map_internal_t::iterator it_other = p_other.begin(); it_other != p_other.end(); it_other++) {
+		_map_internal_t::iterator it_self = find(it_other->second.key);
 		if (it_self == end()) return false;
-		if (it_self->second != it_other->second) return false;
+		if (it_self->second.value != it_other->second.value) return false;
 
 	}
 	return true;
@@ -411,11 +433,12 @@ var Object::get_member(ptr<Object> p_self, const String& p_name) { THROW_ERROR(V
 void Object::set_member(ptr<Object> p_self, const String& p_name, var& p_value) { THROW_ERROR(VarError::INVALID_GET_NAME, ""); } // TODO: error name.
 #endif
 
-var Object::__call(stdvec<var>& p_vars) { THROW_ERROR(VarError::NOT_IMPLEMENTED, ""); }
+var Object::__call(stdvec<var>& p_vars) { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
 var Object::operator()(stdvec<var>& p_vars) { return __call(p_vars); }
 
 var Object::__get_mapped(const var& p_key) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
 void Object::__set_mapped(const var& p_key, const var& p_val) { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
+int64_t Object::__hash() const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
 
 var Object::__add(const var& p_other) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
 var Object::__sub(const var& p_other) const { THROW_ERROR(VarError::OPERATOR_NOT_SUPPORTED, ""); }
@@ -435,6 +458,28 @@ bool Object::__eq(const var& p_other) const {
 }
 
 // var -----------------------------------------------
+
+size_t var::hash() const {
+	switch (type) {
+		case _NULL:
+			THROW_ERROR(VarError::NULL_POINTER, "");
+		case BOOL:   return std::hash<bool>{}(_data._bool);
+		case INT:    return std::hash<int64_t>{}(_data._int);
+		case FLOAT:  return std::hash<double>{}(_data._float);
+		case STRING: return _data._string.hash();
+		case VECT2F: return (std::hash<double>{}  (DATA_PTR_CONST(Vect2f)->x) << 1) ^ std::hash<double>{}  (DATA_PTR_CONST(Vect2f)->y);
+		case VECT2I: return (std::hash<int64_t>{} (DATA_PTR_CONST(Vect2i)->x) << 1) ^ std::hash<int64_t>{} (DATA_PTR_CONST(Vect2i)->y);
+		case VECT3F: return (std::hash<double>{}  (DATA_PTR_CONST(Vect3f)->x) << 1) ^ std::hash<double>{}  (DATA_PTR_CONST(Vect3f)->y);
+		case VECT3I: return (std::hash<int64_t>{} (DATA_PTR_CONST(Vect3i)->x) << 1) ^ std::hash<int64_t>{} (DATA_PTR_CONST(Vect3i)->y);
+		case ARRAY:
+		case MAP:
+			THROW_ERROR(VarError::INVALID_KEY, String::format("key of typt %s is unhashable.", get_type_name().c_str()));
+		case OBJECT:
+			break;
+	}
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
+	THROW_ERROR(VarError::BUG, "");
+}
 
 void var::clear() {
 	clear_data();
@@ -459,7 +504,7 @@ var var::copy(bool p_deep) const {
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
-	return *this;
+	THROW_ERROR(VarError::BUG, "");
 }
 
 
@@ -592,6 +637,7 @@ var var::__get_mapped(const var& p_key) const {
 			return _data._arr[index];
 		} break;
 		case MAP:
+			if (!_data._map.has(p_key)) THROW_ERROR(VarError::INVALID_INDEX, String::format("Key %s does not exists on Map", p_key.to_string()));
 			return _data._map[p_key];
 		case OBJECT:
 			return _data._obj->__get_mapped(p_key);
@@ -646,6 +692,7 @@ var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
 			if (p_args.size() != 0) THROW_ERROR(VarError::INVALID_ARG_COUNT, "Expected at exactly 0 argument.");
 			return to_string();
 		case "copy"_hash:  return copy();
+		case "hash"_hash:  return (int64_t)hash();
 		case "get_type_name"_hash: return get_type_name();
 
 		// operators.
@@ -1014,8 +1061,7 @@ bool var::operator<(const var& p_other) const {
 		}
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
-	// FIXME: a workaround for map keys as vars.
-	return this < &p_other;
+	THROW_OPERATOR_NOT_SUPPORTED(<);
 }
 
 bool var::operator>(const var& p_other) const {
@@ -1063,7 +1109,7 @@ bool var::operator>(const var& p_other) const {
 		}
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 13);
-	return this < &p_other;
+	THROW_OPERATOR_NOT_SUPPORTED(>);
 }
 
 bool var::operator<=(const var& p_other) const {

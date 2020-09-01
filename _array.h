@@ -35,7 +35,7 @@ public:
 	Array() {
 		_data = newptr<stdvec<var>>();
 	}
-	Array(const ptr<std::vector<var>>& p_data) {
+	Array(const ptr<stdvec<var>>& p_data) {
 		_data = p_data;
 	}
 	Array(const Array& p_copy) {
@@ -47,10 +47,10 @@ public:
 		_make_va_arg_array(p_args...);
 	}
 
-	std::vector<var>* get_data() {
+	stdvec<var>* get_data() {
 		return _data.operator->();
 	}
-	std::vector<var>* get_data() const {
+	stdvec<var>* get_data() const {
 		return _data.operator->();
 	}
 
