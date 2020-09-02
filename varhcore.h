@@ -148,25 +148,20 @@ protected:
 	Type type;
 };
 
-
 class VarError : public std::exception {
 public:
 	enum Type {
-		OK,
-		NULL_POINTER,
-		INVALID_INDEX,
-		INVALID_KEY,
-		INVALID_CASTING,
-		INVALID_GET_NAME,
-		INVALID_SET_VALUE,
-		INVALID_ARGUMENT,
-		INVALID_ARG_COUNT,
-
-		NOT_IMPLEMENTED,
-		OPERATOR_NOT_SUPPORTED,
-		ZERO_DIVISION,
-
+		OK = 0,
 		BUG,
+
+		NULL_POINTER,
+		OPERATOR_NOT_SUPPORTED,
+		NOT_IMPLEMENTED,
+		ZERO_DIVISION,
+		TYPE_ERROR,
+		ATTRIBUTE_ERROR,
+		INVALID_ARG_COUNT,
+		INVALID_INDEX,
 
 		_ERROR_MAX_,
 	};
@@ -182,10 +177,29 @@ public:
 		msg = p_msg;
 	}
 	
+#if DEBUG_BUILD
+	const std::string& get_dbg_func() const { return __dbg_func__; }
+	const std::string& get_dbg_file() const { return __dbg_file__; }
+	int get_dbg_line() const { return __dbg_line__; }
+
+	VarError& set_deg_variables(const std::string& p_func, const std::string& p_file, uint32_t p_line) {
+		__dbg_func__ = p_func;
+		__dbg_file__ = p_file;
+		__dbg_line__ = p_line;
+		return *this;
+	}
+#endif
 
 private:
 	Type type = OK;
 	std::string msg;
+
+#if DEBUG_BUILD
+	std::string __dbg_func__ = "<NO-FUNC-SET>";
+	std::string __dbg_file__ = "<NO-FILE-SET>";
+	uint32_t __dbg_line__ = 0;
+#endif
+
 };
 }
 

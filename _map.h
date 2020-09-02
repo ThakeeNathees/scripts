@@ -43,6 +43,7 @@ public:
 	Map();
 	Map(const ptr<_map_internal_t>& p_data);
 	Map(const Map& p_copy);
+	constexpr static  const char* get_class_name_s() { return "Map"; }
 
 	_map_internal_t* get_data() { return  _data.operator->(); }
 	_map_internal_t* get_data() const { return _data.operator->(); }
@@ -59,9 +60,9 @@ public:
 	size_t size() const { return _data->size(); }
 	bool empty() const { return _data->empty(); }
 	void insert(const var& p_key, const var& p_value);
-	var& operator[](const var& p_key) const;
+	var operator[](const var& p_key) const;
 	var& operator[](const var& p_key);
-	var& operator[](const char* p_key) const;
+	var operator[](const char* p_key) const;
 	var& operator[](const char* p_key);
 	_map_internal_t::iterator begin() const;
 	_map_internal_t::iterator end() const;

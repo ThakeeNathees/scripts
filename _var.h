@@ -44,6 +44,8 @@
 
 namespace varh {
 
+class MemberInfo;
+
 class var {
 public:
 	enum Type {
@@ -74,6 +76,7 @@ public:
 	var(const var& p_copy);
 	var(bool p_bool);
 	var(int p_int);
+	var(size_t p_int);
 	var(int64_t p_int);
 	var(float p_float);
 	var(double p_double);
@@ -93,19 +96,45 @@ public:
 		_data._obj = p_ptr;
 	}
 
+	template <typename... Targs>
+	var operator()(Targs... p_args) {
+		return __call(p_args...);
+	}
+
 	// Methods.
 	inline Type get_type() const { return type; }
-	static String get_type_name_s(var::Type p_type);
 	String get_type_name() const;
 	//const char* get_parent_class_name() const;
 	size_t hash() const;
+	static bool is_hashable(var::Type p_type);
 	void clear();
 	var copy(bool p_deep = false) const;
+
+	constexpr static const char* get_type_name_s(var::Type p_type) {
+		switch (p_type) {
+			case var::_NULL:  return "null";
+			case var::VAR:    return "var";
+			case var::BOOL:   return "bool";
+			case var::INT:    return "int";
+			case var::FLOAT:  return "float";
+			case var::STRING: return "String";
+			case var::VECT2F: return "Vect2f";
+			case var::VECT2I: return "Vect2i";
+			case var::VECT3F: return "Vect3f";
+			case var::VECT3I: return "Vect3i";
+			case var::ARRAY:  return "Array";
+			case var::MAP:    return "Map";
+			case var::OBJECT: return "Object";
+			default:
+				return "";
+		}
+	}
 
 	// Operators.
 	operator bool() const;
 	operator int64_t() const;
 	operator int() const { return (int)operator int64_t(); }
+	operator size_t() const { return (size_t)operator int64_t(); }
 	operator float() const { return (float)operator double(); }
 	operator double() const;
 	operator String() const;   // int.operator String() is invalid casting.
@@ -154,14 +183,12 @@ public:
 
 	template <typename... Targs>
 	var __call(Targs... p_args) {
-		stdvec<var> args;
-		__build_args_recur(args, p_args...);
+		stdvec<var> args = make_stdvec<var>(p_args...);
 		return __call_internal(args);
 	}
 	template <typename... Targs>
 	var call_method(const String& p_method, Targs... p_args) {
-		stdvec<var> args;
-		__build_args_recur(args, p_args...);
+		stdvec<var> args = make_stdvec<var>(p_args...);
 		return call_method_internal(p_method, args);
 	}
 	var call_method(const String& p_method, stdvec<var>& p_args) { return call_method_internal(p_method, p_args); }
@@ -169,16 +196,14 @@ public:
 	var get_member(const String& p_name);
 	void set_member(const String& p_name, var& p_value);
 
+	const MemberInfo* get_member_info(const String& p_name) const;
+	static const MemberInfo* get_member_info_s(var::Type p_type, const String& p_name);
+	const stdvec<const MemberInfo*> get_member_info_list() const;
+	static stdvec<const MemberInfo*> get_member_info_list_s(var::Type p_type);
+
 private:
 	var __call_internal(stdvec<var>& p_args);
-	// TODO: call static func in every var classes.
 	var call_method_internal(const String& p_method, stdvec<var>& p_args);
-	template <typename T, typename... Targs>
-	constexpr void __build_args_recur(stdvec<var>& p_args_arr, T p_val, Targs... p_args) {
-		p_args_arr.push_back(p_val);
-		__build_args_recur(p_args_arr, p_args...);
-	}
-	void __build_args_recur(stdvec<var>& p_args_arr) { return; }
 public:
 
 	VAR_OP_DECL(var, +, const);
@@ -214,7 +239,7 @@ private:
 		union {
 			String _string;
 
-			bool _bool;
+			bool _bool = false;
 			int64_t _int;
 			double _float;
 			uint8_t _mem[DATA_MEM_SIZE];
@@ -227,7 +252,7 @@ private:
 
 	// Members.
 	static var tmp;
-	Type type;
+	Type type = _NULL;
 	VarData _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
 };
@@ -235,8 +260,8 @@ private:
 // ******** MEMBER INFO IMPLEMENTATIONS ******************* //
 
 struct VarTypeInfo {
-	var::Type type;
-	const char* class_name;
+	var::Type type = var::_NULL;
+	const char* class_name = nullptr;
 	VarTypeInfo(var::Type p_type = var::VAR) : type(p_type) {}
 	VarTypeInfo(var::Type p_type, const char* p_class_name) : type(p_type), class_name(p_class_name) {}
 

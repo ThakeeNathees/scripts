@@ -53,6 +53,7 @@ struct Vect2 {
 	Vect2(const T* p_arr) : x(p_arr[0]), y(p_arr[1]) {}
 	template<typename T2>
 	Vect2(const Vect2<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y) {}
+	constexpr static  const char* get_class_name_s() { return "Vect2<T>"; }
 
 	// Methods.
 	real_t get_length() const {
@@ -135,6 +136,7 @@ struct Vect3 {
 	Vect3(const T* p_arr) : x(p_arr[0]), y(p_arr[1]), z(p_arr[2]) {}
 	template<typename T2>
 	Vect3(const Vect3<T2>& p_copy) : x((T)p_copy.x), y((T)p_copy.y), z((T)p_copy.z) {}
+	constexpr static  const char* get_class_name_s() { return "Vect3<T>"; }
 
 	// Methods.
 	real_t get_length() const {

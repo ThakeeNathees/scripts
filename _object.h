@@ -34,6 +34,7 @@ public:                                                                         
 	virtual const char* get_class_name() const override { return get_class_name_s(); }               \
 	static constexpr const char* get_parent_class_name_s() { return STR(m_inherits); }               \
 	virtual const char* get_parent_class_name() const override { return get_parent_class_name_s(); } \
+	static ptr<Object> __constructor() { return newptr<m_class>(); }                                 \
 	static void _bind_data()
 
 namespace varh {
@@ -72,6 +73,9 @@ public:
 	static var call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args);  // instance.p_name(args)
 	virtual var __call(stdvec<var>& p_vars);                                                // instance(args)
 
+	// the dynamic way to call method on native classes. See DynamicLibrary for reference.
+	constexpr static const char* __call_method = "__call_method";  
+
 	static var get_member(ptr<Object> p_self, const String& p_name);
 	static void set_member(ptr<Object> p_self, const String& p_name, var& p_value);
 
@@ -96,11 +100,15 @@ public:
 	virtual String to_string() const { return String::format("[Object:%i]", this);  }
 
 	// Methods.
-	virtual ptr<Object> copy(bool p_deep)         const { throw VarError(VarError::NOT_IMPLEMENTED); }
-	static  const char* get_class_name_s()              { return "Object"; }
+	virtual ptr<Object> copy(bool p_deep)         const { throw VarError(VarError::NOT_IMPLEMENTED, "Virtual method \"copy()\" not implemented on type \"Object\"."); }
+	constexpr static  const char* get_class_name_s()              { return "Object"; }
 	virtual const char* get_class_name()          const { return get_class_name_s(); }
-	static  const char* get_parent_class_name_s()       { return ""; }
+	static ptr<Object> __constructor() { return newptr<Object>(); }
+	constexpr static  const char* get_parent_class_name_s()       { return ""; }
 	virtual const char* get_parent_class_name()   const { return get_parent_class_name_s(); }
+
+	static const stdvec<const MemberInfo*> get_member_info_list(const Object* p_instance);
+	static const MemberInfo* get_member_info(const Object* p_instance, const String& p_member);
 
 	static void _bind_data();
 

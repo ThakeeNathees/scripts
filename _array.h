@@ -41,6 +41,8 @@ public:
 	Array(const Array& p_copy) {
 		_data = p_copy._data;
 	}
+	Array(const stdvec<var>& p_data);
+
 	template <typename... Targs>
 	Array(Targs... p_args) {
 		_data = newptr<stdvec<var>>();
@@ -53,6 +55,7 @@ public:
 	stdvec<var>* get_data() const {
 		return _data.operator->();
 	}
+	constexpr static  const char* get_class_name_s() { return "Array"; }
 
 	Array copy(bool p_deep = true) const;
 
@@ -70,32 +73,37 @@ public:
 	void pop_back() { _data->pop_back(); }
 	Array& append(const var& p_var) { push_back(p_var); return *this; }
 	var pop();
+	void clear() { (*_data).clear(); }
+	void insert(int64_t p_index, const var& p_var) { _data->insert(_data->begin() + p_index, p_var); }
+	var& at(int64_t p_index) {
+		if (0 <= p_index && p_index < (int64_t)size())
+			return (*_data).at(p_index);
+		if ((int64_t)size() * -1 <= p_index && p_index < 0)
+			return (*_data).at(size() + p_index);
+		throw VarError(VarError::INVALID_INDEX, String::format("Array index %i is invalid.", p_index));
+	}
+	void resize(size_t p_size) { _data->resize(p_size); }
+	void reserve(size_t p_size) { _data->reserve(p_size); }
+
+	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
+	std::vector<var>::const_iterator end() const { return (*_data).end(); }
+	var& back() { return (*_data).back(); }
+	var& front() { return (*_data).front(); }
+
 	var& operator[](int64_t p_index) const {
 		if (0 <= p_index && p_index < (int64_t)size())
 			return _data->operator[](p_index);
 		if ((int64_t)size() * -1 <= p_index && p_index < 0)
 			return _data->operator[](size() + p_index);
-		throw VarError(VarError::INVALID_INDEX, "");
+		throw VarError(VarError::INVALID_INDEX, String::format("Array index %i is invalid.", p_index));
 	}
 	var& operator[](int64_t p_index) { 
 		if (0 <= p_index && p_index < (int64_t)size())
 			return _data->operator[](p_index);
 		if ((int64_t)size() * -1 <= p_index && p_index < 0)
 			return _data->operator[](size() + p_index);
-		throw VarError(VarError::INVALID_INDEX, "");
+		throw VarError(VarError::INVALID_INDEX, String::format("Array index %i is invalid.", p_index));
 	}
-	std::vector<var>::const_iterator begin() const { return (*_data).begin(); }
-	std::vector<var>::const_iterator end() const { return (*_data).end(); }
-	void clear() { (*_data).clear(); }
-	var& at(int64_t p_index) {
-		if (0 <= p_index && p_index < (int64_t)size())
-			return (*_data).at(p_index);
-		if ((int64_t)size() * -1 <= p_index && p_index < 0)
-			return (*_data).at(size() + p_index);
-		throw VarError(VarError::INVALID_INDEX, "");
-	}
-	var& back() { return (*_data).back(); }
-	var& front() { return (*_data).front(); }
 	// TODO: 
 
 	// Operators.

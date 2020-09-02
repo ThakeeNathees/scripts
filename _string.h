@@ -47,6 +47,7 @@ public:
 	explicit String(size_t p_i)                 { _data = std::to_string(p_i); }
 	explicit String(double p_d)                 { _data = std::to_string(p_d); }
 	~String()                          {}
+	constexpr static  const char* get_class_name_s() { return "String"; }
 
 	// reflection methods.
 	var call_method(const String& p_method, const stdvec<var>& p_args);
@@ -55,7 +56,16 @@ public:
 	static const MemberInfo* get_member_info(const String& p_member);
 
 	static String format(const char* p_format, ...);
-	int64_t to_int() const { return std::stoll(_data); } // TODO: this will throw std::exceptions
+	int64_t to_int() const {
+		// TODO: this should throw std::exceptions
+		if (startswith("0x") || startswith("0X")) {
+			return std::stoll(_data, nullptr, 16);
+		} else if (startswith("0b") || startswith("0B")) {
+			return std::stoll(substr(2, size()), nullptr, 2);
+		} else {
+			return std::stoll(_data);
+		}
+	} 
 	double to_float() const { return std::stod(_data); }
 	String get_line(uint64_t p_line) const;
 	size_t hash() const { return std::hash<std::string>{}(_data); }
@@ -73,14 +83,14 @@ public:
 			return _data[p_index];
 		if ((int64_t)size() * -1 <= p_index && p_index < 0)
 			return _data[size() + p_index];
-		throw VarError(VarError::INVALID_INDEX, ""); // TODO: better error message.
+		throw VarError(VarError::INVALID_INDEX, String::format("String index %i is invalid.", p_index));
 	}
 	char& operator[](int64_t p_index) {
 		if (0 <= p_index && p_index < (int64_t)size())
 			return _data[p_index];
 		if ((int64_t)size() * -1 <= p_index && p_index < 0)
 			return _data[size() + p_index];
-		throw VarError(VarError::INVALID_INDEX, ""); // TODO: better error message.
+		throw VarError(VarError::INVALID_INDEX, String::format("String index %i is invalid.", p_index));
 	}
 
 	operator std::string() const                   { return _data; }
