@@ -58,13 +58,15 @@ std::size_t constexpr operator "" _hash(const char* s, size_t) {
 
 #define func var
 
-#define STRCAT2(m_a, m_b) m_a##m_b
-#define STRCAT3(m_a, m_b, m_c) m_a##m_b##m_c
-#define STRCAT4(m_a, m_b, m_c, m_d) m_a##m_b##m_c##m_d
-
 #define STR(m_mac) #m_mac
 #define STRINGIFY(m_mac) STR(m_mac)
 #define PLACE_HOLDER_MACRO
+
+
+#define MISSED_ENUM_CHECK(m_max_enum, m_max_value) \
+	static_assert((int)m_max_enum == m_max_value, "MissedEnum: " STRINGIFY(m_max_enum) " != " STRINGIFY(m_value) \
+		"\n\tat: " __FILE__ "(" STRINGIFY(__LINE__) ")")
+
 
 namespace varh {
 template<typename T>
@@ -89,6 +91,9 @@ template<typename T1, typename T2>
 inline ptr<T1> ptrcast(T2 p_ptr) {
 	return std::static_pointer_cast<T1>(p_ptr);
 }
+
+template<typename T, typename... Targs>
+stdvec<T> make_stdvec(Targs... p_args) { return { p_args... }; }
 
 #define VSNPRINTF_BUFF_SIZE 8192
 
@@ -126,6 +131,13 @@ typedef float real_t;
 	} else (void(0))
 #else
 #define VAR_ASSERT
+#endif
+
+#define THROW_VARERROR(m_type, m_msg) throw VarError(m_type, m_msg)_ERR_ADD_DBG_VARS
+#ifdef DEBUG_BUILD
+	#define _ERR_ADD_DBG_VARS .set_deg_variables(__FUNCTION__, __FILE__, __LINE__)
+#else
+	#define _ERR_ADD_DBG_VARS 
 #endif
 
 namespace varh {
@@ -177,7 +189,7 @@ public:
 		msg = p_msg;
 	}
 	
-#if DEBUG_BUILD
+#ifdef DEBUG_BUILD
 	const std::string& get_dbg_func() const { return __dbg_func__; }
 	const std::string& get_dbg_file() const { return __dbg_file__; }
 	int get_dbg_line() const { return __dbg_line__; }
@@ -194,7 +206,7 @@ private:
 	Type type = OK;
 	std::string msg;
 
-#if DEBUG_BUILD
+#ifdef DEBUG_BUILD
 	std::string __dbg_func__ = "<NO-FUNC-SET>";
 	std::string __dbg_file__ = "<NO-FILE-SET>";
 	uint32_t __dbg_line__ = 0;

@@ -35,9 +35,11 @@ public:                                                                         
 	static constexpr const char* get_parent_class_name_s() { return STR(m_inherits); }               \
 	virtual const char* get_parent_class_name() const override { return get_parent_class_name_s(); } \
 	static ptr<Object> __constructor() { return newptr<m_class>(); }                                 \
-	static void _bind_data()
+	static void _bind_data(NativeClasses* p_native_classes)
 
 namespace varh {
+
+class NativeClasses;
 
 class Object {
 public:
@@ -110,7 +112,7 @@ public:
 	static const stdvec<const MemberInfo*> get_member_info_list(const Object* p_instance);
 	static const MemberInfo* get_member_info(const Object* p_instance, const String& p_member);
 
-	static void _bind_data();
+	static void _bind_data(NativeClasses* p_native_classes);
 
 private:
 	friend class var;

@@ -28,17 +28,15 @@
 
 #include "_string.h"
 #include "_array.h"
-#include "_vector.h"
 #include "_map.h"
 #include "_object.h"
+#include "_vector.h" // not a part of var anymore
 
 #define DATA_PTR_CONST(T) reinterpret_cast<const T *>(_data._mem)
 #define DATA_PTR_OTHER_CONST(T) reinterpret_cast<const T *>(p_other._data._mem)
 
 #define DATA_PTR(T) reinterpret_cast<T *>(_data._mem)
 #define DATA_PTR_OTHER(T) reinterpret_cast<T *>(p_other._data._mem)
-
-#define DATA_MEM_SIZE 4 * sizeof(real_t)
 
 // TODO: var fn = &func; fn(); operator(){}
 
@@ -56,12 +54,6 @@ public:
 		INT,
 		FLOAT,
 		STRING,
-
-		// math types
-		VECT2F,
-		VECT2I,
-		VECT3F,
-		VECT3I,
 
 		// misc types
 		ARRAY,
@@ -82,10 +74,6 @@ public:
 	var(double p_double);
 	var(const char* p_cstring);
 	var(const String& p_string);
-	var(const Vect2f& p_vect2f);
-	var(const Vect2i& p_vect2i);
-	var(const Vect3f& p_vect3f);
-	var(const Vect3i& p_vect3i);
 	var(const Array& p_array);
 	var(const Map& p_map);
 	~var();
@@ -93,7 +81,7 @@ public:
 	template <typename T=Object>
 	var(const ptr<T>& p_ptr) {
 		type = OBJECT;
-		_data._obj = p_ptr;
+		new(&_data._obj) ptr<Object>(p_ptr);
 	}
 
 	template <typename... Targs>
@@ -118,10 +106,6 @@ public:
 			case var::INT:    return "int";
 			case var::FLOAT:  return "float";
 			case var::STRING: return "String";
-			case var::VECT2F: return "Vect2f";
-			case var::VECT2I: return "Vect2i";
-			case var::VECT3F: return "Vect3f";
-			case var::VECT3I: return "Vect3i";
 			case var::ARRAY:  return "Array";
 			case var::MAP:    return "Map";
 			case var::OBJECT: return "Object";
@@ -141,10 +125,6 @@ public:
 	String to_string() const;  // int.to_string() is valid.
 	// this treated as: built-in C++ operator[](const char *, int), conflict with operator[](size_t)
 	// operator const char* () const;
-	operator Vect2f() const;
-	operator Vect2i() const;
-	operator Vect3f() const;
-	operator Vect3i() const;
 	operator Array() const;
 	operator Map() const;
 	operator ptr<Object>() const;
@@ -232,17 +212,16 @@ private:
 		VarData() : _float(.0f) {}
 		~VarData() {}
 
-		Map _map;
-		Array _arr;
-		ptr<Object> _obj;
 
 		union {
+			ptr<Object> _obj;
+			Map _map;
+			Array _arr;
 			String _string;
 
 			bool _bool = false;
 			int64_t _int;
 			double _float;
-			uint8_t _mem[DATA_MEM_SIZE];
 		};
 	};
 
@@ -276,7 +255,7 @@ class MethodInfo : public MemberInfo {
 private:
 	String name;
 	bool _is_static = false;
-	int arg_count = 0; // -1 means static
+	int arg_count = 0; // -1 is va args, -2 is unknown
 	stdvec<String> arg_names;
 	stdvec<var> default_args;
 	stdvec<VarTypeInfo> arg_types;
@@ -397,15 +376,15 @@ public:
 
 }
 
+// include _native after including everything else.
+#include "_native.h"
+
 // undefine all var.h macros defined in varcore.h
 // this makes the user(carbon) independent of'em
 #if defined(UNDEF_VAR_DEFINES)
 #if !defined(VAR_H_HEADER_ONLY)
 
 #undef func
-#undef STRCAT2
-#undef STRCAT3
-#undef STRCAT4
 #undef STR
 #undef STRINGIFY
 #undef PLACE_HOLDER
