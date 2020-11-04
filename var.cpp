@@ -341,13 +341,6 @@ var Map::call_method(const String& p_method, const stdvec<var>& p_args) {
 	DEBUG_BREAK(); THROW_VARERROR(VarError::BUG, "can't reach here.");
 }
 
-struct Map::_KeyValue {
-	var key;
-	var value;
-	_KeyValue() {}
-	_KeyValue(const var& p_key, const var& p_value) : key(p_key), value(p_value) {}
-};
-
 Map::Map() {
 	_data = newptr<_map_internal_t>();
 }
@@ -382,10 +375,14 @@ Map Map::copy(bool p_deep) const {
 }
 
 // TODO: error message.
-var Map::operator[](const var& p_key) const { return (*_data).operator[](p_key.hash()).value; }
-var& Map::operator[](const var& p_key) { return (*_data).operator[](p_key.hash()).value; }
-var Map::operator[](const char* p_key) const { return (*_data).operator[](var(p_key).hash()).value; }
-var& Map::operator[](const char* p_key) { return (*_data).operator[](var(p_key).hash()).value; }
+#define _INSERT_KEY_IF_HAVENT(m_key)                            \
+	_map_internal_t::iterator it = (*_data).find(m_key.hash()); \
+	if (it == _data->end()) (*_data)[m_key.hash()].key = m_key
+
+var Map::operator[](const var& p_key) const { _INSERT_KEY_IF_HAVENT(p_key); return (*_data).operator[](p_key.hash()).value;  }
+var& Map::operator[](const var& p_key) { _INSERT_KEY_IF_HAVENT(p_key); return (*_data).operator[](p_key.hash()).value; }
+var Map::operator[](const char* p_key) const { _INSERT_KEY_IF_HAVENT(var(p_key)); return (*_data).operator[](var(p_key).hash()).value; }
+var& Map::operator[](const char* p_key) { _INSERT_KEY_IF_HAVENT(var(p_key)); return (*_data).operator[](var(p_key).hash()).value; }
 
 Map::_map_internal_t::iterator Map::begin() const { return (*_data).begin(); }
 Map::_map_internal_t::iterator Map::end() const { return (*_data).end(); }
@@ -530,29 +527,37 @@ const MemberInfo* Object::get_member_info(const Object* p_instance, const String
 
 // TODO: change these methods as static and call with an instance -> the base name could be found with self->get_class_name();
 
-var Object::__call(stdvec<var>& p_vars) { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __call() not implemented on base Object."); }
+#define _OBJ_THROW_NOT_IMPL(m_name)\
+	THROW_VARERROR(VarError::NOT_IMPLEMENTED, String("operator " #m_name " not implemented on base ") + get_class_name() + ".")
+
+var Object::__call(stdvec<var>& p_vars) { _OBJ_THROW_NOT_IMPL(__call); }
 var Object::operator()(stdvec<var>& p_vars) { return __call(p_vars); }
 
-var Object::__get_mapped(const var& p_key) const { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __get_mapped() not implemented on base Object."); }
-void Object::__set_mapped(const var& p_key, const var& p_val) { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __set_mapped() not implemented on base Object."); }
-int64_t Object::__hash() const { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __hash() not implemented on base Object."); }
+var Object::__get_mapped(const var& p_key) const { _OBJ_THROW_NOT_IMPL(__get_mapped()); }
+void Object::__set_mapped(const var& p_key, const var& p_val) { _OBJ_THROW_NOT_IMPL(__set_mapped()); }
+int64_t Object::__hash() const { _OBJ_THROW_NOT_IMPL(__hash()); }
 
-var Object::__add(const var& p_other) const { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __add() not implemented on base Object."); }
-var Object::__sub(const var& p_other) const { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __sub() not implemented on base Object."); }
-var Object::__mul(const var& p_other) const { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __mul() not implemented on base Object."); }
-var Object::__div(const var& p_other) const { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __div() not implemented on base Object."); }
+var  Object::__iter_begin() { _OBJ_THROW_NOT_IMPL(__iter_begin()); }
+bool Object::__iter_has_next() { _OBJ_THROW_NOT_IMPL(__iter_has_next()); }
+var  Object::__iter_next() { _OBJ_THROW_NOT_IMPL(__iter_next()); }
 
-var& Object::__add_eq(const var& p_other) { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __add_eq() not implemented on base Object."); }
-var& Object::__sub_eq(const var& p_other) { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __sub_eq() not implemented on base Object."); }
-var& Object::__mul_eq(const var& p_other) { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __mul_eq() not implemented on base Object."); }
-var& Object::__div_eq(const var& p_other) { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __div_eq() not implemented on base Object."); }
+var Object::__add(const var& p_other) const { _OBJ_THROW_NOT_IMPL(__add()); }
+var Object::__sub(const var& p_other) const { _OBJ_THROW_NOT_IMPL(__sub()); }
+var Object::__mul(const var& p_other) const { _OBJ_THROW_NOT_IMPL(__mul()); }
+var Object::__div(const var& p_other) const { _OBJ_THROW_NOT_IMPL(__div()); }
 
-bool Object::__gt(const var& p_other) const { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __gt() not implemented on base Object."); }
-bool Object::__lt(const var& p_other) const { THROW_VARERROR(VarError::NOT_IMPLEMENTED, "operator __lt() not implemented on base Object."); }
+var& Object::__add_eq(const var& p_other) { _OBJ_THROW_NOT_IMPL(__add_eq()); }
+var& Object::__sub_eq(const var& p_other) { _OBJ_THROW_NOT_IMPL(__sub_eq()); }
+var& Object::__mul_eq(const var& p_other) { _OBJ_THROW_NOT_IMPL(__mul_eq()); }
+var& Object::__div_eq(const var& p_other) { _OBJ_THROW_NOT_IMPL(__div_eq()); }
+
+bool Object::__gt(const var& p_other) const { _OBJ_THROW_NOT_IMPL(__gt()); }
+bool Object::__lt(const var& p_other) const { _OBJ_THROW_NOT_IMPL(__lt()); }
 bool Object::__eq(const var& p_other) const {
 	if (p_other.get_type() != var::OBJECT) return false;
 	return this == p_other.operator varh::ptr<varh::Object>().get();
 }
+#undef _OBJ_THROW_NOT_IMPL
 
 // var -----------------------------------------------
 
@@ -767,6 +772,21 @@ void var::__set_mapped(const var& p_key, const var& p_value) {
 	THROW_VARERROR(VarError::OPERATOR_NOT_SUPPORTED, String::format("operator[] not supported on base %s", get_type_name()));
 }
 
+var var::__iter_begin() {
+	switch (type) {
+		case var::_NULL:  THROW_VARERROR(VarError::NULL_POINTER, "");
+		case var::BOOL:   THROW_VARERROR(VarError::OPERATOR_NOT_SUPPORTED, "boolean is not iterable.");
+		case var::INT:    THROW_VARERROR(VarError::OPERATOR_NOT_SUPPORTED, "integer is not iterable.");
+		case var::FLOAT:  THROW_VARERROR(VarError::OPERATOR_NOT_SUPPORTED, "float is not iterable.");
+		case var::STRING: return newptr<_Iterator_String>(&_data._string);
+		case var::ARRAY: return newptr<_Iterator_Array>(&_data._arr);
+		case var::MAP: return newptr<_Iterator_Map>(&_data._map);
+		case var::OBJECT: return _data._obj.get()->__iter_begin();
+	}
+	MISSED_ENUM_CHECK(_TYPE_MAX_, 9);
+	DEBUG_BREAK(); THROW_VARERROR(VarError::BUG, "can't reach here.");
+}
+
 var var::__call_internal(stdvec<var>& p_args) {
 	switch (type) {
 		case var::_NULL:  THROW_VARERROR(VarError::NULL_POINTER, "");
@@ -801,6 +821,9 @@ var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
 			return get_type_name();
 
 		// operators.
+		case "__iter_begin"_hash:
+			if (p_args.size() != 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 0 argument.");
+			return __iter_begin();
 		case "__get_mapped"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
 			return __get_mapped(p_args[0]);
@@ -1044,6 +1067,9 @@ do {                                                                            
 } while(false)
 
 bool var::operator==(const var& p_other) const {
+
+	// TODO: if other.type == object and it has overload operator.
+
 	switch (type) {
 		case _NULL: return false;
 		case BOOL:   {
@@ -1089,7 +1115,7 @@ bool var::operator==(const var& p_other) const {
 		}
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 9);
-	DEBUG_BREAK(); THROW_VARERROR(VarError::BUG, "can't reach here.");
+	return false; // different types.
 }
 
 bool var::operator!=(const var& p_other) const {

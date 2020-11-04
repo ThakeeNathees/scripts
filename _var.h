@@ -42,8 +42,6 @@
 
 namespace varh {
 
-class MemberInfo;
-
 class var {
 public:
 	enum Type {
@@ -160,6 +158,8 @@ public:
 
 	var __get_mapped(const var& p_key) const;
 	void __set_mapped(const var& p_key, const var& p_value);
+
+	var __iter_begin();
 
 	template <typename... Targs>
 	var __call(Targs... p_args) {
@@ -374,10 +374,22 @@ public:
 	int64_t get_value() const { return value; }
 };
 
+
+/////////////////////////////////////////////////////////////////
+
+struct Map::_KeyValue {
+	var key;
+	var value;
+	_KeyValue() {}
+	_KeyValue(const var& p_key, const var& p_value) : key(p_key), value(p_value) {}
+};
+
 }
+
 
 // include _native after including everything else.
 #include "_native.h"
+#include "_iterator.h"
 
 // undefine all var.h macros defined in varcore.h
 // this makes the user(carbon) independent of'em

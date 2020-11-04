@@ -143,6 +143,7 @@ typedef float real_t;
 namespace varh {
 
 class String;
+class var;
 
 class MemberInfo {
 public:
@@ -158,6 +159,12 @@ public:
 
 protected:
 	Type type;
+};
+
+class _Iterator {
+public:
+	virtual bool __iter_has_next() = 0;
+	virtual var __iter_next() = 0;
 };
 
 class VarError : public std::exception {

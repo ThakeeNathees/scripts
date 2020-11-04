@@ -81,6 +81,10 @@ public:
 	static var get_member(ptr<Object> p_self, const String& p_name);
 	static void set_member(ptr<Object> p_self, const String& p_name, var& p_value);
 
+	virtual var __iter_begin();
+	virtual bool __iter_has_next();
+	virtual var __iter_next();
+
 	virtual var __get_mapped(const var& p_key) const;
 	virtual void __set_mapped(const var& p_key, const var& p_val);
 	virtual int64_t __hash() const;
