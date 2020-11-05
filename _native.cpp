@@ -123,9 +123,9 @@ const StaticFuncBind* NativeClasses::get_initializer(const String& p_class_name)
 	return classes[p_class_name.hash()].__initializer;
 }
 
-ptr<Object> NativeClasses::construct(const String& p_class_name, stdvec<var>& p_args) {
-	ptr<Object> instance = _new(p_class_name);
-	p_args.insert(p_args.begin(), instance);
+ptr<Object> NativeClasses::construct(const String& p_class_name, stdvec<var*>& p_args) {
+	var instance = _new(p_class_name);
+	p_args.insert(p_args.begin(), &instance);
 	const StaticFuncBind* initializer = get_initializer(p_class_name);
 	if (initializer) initializer->call(p_args);
 	return instance;

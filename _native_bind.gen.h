@@ -88,7 +88,7 @@ public:
 	virtual BindData::Type get_type() const { return BindData::METHOD; }
 	virtual int get_argc() const { return argc; }
 
-	virtual var call(ptr<Object> self, stdvec<var>& args) const = 0;
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const = 0;
 	const MethodInfo* get_method_info() const { return mi.get(); }
 	const MemberInfo* get_member_info() const override { return mi.get(); }
 };
@@ -102,7 +102,7 @@ public:
 	virtual BindData::Type get_type()   const { return BindData::STATIC_FUNC; }
 	virtual int get_argc()              const { return argc; }
 
-	virtual var call(stdvec<var>& args) const = 0;
+	virtual var call(stdvec<var*>& args) const = 0;
 	const MethodInfo* get_method_info() const { return mi.get(); }
 	const MemberInfo* get_member_info() const override { return mi.get(); }
 };
@@ -215,13 +215,12 @@ public:
 	}
 	virtual BindData::Type get_type() const { return BindData::ENUM; }
 	int64_t get(const String& p_value_name) const {
-		for (int i = 0; i < (int)ei->get_values().size(); i++) {
-			if (ei->get_values()[i].first == p_value_name) {
-				return ei->get_values()[i].second;
-			}
-		}
+		const stdmap<String, int64_t>& values = ei->get_values();
+		stdmap<String, int64_t>::const_iterator it = values.find(p_value_name);
+		if (it != values.end()) return it->second;
 		throw VarError(VarError::ATTRIBUTE_ERROR, String::format("value \"%s\" isn't exists on enum %s.", p_value_name.c_str(), name));
 	}
+	ptr<_EnumBytes> get() const { return ei->get_runtime(); }
 
 	const EnumInfo* get_enum_info() const { return ei.get(); }
 	const MemberInfo* get_member_info() const override { return ei.get(); }
@@ -332,7 +331,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -343,9 +342,12 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 0 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 0 argument(s).", 0 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 0 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
 			(ptrcast<T>(self).get()->*method)(); return var();
@@ -366,7 +368,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -377,9 +379,12 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 0 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 0 argument(s).", 0 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 0 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
 			(ptrcast<T>(self).get()->*method)(); return var();
@@ -400,7 +405,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -411,14 +416,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 1 argument(s).", 1 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 1 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0]);
+			return (ptrcast<T>(self).get()->*method)(*args[0]);
 		}
 	}
 };
@@ -434,7 +442,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -445,14 +453,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 1 argument(s).", 1 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 1 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0]);
+			return (ptrcast<T>(self).get()->*method)(*args[0]);
 		}
 	}
 };
@@ -468,7 +479,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -479,14 +490,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 2 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 2 argument(s).", 2 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 2 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1]);
 		}
 	}
 };
@@ -502,7 +516,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -513,14 +527,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 2 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 2 argument(s).", 2 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 2 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1]);
 		}
 	}
 };
@@ -536,7 +553,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -547,14 +564,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 3 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 3 argument(s).", 3 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 3 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2]);
 		}
 	}
 };
@@ -570,7 +590,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -581,14 +601,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 3 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 3 argument(s).", 3 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 3 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2]);
 		}
 	}
 };
@@ -604,7 +627,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -615,14 +638,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 4 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 4 argument(s).", 4 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 4 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3]);
 		}
 	}
 };
@@ -638,7 +664,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -649,14 +675,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 4 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 4 argument(s).", 4 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 4 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3]);
 		}
 	}
 };
@@ -672,7 +701,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -683,14 +712,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 5 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 5 argument(s).", 5 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 5 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4]);
 		}
 	}
 };
@@ -706,7 +738,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -717,14 +749,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 5 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 5 argument(s).", 5 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 5 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4]);
 		}
 	}
 };
@@ -740,7 +775,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -751,14 +786,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 6 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 6 argument(s).", 6 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 6 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4], args[5]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4], args[5]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5]);
 		}
 	}
 };
@@ -774,7 +812,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -785,14 +823,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 6 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 6 argument(s).", 6 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 6 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4], args[5]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4], args[5]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5]);
 		}
 	}
 };
@@ -808,7 +849,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -819,14 +860,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 7 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 7 argument(s).", 7 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 7 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5], *args[6]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5], *args[6]);
 		}
 	}
 };
@@ -842,7 +886,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -853,14 +897,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 7 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 7 argument(s).", 7 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 7 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			(ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]); return var();
+			(ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5], *args[6]); return var();
 		} else {
-			return (ptrcast<T>(self).get()->*method)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+			return (ptrcast<T>(self).get()->*method)(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5], *args[6]);
 		}
 	}
 };
@@ -876,7 +923,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -887,9 +934,12 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 0 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 0 argument(s).", 0 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 0 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
 			static_func(); return var();
@@ -910,7 +960,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -921,14 +971,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 1 argument(s).", 1 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 1 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			static_func(args[0]); return var();
+			static_func(*args[0]); return var();
 		} else {
-			return static_func(args[0]);
+			return static_func(*args[0]);
 		}
 	}
 };
@@ -944,7 +997,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -955,14 +1008,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 2 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 2 argument(s).", 2 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 2 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			static_func(args[0], args[1]); return var();
+			static_func(*args[0], *args[1]); return var();
 		} else {
-			return static_func(args[0], args[1]);
+			return static_func(*args[0], *args[1]);
 		}
 	}
 };
@@ -978,7 +1034,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -989,14 +1045,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 3 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 3 argument(s).", 3 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 3 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			static_func(args[0], args[1], args[2]); return var();
+			static_func(*args[0], *args[1], *args[2]); return var();
 		} else {
-			return static_func(args[0], args[1], args[2]);
+			return static_func(*args[0], *args[1], *args[2]);
 		}
 	}
 };
@@ -1012,7 +1071,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -1023,14 +1082,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 4 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 4 argument(s).", 4 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 4 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			static_func(args[0], args[1], args[2], args[3]); return var();
+			static_func(*args[0], *args[1], *args[2], *args[3]); return var();
 		} else {
-			return static_func(args[0], args[1], args[2], args[3]);
+			return static_func(*args[0], *args[1], *args[2], *args[3]);
 		}
 	}
 };
@@ -1046,7 +1108,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -1057,14 +1119,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 5 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 5 argument(s).", 5 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 5 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			static_func(args[0], args[1], args[2], args[3], args[4]); return var();
+			static_func(*args[0], *args[1], *args[2], *args[3], *args[4]); return var();
 		} else {
-			return static_func(args[0], args[1], args[2], args[3], args[4]);
+			return static_func(*args[0], *args[1], *args[2], *args[3], *args[4]);
 		}
 	}
 };
@@ -1080,7 +1145,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -1091,14 +1156,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 6 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 6 argument(s).", 6 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 6 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			static_func(args[0], args[1], args[2], args[3], args[4], args[5]); return var();
+			static_func(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5]); return var();
 		} else {
-			return static_func(args[0], args[1], args[2], args[3], args[4], args[5]);
+			return static_func(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5]);
 		}
 	}
 };
@@ -1114,7 +1182,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -1125,14 +1193,17 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 7 argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of 7 argument(s).", 7 - default_arg_count));
 		}
+
+		stdvec<var> default_args_copy;
 		for (int i = 7 - args_given; i > 0 ; i--) {
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {
-			static_func(args[0], args[1], args[2], args[3], args[4], args[5], args[6]); return var();
+			static_func(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5], *args[6]); return var();
 		} else {
-			return static_func(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+			return static_func(*args[0], *args[1], *args[2], *args[3], *args[4], *args[5], *args[6]);
 		}
 	}
 };
@@ -1355,10 +1426,10 @@ ptr<StaticFuncBind> _bind_static_func(const char* func_name, const char* p_class
 
 
 template<typename T, typename R>
-using MVA = R(T::*)(stdvec<var>&);
+using MVA = R(T::*)(stdvec<var*>&);
 
 template<typename R>
-using FVA = R(*)(stdvec<var>&);
+using FVA = R(*)(stdvec<var*>&);
 
 template<typename T, typename R>
 class _MethodBind_MVA : public MethodBind {
@@ -1371,7 +1442,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 		if constexpr (std::is_same<R, void>::value) {
 			(ptrcast<T>(self).get()->*method)(args); return var();
 		} else {
@@ -1392,7 +1463,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 		if constexpr (std::is_same<R, void>::value) {
 			static_func(args); return var();
 		} else {

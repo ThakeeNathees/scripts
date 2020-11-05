@@ -163,15 +163,17 @@ public:
 
 	template <typename... Targs>
 	var __call(Targs... p_args) {
-		stdvec<var> args = make_stdvec<var>(p_args...);
+		stdvec<var> _args = make_stdvec<var>(p_args...);
+		stdvec<var*> args; for (var& v : _args) args.push_back(&v);
 		return __call_internal(args);
 	}
 	template <typename... Targs>
 	var call_method(const String& p_method, Targs... p_args) {
-		stdvec<var> args = make_stdvec<var>(p_args...);
+		stdvec<var> _args = make_stdvec<var>(p_args...);
+		stdvec<var*> args; for (var& v : _args) args.push_back(&v);
 		return call_method_internal(p_method, args);
 	}
-	var call_method(const String& p_method, stdvec<var>& p_args) { return call_method_internal(p_method, p_args); }
+	var call_method(const String& p_method, stdvec<var*>& p_args) { return call_method_internal(p_method, p_args); }
 
 	var get_member(const String& p_name);
 	void set_member(const String& p_name, var& p_value);
@@ -182,8 +184,8 @@ public:
 	static stdvec<const MemberInfo*> get_member_info_list_s(var::Type p_type);
 
 private:
-	var __call_internal(stdvec<var>& p_args);
-	var call_method_internal(const String& p_method, stdvec<var>& p_args);
+	var __call_internal(stdvec<var*>& p_args);
+	var call_method_internal(const String& p_method, stdvec<var*>& p_args);
 public:
 
 	VAR_OP_DECL(var, +, const);
@@ -236,158 +238,11 @@ private:
 	friend std::ostream& operator<<(std::ostream& p_ostream, const var& p_var);
 };
 
-// ******** MEMBER INFO IMPLEMENTATIONS ******************* //
-
-struct VarTypeInfo {
-	var::Type type = var::_NULL;
-	const char* class_name = nullptr;
-	VarTypeInfo(var::Type p_type = var::VAR) : type(p_type) {}
-	VarTypeInfo(var::Type p_type, const char* p_class_name) : type(p_type), class_name(p_class_name) {}
-
-	bool operator==(const VarTypeInfo p_other) const {
-		if (type != var::OBJECT) return type == p_other.type;
-		return strcmp(class_name, p_other.class_name) == 0;
-	}
-	bool operator!=(const VarTypeInfo p_other) const { return !(operator==(p_other)); }
-};
-
-class MethodInfo : public MemberInfo {
-private:
-	String name;
-	bool _is_static = false;
-	int arg_count = 0; // -1 is va args, -2 is unknown
-	stdvec<String> arg_names;
-	stdvec<var> default_args;
-	stdvec<VarTypeInfo> arg_types;
-	VarTypeInfo return_type;
-
-public:
-	virtual Type get_type() const override { return Type::METHOD; }
-	virtual const String& get_name() const override { return name; }
-
-	// complete constructor.
-	MethodInfo(
-		String p_name,
-		stdvec<String> p_arg_names,
-		stdvec<VarTypeInfo> p_arg_types = stdvec<VarTypeInfo>(),
-		VarTypeInfo p_return_type = var::_NULL,
-		bool p__is_static = false,
-		stdvec<var> p_default_args = stdvec<var>(),
-		int p_arg_count = -2
-	) {
-		name = p_name;
-		arg_names = p_arg_names;
-		arg_types = p_arg_types;
-		return_type = p_return_type;
-		_is_static = p__is_static;
-		default_args = p_default_args;
-
-		// if va_arg it should be set manually to -1
-		if (p_arg_count == -2) arg_count = (int)arg_names.size();
-		else arg_count = p_arg_count;
-	}
-
-	// zero parameter constructor
-	MethodInfo(
-		String p_name,
-		VarTypeInfo p_return_type = var::_NULL,
-		bool p__is_static = false
-	) {
-		name = p_name;
-		return_type = p_return_type;
-		_is_static = p__is_static;
-	}
-
-	int get_arg_count() const { return arg_count; }
-	int get_default_arg_count() const { return (int)default_args.size(); }
-	bool is_static() const { return _is_static; }
-	const stdvec<String>& get_arg_names() const { return arg_names; }
-	const stdvec<var>& get_default_args() const { return default_args; }
-	const stdvec<VarTypeInfo>& get_arg_types() const { return arg_types; }
-	VarTypeInfo get_return_type() const { return return_type; }
-};
-
-class PropertyInfo : public MemberInfo {
-private:
-	String name;
-	VarTypeInfo datatype;
-	var value;
-	bool _is_const = false;
-	bool _is_static = false;
-
-public:
-	virtual Type get_type() const override { return Type::PROPERTY; }
-	virtual const String& get_name() const override { return name; }
-
-	PropertyInfo(
-		const String& p_name,
-		VarTypeInfo p_datatype = var::VAR,
-		var p_value = var(),
-		bool p__is_const = false,
-		bool p__is_static = false
-	) {
-		name = p_name;
-		datatype = p_datatype;
-		value = p_value;
-		_is_const = p__is_const;
-		_is_static = p__is_static;
-	}
-
-	bool is_static() const { return _is_static; }
-	bool is_const() const { return _is_const; }
-	VarTypeInfo get_datatype() const { return datatype; }
-	const var& get_value() const { return value; }         // value for constants.
-	const var& get_default_value() const { return value; } // defalut_value for variables.
-};
-
-class EnumInfo : public MemberInfo {
-private:
-	String name;
-	stdvec<std::pair<String, int64_t>> values;
-
-public:
-	virtual Type get_type() const override { return Type::ENUM; }
-	virtual const String& get_name() const override { return name; }
-
-	EnumInfo(String p_name, const stdvec<std::pair<String, int64_t>>& p_values) {
-		name = p_name;
-		values = p_values;
-	}
-
-	const stdvec<std::pair<String, int64_t>>& get_values() const { return values; }
-};
-
-class EnumValueInfo : public MemberInfo {
-private:
-	String name;
-	int64_t value;
-
-public:
-	virtual Type get_type() const override { return Type::ENUM_VALUE; }
-	virtual const String& get_name() const override { return name; }
-
-	EnumValueInfo(const String& p_name, int64_t p_value) {
-		name = p_name;
-		value = p_value;
-	}
-
-	int64_t get_value() const { return value; }
-};
-
-
-/////////////////////////////////////////////////////////////////
-
-struct Map::_KeyValue {
-	var key;
-	var value;
-	_KeyValue() {}
-	_KeyValue(const var& p_key, const var& p_value) : key(p_key), value(p_value) {}
-};
-
 }
 
-
-// include _native after including everything else.
+// ******** MEMBER INFO IMPLEMENTATIONS ******************* //
+#include "_runtime_types.h"
+#include "_type_info.h"
 #include "_native.h"
 #include "_iterator.h"
 

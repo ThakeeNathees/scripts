@@ -47,7 +47,7 @@ public:
 	// Operators.
 	operator String()  const { return to_string(); }
 	Object& operator=(const Object& p_copy) = default;
-	var operator()(stdvec<var>& p_vars);
+	//var operator()(stdvec<var>& p_vars);
 
 	bool operator==(const var& p_other) const { return __eq(p_other); }
 	bool operator!=(const var& p_other) const { return !operator == (p_other); }
@@ -72,14 +72,14 @@ public:
 	// Virtual methods.
 	// These double underscore methdos will be used as operators callback in the compiler.
 
-	static var call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args);  // instance.p_name(args)
-	virtual var __call(stdvec<var>& p_vars);                                                // instance(args)
-
-	// the dynamic way to call method on native classes. See DynamicLibrary for reference.
-	constexpr static const char* __call_method = "__call_method";  
-
+	static var call_method(ptr<Object> p_self, const String& p_name, stdvec<var*>& p_args);  // instance.p_name(args)
 	static var get_member(ptr<Object> p_self, const String& p_name);
 	static void set_member(ptr<Object> p_self, const String& p_name, var& p_value);
+
+	virtual var __call(stdvec<var*>& p_vars);                                                // instance(args)
+	virtual var __call_method(const String& p_method_name, stdvec<var*>& p_args);            // class's own implementation of call_method();
+	virtual var __get_member(const String& p_member_name);
+	virtual void __set_member(const String& p_member_name, var& p_value);
 
 	virtual var __iter_begin();
 	virtual bool __iter_has_next();

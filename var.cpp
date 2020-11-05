@@ -75,7 +75,7 @@ std::string VarError::get_err_name(VarError::Type p_type) {
 do {                                                                                                                                                    \
 	if (has_member(p_method)) {                                                                                                                         \
 		if (get_member_info(p_method)->get_type() != MemberInfo::METHOD)                                                                                \
-			THROW_VARERROR(VarError::TYPE_ERROR, String::format("member \"%s\" is not callable.", p_method.c_str()));                                      \
+			THROW_VARERROR(VarError::TYPE_ERROR, String::format("member \"%s\" is not callable.", p_method.c_str()));                                   \
 		const MethodInfo* mp = (MethodInfo*)get_member_info(p_method);                                                                                  \
 		int arg_count = mp->get_arg_count();                                                                                                            \
 		int default_arg_count = mp->get_default_arg_count();                                                                                            \
@@ -83,7 +83,7 @@ do {                                                                            
 			if (p_args.size() + default_arg_count < arg_count) { /* Args not enough. */                                                                 \
 				if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format("expected at exactly %i argument(s).", arg_count)); \
 				else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format("expected at least %i argument(s).", arg_count - default_arg_count));      \
-			} else if (p_args.size() > arg_count) { /* More args proveded.    */                                                                        \
+			} else if (p_args.size() > arg_count) { /* More args proveded.    */                                                                           \
 				if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format("expected at exactly %i argument(s).", arg_count)); \
 				else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format(                                                                           \
 					"expected minimum of %i argument(s) and maximum of %i argument(s).", arg_count - default_arg_count, arg_count));                    \
@@ -92,12 +92,12 @@ do {                                                                            
 		for (int j = 0; j < mp->get_arg_types().size(); j++) {                                                                                          \
 			if (mp->get_arg_types()[j] == VarTypeInfo(var::VAR)) continue; /* can't be _NULL. */                                                        \
 			if (p_args.size() == j) break; /* rest are default args. */                                                                                 \
-			if (mp->get_arg_types()[j] != VarTypeInfo(p_args[j].get_type(), p_args[j].get_type_name().c_str()))                                         \
-				THROW_VARERROR(VarError::TYPE_ERROR, String::format(                                                                                       \
+			if (mp->get_arg_types()[j] != VarTypeInfo(p_args[j]->get_type(), p_args[j]->get_type_name().c_str()))                                       \
+				THROW_VARERROR(VarError::TYPE_ERROR, String::format(                                                                                    \
 					"expected type %s at argument %i.", var::get_type_name_s(mp->get_arg_types()[j].type), j));                                         \
 		}                                                                                                                                               \
 	} else {                                                                                                                                            \
-		THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("attribute \"%s\" not exists on base %s.", p_method.c_str(), get_class_name_s()));        \
+		THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("attribute \"%s\" not exists on base %s.", p_method.c_str(), get_class_name_s()));     \
 	}                                                                                                                                                   \
 } while (false)
 
@@ -107,7 +107,7 @@ bool m_type::has_member(const String& p_member) {                               
 }                                                                                                                                         \
 const MemberInfo* m_type::get_member_info(const String& p_member) {                                                                       \
 	if (!has_member(p_member))                                                                                                            \
-		THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("attribute \"%s\" not exists on base " #m_type ".", p_member.c_str()));     \
+		THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("attribute \"%s\" not exists on base " #m_type ".", p_member.c_str()));  \
 	const stdmap<String, const MemberInfo*>& member_info = get_member_info_list();                                                        \
 	return member_info.at(p_member);                                                                                                      \
 }                                                                                                                                         \
@@ -134,7 +134,7 @@ MEMBER_INFO_IMPLEMENTATION(String) {
 	return member_info;
 }
 
-var String::call_method(const String& p_method, const stdvec<var>& p_args) {
+var String::call_method(const String& p_method, const stdvec<var*>& p_args) {
 
 	CHECK_METHOD_AND_ARGS();
 
@@ -143,11 +143,11 @@ var String::call_method(const String& p_method, const stdvec<var>& p_args) {
 		case "length"_hash:      return (int64_t)size();
 		case "to_int"_hash:     return to_int();
 		case "to_float"_hash:   return to_float();
-		case "get_line"_hash:   return get_line(p_args[0].operator int64_t());
+		case "get_line"_hash:   return get_line(p_args[0]->operator int64_t());
 		case "hash"_hash:       return (int64_t)hash();
-		case "substr"_hash:     return substr((size_t)p_args[0].operator int64_t(), (size_t)p_args[1].operator int64_t());
-		case "endswith"_hash:   return endswith(p_args[0].operator String());
-		case "startswith"_hash: return startswith(p_args[0].operator String());
+		case "substr"_hash:     return substr((size_t)p_args[0]->operator int64_t(), (size_t)p_args[1]->operator int64_t());
+		case "endswith"_hash:   return endswith(p_args[0]->operator String());
+		case "startswith"_hash: return startswith(p_args[0]->operator String());
 	}
 	// TODO: more.
 	THROW_VARERROR(VarError::BUG, "can't reach here.");
@@ -234,20 +234,20 @@ MEMBER_INFO_IMPLEMENTATION(Array) {
 	return member_info;
 }
 
-var Array::call_method(const String& p_method, const stdvec<var>& p_args) {
+var Array::call_method(const String& p_method, const stdvec<var*>& p_args) {
 	CHECK_METHOD_AND_ARGS();
 	switch (p_method.const_hash()) {
 		case "size"_hash:      return (int64_t)size();
 		case "empty"_hash:     return empty();
-		case "push_back"_hash: { push_back(p_args[0]); return var(); }
+		case "push_back"_hash: { push_back(*p_args[0]); return var(); }
 		case "pop_back"_hash: { pop_back(); return var(); }
-		case "append"_hash:    return append(p_args[0]);
+		case "append"_hash:    return append(*p_args[0]);
 		case "pop"_hash:       return pop();
 		case "clear"_hash: { clear(); return var(); }
-		case "insert"_hash: { insert(p_args[0], p_args[1]); return var(); }
-		case "at"_hash:        return at(p_args[0].operator int64_t());
-		case "resize"_hash: { resize(p_args[0].operator int64_t()); return var(); }
-		case "reserve"_hash: { reserve(p_args[0].operator int64_t()); return var(); }
+		case "insert"_hash: { insert(*p_args[0], *p_args[1]); return var(); }
+		case "at"_hash:        return at(p_args[0]->operator int64_t());
+		case "resize"_hash: { resize(p_args[0]->operator int64_t()); return var(); }
+		case "reserve"_hash: { reserve(p_args[0]->operator int64_t()); return var(); }
 	}
 	// TODO: add more.
 	DEBUG_BREAK(); THROW_VARERROR(VarError::BUG, "can't reach here.");
@@ -328,14 +328,14 @@ MEMBER_INFO_IMPLEMENTATION(Map) {
 	return member_info;
 }
 
-var Map::call_method(const String& p_method, const stdvec<var>& p_args) {
+var Map::call_method(const String& p_method, const stdvec<var*>& p_args) {
 	CHECK_METHOD_AND_ARGS();
 	switch (p_method.const_hash()) {
 		case "size"_hash:   return (int64_t)size();
 		case "empty"_hash:  return empty();
-		case "insert"_hash: insert(p_args[0], p_args[1]); return var();
+		case "insert"_hash: insert(*p_args[0], *p_args[1]); return var();
 		case "clear"_hash:  clear(); return var();
-		case "has"_hash:    return has(p_args[0]);
+		case "has"_hash:    return has(*p_args[0]);
 	}
 	// TODO: more.
 	DEBUG_BREAK(); THROW_VARERROR(VarError::BUG, "can't reach here.");
@@ -431,7 +431,7 @@ void Object::_bind_data(NativeClasses* p_native_classes) {
 	BIND_METHOD("get_parent_class_name", &Object::get_parent_class_name);
 }
 // call_method() should call it's parent if method not exists.
-var Object::call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args) {
+var Object::call_method(ptr<Object> p_self, const String& p_name, stdvec<var*>& p_args) {
 	String class_name = p_self->get_class_name();
 	String method_name = p_name;
 
@@ -440,10 +440,6 @@ var Object::call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p
 	}
 
 	ptr<BindData> bind_data = NativeClasses::singleton()->find_bind_data(class_name, p_name);
-	if (!bind_data) {
-		bind_data = NativeClasses::singleton()->find_bind_data(class_name, __call_method);
-		p_args = { p_name, Array(p_args) };
-	}
 
 	if (bind_data) {
 		if (bind_data->get_type() == BindData::METHOD) {
@@ -456,11 +452,12 @@ var Object::call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p
 			THROW_VARERROR(VarError::TYPE_ERROR,
 				String::format("attribute named \"%s\" on type %s is not callable.", method_name.c_str(), p_self->get_class_name()));
 		}
+	} else {
+		p_self->__call_method(p_name, p_args);
 	}
 
 	THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no method named \"%s\".", p_self->get_class_name(), method_name.c_str()));
 }
-
 
 var Object::get_member(ptr<Object> p_self, const String& p_name) {
 	String class_name = p_self->get_class_name();
@@ -480,10 +477,15 @@ var Object::get_member(ptr<Object> p_self, const String& p_name) {
 			return ptrcast<ConstantBind>(bind_data)->get();
 		} else if (bind_data->get_type() == BindData::ENUM_VALUE) {
 			return ptrcast<EnumValueBind>(bind_data)->get();
+		} else if (bind_data->get_type() == BindData::ENUM) {
+			return ptrcast<EnumBind>(bind_data)->get();
 
 		} else {
+			// TODO: function reference runtime object.
 			THROW_VARERROR(VarError::TYPE_ERROR, String::format("attribute named \"%s\" on type %s is not a property.", member_name.c_str(), p_self->get_class_name()));
 		}
+	} else {
+		return p_self->__get_member(p_name);
 	}
 	THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no member named \"%s\"", p_self->get_class_name(), member_name.c_str()));
 }
@@ -511,6 +513,8 @@ void Object::set_member(ptr<Object> p_self, const String& p_name, var& p_value) 
 		} else {
 			THROW_VARERROR(VarError::TYPE_ERROR, String::format("attribute named \"%s\" on type \"%s\" is not a property.", member_name.c_str(), p_self->get_class_name()));
 		}
+	} else {
+		p_self->__set_member(p_name, p_value);
 	}
 	THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no member named \"%s\".", p_self->get_class_name(), member_name.c_str()));
 }
@@ -530,8 +534,18 @@ const MemberInfo* Object::get_member_info(const Object* p_instance, const String
 #define _OBJ_THROW_NOT_IMPL(m_name)\
 	THROW_VARERROR(VarError::NOT_IMPLEMENTED, String("operator " #m_name " not implemented on base ") + get_class_name() + ".")
 
-var Object::__call(stdvec<var>& p_vars) { _OBJ_THROW_NOT_IMPL(__call); }
-var Object::operator()(stdvec<var>& p_vars) { return __call(p_vars); }
+var Object::__call(stdvec<var*>& p_vars) { _OBJ_THROW_NOT_IMPL(__call()); }
+var Object::__call_method(const String& p_method_name, stdvec<var*>& p_args) {
+	THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no method named \"%s\".", get_class_name(), p_method_name.c_str()));
+}
+//var Object::operator()(stdvec<var>& p_vars) { return __call(p_vars); }
+
+var  Object::__get_member(const String& p_member_name) {
+	THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no member named \"%s\"", get_class_name(), p_member_name.c_str()));
+}
+void Object::__set_member(const String& p_member_name, var& p_value) {
+	THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no member named \"%s\".", get_class_name(), p_member_name.c_str()));
+}
 
 var Object::__get_mapped(const var& p_key) const { _OBJ_THROW_NOT_IMPL(__get_mapped()); }
 void Object::__set_mapped(const var& p_key, const var& p_val) { _OBJ_THROW_NOT_IMPL(__set_mapped()); }
@@ -787,7 +801,7 @@ var var::__iter_begin() {
 	DEBUG_BREAK(); THROW_VARERROR(VarError::BUG, "can't reach here.");
 }
 
-var var::__call_internal(stdvec<var>& p_args) {
+var var::__call_internal(stdvec<var*>& p_args) {
 	switch (type) {
 		case var::_NULL:  THROW_VARERROR(VarError::NULL_POINTER, "");
 		case var::BOOL:   THROW_VARERROR(VarError::OPERATOR_NOT_SUPPORTED, "boolean is not callable.");
@@ -802,7 +816,7 @@ var var::__call_internal(stdvec<var>& p_args) {
 	DEBUG_BREAK(); THROW_VARERROR(VarError::BUG, "can't reach here.");
 }
 
-var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
+var var::call_method_internal(const String& p_method, stdvec<var*>& p_args) {
 
 	// check var methods.
 	switch (p_method.const_hash()) {
@@ -812,7 +826,7 @@ var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
 		case "copy"_hash:
 			if (p_args.size() >= 2) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at maximum 1 argument.");
 			if (p_args.size() == 0) return copy();
-			return copy(p_args[0].operator bool());
+			return copy(p_args[0]->operator bool());
 		case "hash"_hash:
 			if (p_args.size() != 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 0 argument.");
 			return (int64_t)hash();
@@ -826,43 +840,43 @@ var var::call_method_internal(const String& p_method, stdvec<var>& p_args) {
 			return __iter_begin();
 		case "__get_mapped"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return __get_mapped(p_args[0]);
+			return __get_mapped(*p_args[0]);
 		case "__set_mapped"_hash:
 			if (p_args.size() != 2) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			__set_mapped(p_args[0], p_args[1]); return var();
+			__set_mapped(*p_args[0], *p_args[1]); return var();
 		case "__add"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator +(p_args[0]);
+			return operator +(*p_args[0]);
 		case "__sub"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator -(p_args[0]);
+			return operator -(*p_args[0]);
 		case "__mul"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator *(p_args[0]);
+			return operator *(*p_args[0]);
 		case "__div"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator /(p_args[0]);
+			return operator /(*p_args[0]);
 		case "__add_eq"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator +=(p_args[0]);
+			return operator +=(*p_args[0]);
 		case "__sub_eq"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator -=(p_args[0]);
+			return operator -=(*p_args[0]);
 		case "__mul_eq"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator *=(p_args[0]);
+			return operator *=(*p_args[0]);
 		case "__div_eq"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator /=(p_args[0]);
+			return operator /=(*p_args[0]);
 		case "__gt"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator >(p_args[0]);
+			return operator >(*p_args[0]);
 		case "__lt"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator <(p_args[0]);
+			return operator <(*p_args[0]);
 		case "__eq"_hash:
 			if (p_args.size() != 1) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly 1 argument.");
-			return operator ==(p_args[0]);
+			return operator ==(*p_args[0]);
 
 		case "__call"_hash:
 			return __call_internal(p_args);

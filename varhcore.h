@@ -152,13 +152,12 @@ public:
 		PROPERTY,
 		ENUM,
 		ENUM_VALUE,
+
+		CLASS, // for FileNodes
 	};
 
 	virtual Type get_type() const = 0;
 	virtual const String& get_name() const = 0;
-
-protected:
-	Type type;
 };
 
 class _Iterator {

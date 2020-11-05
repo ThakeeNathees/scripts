@@ -52,7 +52,7 @@ public:
 	constexpr static  const char* get_class_name_s() { return "String"; }
 
 	// reflection methods.
-	var call_method(const String& p_method, const stdvec<var>& p_args);
+	var call_method(const String& p_method, const stdvec<var*>& p_args);
 	static const stdmap<String, const MemberInfo*>& get_member_info_list();
 	static bool has_member(const String& p_member);
 	static const MemberInfo* get_member_info(const String& p_member);

@@ -76,7 +76,7 @@ def get_args_call_symbol(i):
 	ret = ''
 	for j in range(i):
 		if j > 0 : ret += ', '
-		ret += f'args[{j}]'
+		ret += f'*args[{j}]'
 	return ret
 
 def generage_method_calls(path, num):
@@ -119,7 +119,7 @@ public:
 	virtual BindData::Type get_type() const { return BindData::METHOD; }
 	virtual int get_argc() const { return argc; }
 
-	virtual var call(ptr<Object> self, stdvec<var>& args) const = 0;
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const = 0;
 	const MethodInfo* get_method_info() const { return mi.get(); }
 	const MemberInfo* get_member_info() const override { return mi.get(); }
 };
@@ -133,7 +133,7 @@ public:
 	virtual BindData::Type get_type()   const { return BindData::STATIC_FUNC; }
 	virtual int get_argc()              const { return argc; }
 
-	virtual var call(stdvec<var>& args) const = 0;
+	virtual var call(stdvec<var*>& args) const = 0;
 	const MethodInfo* get_method_info() const { return mi.get(); }
 	const MemberInfo* get_member_info() const override { return mi.get(); }
 };
@@ -246,13 +246,12 @@ public:
 	}
 	virtual BindData::Type get_type() const { return BindData::ENUM; }
 	int64_t get(const String& p_value_name) const {
-		for (int i = 0; i < (int)ei->get_values().size(); i++) {
-			if (ei->get_values()[i].first == p_value_name) {
-				return ei->get_values()[i].second;
-			}
-		}
+		const stdmap<String, int64_t>& values = ei->get_values();
+		stdmap<String, int64_t>::const_iterator it = values.find(p_value_name);
+		if (it != values.end()) return it->second;
 		throw VarError(VarError::ATTRIBUTE_ERROR, String::format("value \\"%s\\" isn't exists on enum %s.", p_value_name.c_str(), name));
 	}
+	ptr<_EnumBytes> get() const { return ei->get_runtime(); }
 
 	const EnumInfo* get_enum_info() const { return ei.get(); }
 	const MemberInfo* get_member_info() const override { return ei.get(); }
@@ -306,7 +305,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {{
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {{
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -317,9 +316,12 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly {i} argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of {i} argument(s).", {i} - default_arg_count));
 		}}
+
+		stdvec<var> default_args_copy;
 		for (int i = {i} - args_given; i > 0 ; i--) {{
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {{
 			(ptrcast<T>(self).get()->*method)({get_args_call_symbol(i)}); return var();
@@ -348,7 +350,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}}
-	virtual var call(stdvec<var>& args) const override {{
+	virtual var call(stdvec<var*>& args) const override {{
 
 		int default_arg_count = mi->get_default_arg_count();
 		int args_given = (int)args.size();
@@ -359,9 +361,12 @@ public:
 			if (default_arg_count == 0) THROW_VARERROR(VarError::INVALID_ARG_COUNT, "expected at exactly {i} argument(s).");
 			else THROW_VARERROR(VarError::INVALID_ARG_COUNT, String::format( "expected minimum of %i argument(s) and maximum of {i} argument(s).", {i} - default_arg_count));
 		}}
+
+		stdvec<var> default_args_copy;
 		for (int i = {i} - args_given; i > 0 ; i--) {{
-			args.push_back(mi->get_default_args()[default_arg_count - i]);
+			default_args_copy.push_back(mi->get_default_args()[default_arg_count - i]);
 		}}
+		for (var& v : default_args_copy) args.push_back(&v);
 
 		if constexpr (std::is_same<R, void>::value) {{
 			static_func({get_args_call_symbol(i)}); return var();
@@ -407,10 +412,10 @@ ptr<StaticFuncBind> _bind_static_func(const char* func_name, const char* p_class
 	f.write('''\
 
 template<typename T, typename R>
-using MVA = R(T::*)(stdvec<var>&);
+using MVA = R(T::*)(stdvec<var*>&);
 
 template<typename R>
-using FVA = R(*)(stdvec<var>&);
+using FVA = R(*)(stdvec<var*>&);
 
 template<typename T, typename R>
 class _MethodBind_MVA : public MethodBind {
@@ -423,7 +428,7 @@ public:
 		method = p_method;
 		mi = p_mi;
 	}
-	virtual var call(ptr<Object> self, stdvec<var>& args) const override {
+	virtual var call(ptr<Object> self, stdvec<var*>& args) const override {
 		if constexpr (std::is_same<R, void>::value) {
 			(ptrcast<T>(self).get()->*method)(args); return var();
 		} else {
@@ -444,7 +449,7 @@ public:
 		static_func = p_func;
 		mi = p_mi;
 	}
-	virtual var call(stdvec<var>& args) const override {
+	virtual var call(stdvec<var*>& args) const override {
 		if constexpr (std::is_same<R, void>::value) {
 			static_func(args); return var();
 		} else {
