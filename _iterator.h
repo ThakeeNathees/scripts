@@ -76,15 +76,32 @@ public:
 };
 
 class _Map_KeyValue_Pair : public Object {
-	REGISTER_CLASS(_Map_KeyValue_Pair, Object) {
-		BIND_MEMBER("key", &_Map_KeyValue_Pair::key);
-		BIND_MEMBER("value", &_Map_KeyValue_Pair::value);
-	}
+	REGISTER_CLASS(_Map_KeyValue_Pair, Object) {}
+
 public:
 	_Map_KeyValue_Pair() {}
-	_Map_KeyValue_Pair(var p_key, var p_value) : key(p_key), value(p_value) {}
+	_Map_KeyValue_Pair(var* p_key, var* p_value) : key(p_key), value(p_value) {}
 
-	var key, value;
+	var __get_member(const String& p_name) {
+		if (p_name == "key") {
+			return *key;
+		} else if (p_name == "value") {
+			return *value;
+		} else {
+			THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no value named \"%s\".", get_class_name(), p_name.c_str()));
+		}
+	}
+	void __set_member(const String& p_name, var& p_value) override {
+		if (p_name == "key") {
+			*key = p_value;
+		} else if (p_name == "value") {
+			*value = p_value;
+		} else {
+			THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no value named \"%s\".", get_class_name(), p_name.c_str()));
+		}
+	}
+
+	var *key, *value;
 };
 
 class _Iterator_Map : public Object {
@@ -108,7 +125,7 @@ public:
 	}
 
 	virtual var __iter_next() override {
-		ptr<_Map_KeyValue_Pair>& ret = newptr<_Map_KeyValue_Pair>(_it->second.key, (_it)->second.value);
+		ptr<_Map_KeyValue_Pair>& ret = newptr<_Map_KeyValue_Pair>(&_it->second.key, &(_it)->second.value);
 		_it++;
 		return ret;
 	}

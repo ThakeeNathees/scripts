@@ -53,7 +53,7 @@ public:
 		if (it != _values.end()) return it->second;
 		else THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("enum %s has no value named \"%s\".", _name.c_str(), p_name.c_str()));
 	}
-	void __set_member(const String& p_name, var& p_value) {
+	void __set_member(const String& p_name, var& p_value) override {
 		stdmap<String, int64_t>::iterator it = _values.find(p_name);
 		if (it != _values.end()) THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("cannot assign a value to enum value."));
 		else THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("enum %s has no member named \"%s\".", _name.c_str(), p_name.c_str()));
