@@ -103,7 +103,7 @@ public:
 	virtual int get_argc()              const { return argc; }
 
 	virtual var call(stdvec<var*>& args) const = 0;
-	const MethodInfo* get_method_info() const { return mi.get(); }
+	const ptr<MethodInfo> get_method_info() const { return mi; }
 	const MemberInfo* get_member_info() const override { return mi.get(); }
 };
 
@@ -115,7 +115,7 @@ public:
 	virtual BindData::Type get_type() const { return BindData::MEMBER_VAR; }
 	virtual var& get(ptr<Object> self) const = 0;
 
-	const PropertyInfo* get_prop_info() const { return pi.get(); }
+	const ptr<PropertyInfo> get_prop_info() const { return pi; }
 	const MemberInfo* get_member_info() const override { return pi.get(); }
 };
 
@@ -159,7 +159,7 @@ public:
 		pi = p_pi;
 	}
 	virtual var& get() const { return *member; }
-	const PropertyInfo* get_prop_info() const { return pi.get(); }
+	const ptr<PropertyInfo> get_prop_info() const { return pi; }
 	const MemberInfo* get_member_info() const override { return pi.get(); }
 };
 
@@ -176,7 +176,7 @@ public:
 	virtual BindData::Type get_type() const { return BindData::STATIC_CONST; }
 	virtual var get() const = 0;
 
-	const PropertyInfo* get_prop_info() const { return pi.get(); }
+	const ptr<PropertyInfo> get_prop_info() const { return pi; }
 	const MemberInfo* get_member_info() const override { return pi.get(); }
 };
 
@@ -220,9 +220,8 @@ public:
 		if (it != values.end()) return it->second;
 		throw VarError(VarError::ATTRIBUTE_ERROR, String::format("value \"%s\" isn't exists on enum %s.", p_value_name.c_str(), name));
 	}
-	ptr<_EnumBytes> get() const { return ei->get_runtime(); }
-
-	const EnumInfo* get_enum_info() const { return ei.get(); }
+	const ptr<EnumInfo> get() const { return ei; }
+	const ptr<EnumInfo> get_enum_info() const { return ei; }
 	const MemberInfo* get_member_info() const override { return ei.get(); }
 };
 inline ptr<EnumBind> _bind_enum(const char* p_name, const char* p_class_name, const stdvec<std::pair<String, int64_t>>& p_values) {
@@ -242,7 +241,7 @@ public:
 	virtual BindData::Type get_type() const { return BindData::ENUM_VALUE; }
 	int64_t get() const { return value; }
 
-	const EnumValueInfo* get_enum_value_info() const { return evi.get(); }
+	const ptr<EnumValueInfo> get_enum_value_info() const { return evi; }
 	const MemberInfo* get_member_info() const override { return evi.get(); }
 };
 

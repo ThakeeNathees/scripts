@@ -29,18 +29,7 @@
 // DO NOT INCLUDE THIS AS IT WON'T WORK SINCE IT HAS DEPENDANCY IN _var.h
 // INCLUDE _var.h INSETEAD. IT'S DESIGNED LIKE THIS TO GENERATE SINGLE HEADER.
 
-namespace carbon {
-class Bytecode;
-}
-
 namespace varh {
-
-struct Map::_KeyValue {
-	var key;
-	var value;
-	_KeyValue() {}
-	_KeyValue(const var& p_key, const var& p_value) : key(p_key), value(p_value) {}
-};
 	
 struct VarTypeInfo {
 	var::Type type = var::_NULL;
@@ -55,17 +44,31 @@ struct VarTypeInfo {
 	bool operator!=(const VarTypeInfo p_other) const { return !(operator==(p_other)); }
 };
 
-class ClassInfo : public MemberInfo {
+class ClassInfo : public MemberInfo, public Object {
+	REGISTER_CLASS(ClassInfo, Object);
+	public: ClassInfo() {} // default constructor needed for inherit Object
+
 private:
 	String name;
-	ptr<::carbon::Bytecode> _class;
+	var _class; // compiled version of the class.
 public:
-	ClassInfo(const String& p_name, ptr<::carbon::Bytecode> p_class) :name(p_name), _class(p_class) { }
+	ClassInfo(const String& p_name, const var& p_class) :name(p_name), _class(p_class) { }
 	virtual Type get_type() const { return  CLASS; };
 	virtual const String& get_name() const { return name; };
+
+	var __get_member(const String& p_name) override {
+		switch (p_name.const_hash()) {
+			case "name"_hash: return name;
+			case "_class"_hash: return _class;
+			default: return Super::__get_member(p_name);
+		}
+	}
 };
 
-class MethodInfo : public MemberInfo {
+class MethodInfo : public MemberInfo, public Object {
+	REGISTER_CLASS(MethodInfo, Object);
+	public: MethodInfo() {} // default constructor needed for inherit Object
+
 private:
 	String name;
 	bool _is_static = false;
@@ -75,6 +78,7 @@ private:
 	stdvec<VarTypeInfo> arg_types;
 	VarTypeInfo return_type;
 
+	var _method; // compiled version of the method
 public:
 	virtual Type get_type() const override { return Type::METHOD; }
 	virtual const String& get_name() const override { return name; }
@@ -119,9 +123,23 @@ public:
 	const stdvec<var>& get_default_args() const { return default_args; }
 	const stdvec<VarTypeInfo>& get_arg_types() const { return arg_types; }
 	VarTypeInfo get_return_type() const { return return_type; }
+
+	var __get_member(const String& p_name) override {
+		switch (p_name.const_hash()) {
+			case "name"_hash: return name;
+			case "is_static"_hash: return _is_static;
+			case "arg_count"_hash: return arg_count;
+			case "default_arg_count"_hash: return default_args.size();
+			case "_method"_hash: return _method;
+			default: return Super::__get_member(p_name);
+		}
+	}
 };
 
-class PropertyInfo : public MemberInfo {
+class PropertyInfo : public MemberInfo, public Object {
+	REGISTER_CLASS(PropertyInfo, Object);
+	public: PropertyInfo() {} // default constructor needed for inherit Object
+
 private:
 	String name;
 	VarTypeInfo datatype;
@@ -152,25 +170,49 @@ public:
 	VarTypeInfo get_datatype() const { return datatype; }
 	const var& get_value() const { return value; }         // value for constants.
 	const var& get_default_value() const { return value; } // defalut_value for variables.
+
+	var __get_member(const String& p_name) override {
+		switch (p_name.const_hash()) {
+			case "name"_hash: return name;
+			case "value"_hash: return value;
+			default: return Super::__get_member(p_name);
+		}
+	}
 };
 
-class EnumInfo : public MemberInfo {
+class EnumInfo : public MemberInfo, public Object {
+	REGISTER_CLASS(EnumInfo, Object);
+	public: EnumInfo() {} // default constructor needed for inherit Object
+
 private:
-	ptr<_EnumBytes> _enum = nullptr;
+	String _name;
+	stdmap<String, int64_t> _values;
 
 public:
 	virtual Type get_type() const override { return Type::ENUM; }
-	virtual const String& get_name() const override { return _enum->_name; }
+	virtual const String& get_name() const override { return _name; }
 
-	EnumInfo(String p_name, const stdvec<std::pair<String, int64_t>>& p_values) {
-		_enum = newptr<_EnumBytes>(p_name, p_values);
-	}
-	EnumInfo(ptr<_EnumBytes> p_enum) {
-		_enum = p_enum;
+	EnumInfo(const String& p_name) : _name(p_name) {}
+	EnumInfo(const String& p_name, const stdvec<std::pair<String, int64_t>>& p_values) {
+		_name = p_name;
+		for (const std::pair<String, int64_t>& p : p_values) {
+			_values[p.first] = p.second;
+		}
 	}
 
-	const stdmap<String, int64_t>& get_values() const { return _enum->_values; }
-	ptr<_EnumBytes> get_runtime() const { return _enum; }
+	var __get_member(const String& p_name) override {
+		stdmap<String, int64_t>::iterator it = _values.find(p_name);
+		if (it != _values.end()) return it->second;
+		return Super::__get_member(p_name);
+	}
+	void __set_member(const String& p_name, var& p_value) override {
+		stdmap<String, int64_t>::iterator it = _values.find(p_name);
+		if (it != _values.end()) THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("cannot assign a value to enum value."));
+		else Super::__set_member(p_name, p_value);
+	}
+
+	const stdmap<String, int64_t>& get_values() const { return _values; }
+	stdmap<String, int64_t>& get_edit_values() { return _values; }
 };
 
 class EnumValueInfo : public MemberInfo {

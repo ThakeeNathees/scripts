@@ -30,6 +30,7 @@
 
 #define REGISTER_CLASS(m_class, m_inherits)                                                          \
 public:                                                                                              \
+	typedef m_inherits Super;                                                                        \
 	static constexpr const char* get_class_name_s() { return STR(m_class); }                         \
 	virtual const char* get_class_name() const override { return get_class_name_s(); }               \
 	static constexpr const char* get_parent_class_name_s() { return STR(m_inherits); }               \

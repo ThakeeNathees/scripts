@@ -132,6 +132,41 @@ public:
 		return ptrcast<T>(operator ptr<Object>());
 	}
 
+	enum Operator {
+
+		// methamatical operators
+		OP_ASSIGNMENT,
+		OP_ADDITION,
+		OP_SUBTRACTION,
+		OP_MULTIPLICATION,
+		OP_DIVISION,
+		OP_MODULO,
+		OP_POSITIVE, // unary
+		OP_NEGATIVE, // unary
+
+		// locical operators
+		OP_EQ_CHECK,
+		OP_NOT_EQ_CHECK,
+		OP_LT,
+		OP_LTEQ,
+		OP_GT,
+		OP_GTEQ,
+		OP_AND,
+		OP_OR,
+		OP_NOT, // unary
+
+		// bitwise operators
+		OP_BIT_LSHIFT,
+		OP_BIT_RSHIFT,
+		OP_BIT_AND,
+		OP_BIT_OR,
+		OP_BIT_XOR,
+		OP_BIT_NOT, // unary
+
+		_OP_MAX_,
+	};
+	static String get_op_name_s(Operator op);
+
 #define _VAR_OP_DECL(m_ret, m_op, m_access)                                                        \
 	m_ret operator m_op (bool p_other) m_access { return operator m_op (var(p_other)); }           \
 	m_ret operator m_op (int64_t p_other) m_access { return operator m_op (var(p_other)); }        \
@@ -167,6 +202,8 @@ public:
 		stdvec<var*> args; for (var& v : _args) args.push_back(&v);
 		return __call_internal(args);
 	}
+	var __call(stdvec<var*>& p_args) { return __call_internal(p_args); }
+
 	template <typename... Targs>
 	var call_method(const String& p_method, Targs... p_args) {
 		stdvec<var> _args = make_stdvec<var>(p_args...);
@@ -200,7 +237,7 @@ public:
 	var& operator=(const ptr<T>& p_other) {
 		clear_data();
 		type = OBJECT;
-		_data._obj = ptrcast<Object>(p_other);
+		new(&_data._obj) ptr<Object>(ptrcast<Object>(p_other));
 		return *this;
 	}
 	VAR_OP_DECL(var&, +=, PLACE_HOLDER_MACRO);
@@ -244,7 +281,7 @@ private:
 #include "_runtime_types.h"
 #include "_type_info.h"
 #include "_native.h"
-#include "_iterator.h"
+//#include "_iterator.h"
 
 // undefine all var.h macros defined in varcore.h
 // this makes the user(carbon) independent of'em

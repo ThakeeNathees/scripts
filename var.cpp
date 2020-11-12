@@ -464,7 +464,8 @@ var Object::get_member(ptr<Object> p_self, const String& p_name) {
 	String member_name = p_name;
 
 	if (!NativeClasses::singleton()->is_class_registered(class_name)) {
-		THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("the class \"%s\" isn't registered in native class entries.", class_name.c_str()));
+		//THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("the class \"%s\" isn't registered in native class entries.", class_name.c_str()));
+		return p_self->__get_member(p_name);
 	}
 
 	ptr<BindData> bind_data = NativeClasses::singleton()->find_bind_data(class_name, member_name);
@@ -496,7 +497,9 @@ void Object::set_member(ptr<Object> p_self, const String& p_name, var& p_value) 
 	String member_name = p_name;
 
 	if (!NativeClasses::singleton()->is_class_registered(class_name)) {
-		THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("the class \"%s\" isn't registered in native class entries.", class_name.c_str()));
+		//THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("the class \"%s\" isn't registered in native class entries.", class_name.c_str()));
+		p_self->__set_member(p_name, p_value);
+		return;
 	}
 
 	ptr<BindData> bind_data = NativeClasses::singleton()->find_bind_data(class_name, member_name);
@@ -544,7 +547,7 @@ var  Object::__get_member(const String& p_member_name) {
 	THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no member named \"%s\"", get_class_name(), p_member_name.c_str()));
 }
 void Object::__set_member(const String& p_member_name, var& p_value) {
-	THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no member named \"%s\".", get_class_name(), p_member_name.c_str()));
+	THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("type %s has no writable member named \"%s\".", get_class_name(), p_member_name.c_str()));
 }
 
 var Object::__get_mapped(const var& p_key) const { _OBJ_THROW_NOT_IMPL(__get_mapped()); }
@@ -573,7 +576,56 @@ bool Object::__eq(const var& p_other) const {
 }
 #undef _OBJ_THROW_NOT_IMPL
 
+// runtime types -------------------------------------
+
+void _Iterator_String::_bind_data(NativeClasses* p_native_classes) {
+	BIND_METHOD("__iter_has_next", &_Iterator_String::__iter_has_next);
+	BIND_METHOD("__iter_next", &_Iterator_String::__iter_next);
+}
+
+void _Iterator_Array::_bind_data(NativeClasses* p_native_classes) {
+	BIND_METHOD("__iter_has_next", &_Iterator_Array::__iter_has_next);
+	BIND_METHOD("__iter_next", &_Iterator_Array::__iter_next);
+}
+
+void _Iterator_Map::_bind_data(NativeClasses* p_native_classes) {
+	BIND_METHOD("__iter_has_next", &_Iterator_Map::__iter_has_next);
+	BIND_METHOD("__iter_next", &_Iterator_Map::__iter_next);
+}
+
+
 // var -----------------------------------------------
+
+String var::get_op_name_s(Operator op) {
+	static const char* _names[] = {
+		"OP_ASSIGNMENT",
+		"OP_ADDITION",
+		"OP_SUBTRACTION",
+		"OP_MULTIPLICATION",
+		"OP_DIVISION",
+		"OP_MODULO",
+		"OP_POSITIVE",
+		"OP_NEGATIVE",
+		"OP_EQ_CHECK",
+		"OP_NOT_EQ_CHECK",
+		"OP_LT",
+		"OP_LTEQ",
+		"OP_GT",
+		"OP_GTEQ",
+		"OP_AND",
+		"OP_OR",
+		"OP_NOT",
+		"OP_BIT_LSHIFT",
+		"OP_BIT_RSHIFT",
+		"OP_BIT_AND",
+		"OP_BIT_OR",
+		"OP_BIT_XOR",
+		"OP_BIT_NOT",
+		"_OP_MAX_",
+	};
+	MISSED_ENUM_CHECK(Operator::_OP_MAX_, 23);
+	return _names[op];
+}
 
 size_t var::hash() const {
 	switch (type) {
@@ -586,7 +638,7 @@ size_t var::hash() const {
 		case ARRAY:
 		case MAP:
 			THROW_VARERROR(VarError::TYPE_ERROR, String::format("key of typt %s is unhashable.", get_type_name().c_str()));
-		case OBJECT:
+		case OBJECT: DEBUG_BREAK(); // TODO: add hash method for objects?
 			break;
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 9);
@@ -717,7 +769,7 @@ var var::operator m_op(int) {                                                   
 	switch (type) {                                                                                     \
 		case INT: return _data._int m_op;                                                               \
 		case FLOAT: return _data._float m_op;                                                           \
-		default: THROW_VARERROR(VarError::OPERATOR_NOT_SUPPORTED,                                          \
+		default: THROW_VARERROR(VarError::OPERATOR_NOT_SUPPORTED,                                       \
 			String::format("operator " #m_op " not supported on base %s.", get_type_name().c_str()));   \
 	}                                                                                                   \
 	return var();                                                                                       \
@@ -793,8 +845,8 @@ var var::__iter_begin() {
 		case var::INT:    THROW_VARERROR(VarError::OPERATOR_NOT_SUPPORTED, "integer is not iterable.");
 		case var::FLOAT:  THROW_VARERROR(VarError::OPERATOR_NOT_SUPPORTED, "float is not iterable.");
 		case var::STRING: return newptr<_Iterator_String>(&_data._string);
-		case var::ARRAY: return newptr<_Iterator_Array>(&_data._arr);
-		case var::MAP: return newptr<_Iterator_Map>(&_data._map);
+		case var::ARRAY:  return newptr<_Iterator_Array>(&_data._arr);
+		case var::MAP:    return newptr<_Iterator_Map>(&_data._map);
 		case var::OBJECT: return _data._obj.get()->__iter_begin();
 	}
 	MISSED_ENUM_CHECK(_TYPE_MAX_, 9);

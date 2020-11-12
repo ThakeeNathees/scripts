@@ -59,7 +59,7 @@ void NativeClasses::bind_data(ptr<BindData> p_bind_data) {
 	if (class_name == data_name) {
 		if (p_bind_data->get_type() != BindData::STATIC_FUNC)
 			THROW_VARERROR(VarError::ATTRIBUTE_ERROR, String::format("attribute \"%s\" can't be the same as type name.", data_name.c_str()));
-		const MethodInfo* mi = ptrcast<StaticFuncBind>(p_bind_data)->get_method_info();
+		const MethodInfo* mi = ptrcast<StaticFuncBind>(p_bind_data)->get_method_info().get();
 		if (mi->get_return_type().type != var::_NULL) THROW_VARERROR(VarError::TYPE_ERROR, "constructor initializer must not return anything.");
 		if (mi->get_arg_count() < 1 || mi->get_arg_types()[0].type != var::OBJECT) THROW_VARERROR(VarError::TYPE_ERROR, "constructor initializer must take the instance as the first argument.");
 		entries.__initializer = ptrcast<StaticFuncBind>(p_bind_data).get();		
