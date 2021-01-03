@@ -2,7 +2,7 @@
 // MIT License
 //------------------------------------------------------------------------------
 // 
-// Copyright (c) 2020 Thakee Nathees
+// Copyright (c) 2020-2021 Thakee Nathees
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,91 +26,99 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include "varhcore.h"
+#include "internal.h"
 
 namespace varh {
 
 class var;
-class Object;
+class Array;
 
 class String {
 public:
 
 	// Constructors.
-	String()                           {}
-	String(const std::string& p_copy)  { _data = p_copy; }
-	String(const char* p_copy)         { _data = p_copy; }
-	String(const String& p_copy)       { _data = p_copy._data; }
-	String(char p_char)                { _data = p_char; }
-	explicit String(int p_i)                    { _data = std::to_string(p_i); }
-	explicit String(int64_t p_i)                { _data = std::to_string(p_i); }
-	explicit String(size_t p_i)                 { _data = std::to_string(p_i); }
-	explicit String(double p_d)                 { _data = std::to_string(p_d); }
-	~String()                          {}
+	String();
+	String(const std::string& p_copy);
+	String(const char* p_copy);
+	String(const String& p_copy);
+	String(char p_char);
+	explicit String(int p_i);
+	explicit String(int64_t p_i);
+	explicit String(size_t p_i);
+	explicit String(double p_d);
+	~String();
 
-	// Methods.
-	var call_method(const String& p_method, const stdvec<var>& p_args);
+	constexpr static  const char* get_type_name_s() { return "String"; }
 
+	// reflection methods.
+	var call_method(const String& p_method, const stdvec<var*>& p_args);
 	static String format(const char* p_format, ...);
-	int64_t to_int() const { return std::stoll(_data); } // TODO: this will throw std::exceptions
-	double to_float() const { return std::stod(_data); }
-	String get_line(uint64_t p_line) const;
-	size_t hash() const { return std::hash<std::string>{}(_data); }
+	int64_t to_int() const;
+	double to_float() const;
+	//String get_line(uint64_t p_line) const;
+	size_t hash() const;
+	size_t const_hash() const;
 
-	String substr(size_t p_start, size_t p_end) const;
+	String upper() const;
+	String lower() const;
+	String substr(int64_t p_start, int64_t p_end) const;
 	bool endswith(const String& p_str) const;
 	bool startswith(const String& p_str) const;
-	// String strip(p_delemeter = " "); lstrip(); rstrip();
-	// Array split(p_delimeter = " ");
+	Array split(const String& p_delimiter = "") const;
+	String strip() const; // lstrip, rstrip
+	String join(const Array& p_elements) const;
+	String replace(const String& p_with, const String& p_what) const;
 
 	// operators.
-	char operator[](size_t p_index) const {
-		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
-		return _data[p_index];
-	}
-	char& operator[](size_t p_index) {
-		if (p_index >= size()) { throw VarError(VarError::INVALID_INDEX, ""); }
-		return _data[p_index];
-	}
+	char operator[](int64_t p_index) const;
+	char& operator[](int64_t p_index);
 
-	operator std::string() const                   { return _data; }
 	// operator bool() {} don't implement this don't even delete
+	operator std::string() const { return *_data; } // <-- TODO: remove this and find alternative.
+	operator std::string& () { return *_data; }
+	operator const std::string& () const { return *_data; }
 	
-	bool operator==(const String & p_other) const  { return _data == p_other._data; }
-	bool operator!=(const String & p_other) const  { return _data != p_other._data; }
-	bool operator<(const String& p_other) const    { return _data < p_other._data; }
+	String operator %(const var& p_other) const;
 
-	String operator+(char p_c) const               { return _data + p_c; }
-	String operator+(int p_i) const                { return _data + std::to_string(p_i); }
-	String operator+(double p_d) const             { return _data + std::to_string(p_d); }
-	String operator+(const char* p_cstr) const     { return _data + p_cstr; }
-	String operator+(const String& p_other) const  { return _data + p_other._data; }
+	bool operator==(const String& p_other) const;
+	bool operator!=(const String& p_other) const;
+	bool operator<(const String& p_other) const;
+	bool operator<=(const String& p_other) const;
+	bool operator>(const String& p_other) const;
+	bool operator>=(const String& p_other) const;
+
+	String operator+(char p_c) const;
+	String operator+(const char* p_cstr) const;
+	String operator+(const String& p_other) const;
+	//String operator+(int p_i) const;
+	//String operator+(double p_d) const;
 	// String operator+(var& p_obj) const          { TODO: }
 
-	String& operator+=(char p_c)                   { _data += p_c;                 return *this; }
-	String& operator+=(int p_i)                    { _data += std::to_string(p_i); return *this; }
-	String& operator+=(double p_d)                 { _data += std::to_string(p_d); return *this; }
-	String& operator+=(const char* p_cstr)         { _data += p_cstr;              return *this; }
-	String& operator+=(const String& p_other)      { _data += p_other._data;       return *this; }
+	String& operator+=(char p_c);
+	String& operator+=(const char* p_cstr);
+	String& operator+=(const String& p_other);
+	//String& operator+=(int p_i);
+	//String& operator+=(double p_d);
 	// String& operator+(var& p_obj)               { TODO: }
 
-	String& operator=(char p_c)                   { _data = p_c;                 return *this; }
-	String& operator=(int p_i)                    { _data = std::to_string(p_i); return *this; }
-	String& operator=(double p_d)                 { _data = std::to_string(p_d); return *this; }
-	String& operator=(const char* p_cstr)         { _data = p_cstr;              return *this; }
-	String& operator=(const String& p_other)      { _data = p_other._data;       return *this; }
+	String& operator=(char p_c);
+	String& operator=(const char* p_cstr);
+	String& operator=(const String& p_other);
+	//String& operator=(int p_i);
+	//String& operator=(double p_d);
 	// String& operator=(var& p_obj)               { TODO: }
 
 	// Wrappers.
-	size_t size() const                   { return _data.size(); }
-	const char* c_str() const             { return _data.c_str(); }
-	String& append(const String& p_other) { _data.append(p_other); return *this; }
+	size_t size() const;
+	const char* c_str() const;
+	void* get_data();
+	String& append(const String& p_other);
 
 private:
 	friend class var;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const String& p_str);
 	friend std::istream& operator>>(std::istream& p_ostream, String& p_str);
-	std::string _data;
+	std::string* _data = nullptr;
 };
 
 // Global operators. TODO: implement more

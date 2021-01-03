@@ -2,7 +2,7 @@
 // MIT License
 //------------------------------------------------------------------------------
 // 
-// Copyright (c) 2020 Thakee Nathees
+// Copyright (c) 2020-2021 Thakee Nathees
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,60 +26,57 @@
 #ifndef  MAP_H
 #define  MAP_H
 
-#include "varhcore.h"
-
+#include "internal.h"
 
 namespace varh {
 
-class var;
 class String;
+class var;
 
 class Map {
+	friend class var;
 public:
-	// Mehtods.
-	Map() {
-		_data = std::make_shared<stdmap<var, var>>();
-	}
-	Map(const ptr<stdmap<var, var>>& p_data) {
-		_data = p_data;
-	}
-	Map(const Map& p_copy) {
-		_data = p_copy._data;
-	}
+	struct _KeyValue;
+	struct _Comparator {
+		bool operator() (const var& l, const var& r) const;
+	};
+	//typedef stdmap<size_t, _KeyValue> _map_internal_t;
+	typedef std::map<var, var, _Comparator> _map_internal_t;
 
-	stdmap<var, var>* get_data() {
-		return _data.operator->();
-	}
-	stdmap<var, var>* get_data() const {
-		return _data.operator->();
-	}
+	constexpr static  const char* get_type_name_s() { return "Map"; }
 
+	// methods.
+	Map();
+	Map(const ptr<_map_internal_t>& p_data);
+	Map(const Map& p_copy);
+
+	void* get_data() const;
 	Map copy(bool p_deep = true) const;
+	var call_method(const String& p_method, const stdvec<var*>& p_args);
 
 	// Wrappers.
-	size_t size() const { return _data->size(); }
-	bool empty() const { return _data->empty(); }
+	size_t size() const;
+	bool empty() const;
 	void insert(const var& p_key, const var& p_value);
-	var& operator[](const var& p_key) const;
-	var& operator[](const var& p_key);
-	var& operator[](const char* p_key) const;
-	var& operator[](const char* p_key);
-	stdmap<var, var>::iterator begin() const;
-	stdmap<var, var>::iterator end() const;
-	stdmap<var, var>::iterator find(const var& p_key) const;
-	void clear() { _data->clear(); }
+	void clear();
 	bool has(const var& p_key) const;
-	// TODO:
+	var at(const var& p_key) const;
 
-	// Operators.
-	operator bool() const { return empty(); }
-	String to_string() const; // operator String() const;
+	String to_string() const;
+	operator bool() const;
 	bool operator ==(const Map& p_other) const;
 	Map& operator=(const Map& p_other);
+	var operator[](const var& p_key) const;
+	var& operator[](const var& p_key);
+	var operator[](const char* p_key) const;
+	var& operator[](const char* p_key);
 
 private:
-	friend class var;
-	ptr<stdmap<var, var>> _data;
+	_map_internal_t::iterator begin() const;
+	_map_internal_t::iterator end() const;
+	_map_internal_t::iterator find(const var& p_key) const;
+
+	ptr<_map_internal_t> _data;
 	friend std::ostream& operator<<(std::ostream& p_ostream, const Map& p_dict);
 };
 

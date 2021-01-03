@@ -36,7 +36,34 @@ USAGE = '''
 #include "var.h"
 using namespace varh;
 
-// SAMPLES:
+class Aclass : public Object {
+	REGISTER_CLASS(Aclass, Object) {
+		BIND_ENUM_VALUE("EVAL1", EVAL1);                          // Bind unnamed enums
+		BIND_ENUM_VALUE("EVAL2", EVAL2);
+
+		BIND_ENUM("MyEnum", {                                     // enum type
+			{ "V1", MyEnum::V1 },
+			{ "V2", MyEnum::V2 },
+			{ "V3", MyEnum::V3 },
+		});
+
+		BIND_METHOD("method1",  &Aclass::method1);                // bind method with 0 arguments
+		BIND_METHOD("method2",  &Aclass::method2,  PARAMS("arg1", "arg2"), DEFVALUES("arg2_defval")); // method with 2 arguments, 1 default arg.
+		BIND_STATIC_FUNC("static_func", &Aclass::static_fun);     // similerly for static functions.
+
+		BIND_MEMBER("member", &Aclass::member);                   // bind member, type MUST BE var.
+		BIND_MEMBER("member", &Aclass::member, DEFVAL(2));        // bind member with default initial value.
+
+		BIND_STATIC_MEMBER("s_member", &Aclass::s_member);        // no need to set default value, could be resolved statically. type MUST BE var.
+		BIND_STATIC_MEMBER("s_member", &Aclass::s_member);        // no need to set default value, could be resolved statically.
+
+		BIND_CONST("CONST_VAL", &Aclass::CONST_VAL);              // similerly as static member but it could be any type since it won't change.
+
+		BIND_METHOD_VA("va_method", &Aclass::va_method);          // method must be `Ret va_method(stdvec<var>& p_args) {}`
+		BIND_STATIC_FUNC_VA("va_func_s", &Aclass::va_func_s);     // similerly static method.
+	}
+};
+
 #include <iostream>
 #define print(x) std::cout << (x) << std::endl
 int main() {
@@ -58,18 +85,18 @@ int main() {
 
 import os, re
 src     = dict() ## file_name : source
-headers = dict() ## file_name : [source, included?]
+headers = dict() ## file_name : [source, included?]		
 
 for dir in os.listdir('.'):
     if os.path.isfile(dir):
         if dir.endswith('.cpp'):
             with open(dir, 'r') as f:
                 src[dir] = f.read()
-        elif dir.endswith('.h'):
+        elif dir.endswith('.h') or dir.endswith('.inc'):
             with open(dir, 'r') as f:
                 headers[dir] = [f.read(), False]
 
-gen = headers['_var.h'][0] ## generated source
+gen = headers['var.h'][0] ## generated source
 done = False
 while not done:
     done = True
@@ -95,6 +122,6 @@ for include in re.findall(r'#include ".+"', gen):
 gen = USAGE + '\n#define VAR_H_HEADER_ONLY\n' + gen
 gen = LICENSE + gen.replace(LICENSE, '')
             
-with open('var.h', 'w') as f:
+with open('var.gen.h', 'w') as f:
     f.write(gen)
-print('var.h generated')
+print('var.gen.h generated')

@@ -21,7 +21,7 @@ public:
 
 class MyClass : public Object {
 public:
-	virtual String to_string() const override {
+	virtual String to_string() override {
 		return "MyClass";
 	}
 	~MyClass() {
@@ -36,8 +36,8 @@ int main() {
 	v = 3.14;           print(v); // prints 3.14 float
 	v = "hello world!"; print(v); // prints the String
 
-	v = String("string"); v = Vect2f(1.2, 3.4); v = Vect2i(1, 2);
-	v = Map(); v = Array(1, 2.3, "hello world!", Array(4, 5, 6));
+	v = String("string"); v = Map();
+	v = Array(1, 2.3, "hello world!", Array(4, 5, 6));
 
 	class Aclass : public Object {
 	public: String to_string() const { return "Aclass"; }

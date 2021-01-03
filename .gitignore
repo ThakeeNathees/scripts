@@ -1,6 +1,7 @@
 # vs proj
 bin/
 .vs/
+__pycache__
 *.sln
 *.vcxproj
 *.vcxproj.filters

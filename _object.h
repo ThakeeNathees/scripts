@@ -2,7 +2,7 @@
 // MIT License
 //------------------------------------------------------------------------------
 // 
-// Copyright (c) 2020 Thakee Nathees
+// Copyright (c) 2020-2021 Thakee Nathees
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,42 +26,51 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
-#include "varhcore.h"
+#include "internal.h"
 
-#ifndef INHERITS_OBJECT_ADDNL
-#define INHERITS_OBJECT_ADDNL
-#endif //INHERITS_OBJECT_ADDNL
-
-#define INHERITS_OBJECT(m_class, m_inherits)                                                         \
+#define REGISTER_CLASS(m_class, m_inherits)                                                          \
 public:                                                                                              \
-	static  const char* get_class_name_s() { return STR(m_class); }                                  \
-	virtual const char* get_class_name() const override { return get_class_name_s(); }               \
-	static  const char* get_parent_class_name_s() { return STR(m_inherits); }                        \
-	virtual const char* get_parent_class_name() const override { return get_parent_class_name_s(); } \
-	INHERITS_OBJECT_ADDNL(m_class, m_inherits)                                                       \
-private:
+	typedef m_inherits Super;                                                                        \
+	static ptr<Object> __new() { return newptr<m_class>(); }                                         \
+	static constexpr const char* get_type_name_s() { return STR(m_class); }                          \
+	static constexpr const char* get_base_type_name_s() { return STR(m_inherits); }                  \
+	virtual const char* get_base_type_name() const override { return get_base_type_name_s(); }       \
+	virtual const char* get_type_name() const override { return get_type_name_s(); }                 \
+	static void _bind_data(NativeClasses* p_native_classes)
 
 namespace varh {
+
+class var;
+class String;
+class NativeClasses;
 
 class Object {
 public:
 
+	// REGISTER_CLASS methods.
+	static ptr<Object> __new() { return newptr<Object>(); }
+	constexpr static  const char* get_type_name_s() { return "Object"; }
+	constexpr static  const char* get_base_type_name_s() { return ""; }
+	virtual const char* get_type_name() const { return get_type_name_s(); }
+	virtual const char* get_base_type_name() const { return get_base_type_name_s(); }
+	static void _bind_data(NativeClasses* p_native_classes);
+
 	// Operators.
-	operator String()  const { return to_string(); }
 	Object& operator=(const Object& p_copy) = default;
-	var operator()(stdvec<var>& p_vars);
+	operator String(); // const
+	var operator()(stdvec<var*>& p_args);
 
-	bool operator==(const var& p_other) const { return __eq(p_other); }
-	bool operator!=(const var& p_other) const { return !operator == (p_other); }
-	bool operator<=(const var& p_other) const { return __lt(p_other) || __eq(p_other); }
-	bool operator>=(const var& p_other) const { return __gt(p_other) || __eq(p_other); }
-	bool operator< (const var& p_other) const { return __lt(p_other); }
-	bool operator> (const var& p_other) const { return __gt(p_other); }
+	bool operator==(const var& p_other) /*const*/;
+	bool operator!=(const var& p_other) /*const*/;
+	bool operator<=(const var& p_other) /*const*/;
+	bool operator>=(const var& p_other) /*const*/;
+	bool operator< (const var& p_other) /*const*/;
+	bool operator> (const var& p_other) /*const*/;
 
-	var operator+(const var& p_other) const;
-	var operator-(const var& p_other) const;
-	var operator*(const var& p_other) const;
-	var operator/(const var& p_other) const;
+	var operator+(const var& p_other) /*const*/;
+	var operator-(const var& p_other) /*const*/;
+	var operator*(const var& p_other) /*const*/;
+	var operator/(const var& p_other) /*const*/;
 
 	var& operator+=(const var& p_other);
 	var& operator-=(const var& p_other);
@@ -71,43 +80,44 @@ public:
 	var operator[](const var& p_key) const;
 	var& operator[](const var& p_key);
 
-	// Virtual methods.
-	// These double underscore methdos will be used as operators callback in the compiler.
+	// TODO: move them to native
+	static var call_method_s(ptr<Object>& p_self, const String& p_name, stdvec<var*>& p_args);
+	static var get_member_s(ptr<Object>& p_self, const String& p_name);
+	static void set_member_s(ptr<Object>& p_self, const String& p_name, var& p_value);
 
-	static var call_method(ptr<Object> p_self, const String& p_name, stdvec<var>& p_args);  // instance.p_name(args)
-	virtual var __call(stdvec<var>& p_vars);                             // instance(args)
+	virtual var call_method(const String& p_method_name, stdvec<var*>& p_args);
+	virtual var get_member(const String& p_member_name);
+	virtual void set_member(const String& p_member_name, var& p_value);
 
-	virtual bool __has(const String& p_name) const;
-	virtual var& __get(const String& p_name);
+	virtual ptr<Object> copy(bool p_deep) /*const*/;
+	virtual void* get_data();
 
-	virtual bool __has_mapped(const String& p_name) const;
-	virtual var __get_mapped(const var& p_key) const;
+	// operators.
+	virtual var __call(stdvec<var*>& p_vars);
+
+	virtual var __iter_begin();
+	virtual bool __iter_has_next();
+	virtual var __iter_next();
+
+	virtual var __get_mapped(const var& p_key) /*const*/;
 	virtual void __set_mapped(const var& p_key, const var& p_val);
+	virtual int64_t __hash() /*const*/;
 
-	virtual var __add(const var& p_other) const;
-	virtual var __sub(const var& p_other) const;
-	virtual var __mul(const var& p_other) const;
-	virtual var __div(const var& p_other) const;
+	virtual var __add(const var& p_other) /*const*/;
+	virtual var __sub(const var& p_other) /*const*/;
+	virtual var __mul(const var& p_other) /*const*/;
+	virtual var __div(const var& p_other) /*const*/;
 
 	virtual var& __add_eq(const var& p_other);
 	virtual var& __sub_eq(const var& p_other);
 	virtual var& __mul_eq(const var& p_other);
 	virtual var& __div_eq(const var& p_other);
 
-	virtual bool __gt(const var& p_other) const;
-	virtual bool __lt(const var& p_other) const;
-	virtual bool __eq(const var& p_other) const;
+	virtual bool __gt(const var& p_other) /*const*/;
+	virtual bool __lt(const var& p_other) /*const*/;
+	virtual bool __eq(const var& p_other) /*const*/;
 
-	virtual String to_string() const { return String::format("[Object:%i]", this);  }
-
-	// Methods.
-	virtual ptr<Object> copy(bool p_deep)         const { throw VarError(VarError::NOT_IMPLEMENTED); }
-	static  const char* get_class_name_s()              { return "Object"; }
-	virtual const char* get_class_name()          const { return get_class_name_s(); }
-	static  const char* get_parent_class_name_s()       { return nullptr; }
-	virtual const char* get_parent_class_name()   const { return get_parent_class_name_s(); }
-
-	static void _bind_data() {} // TODO:
+	virtual String to_string() /*const*/;
 
 private:
 	friend class var;
