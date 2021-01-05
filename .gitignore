@@ -3,19 +3,23 @@
 *.gen.h
 *.gen.inc
 *.dblite
-bin/
-*/bin/
-x64/
-release/
-debug/
-__pycache__/
-.vs/
-.vscode/
 *.sln
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
 *.obj.enc
+*.lnk
+
+# own directories
+bin/
+*/bin/
+.vs/
+.vscode/
+x64/
+release/
+debug/
+__pycache__/
+doc/doxygen/
 
 # Prerequisites
 *.d
