@@ -3,7 +3,7 @@ import os, subprocess, sys
 
 ###### USER DATA #############################################################################
 def USER_DATA(env):
-	env.PROJECT_NAME = 'varh'
+	env.PROJECT_NAME = 'ccutils'
 	env.SCONSCRIPTS  = []
 	env.SOURCES_TEST = []
 	env.SOURCES_MAIN = [
