@@ -77,10 +77,11 @@
  * -[NaN      ]1---------------------------------------------------
  * 
  * if sign bit set, it's a heap allocated pointer.
- * |            these 3 bits are type tags representing 8 different types
- * |            vvv
- * S[NaN      ]1---------------------------------------------------
- *                 ^~~~~~~~ 48 bits to represent the value (51 for pointer)
+ * |             these 2 bits are type tags representing 8 different types
+ * |             vv
+ * S[NaN      ]1cXX------------------------------------------------
+ *              |  ^~~~~~~~ 48 bits to represent the value (51 for pointer)
+ *              '- if this (const) bit set, it's a constant.
  * 
  * On a 32-bit machine a pointer size is 32 and on a 64-bit machine actually 48
  * bits are used for pointers. Ta-da, now we have double precision number,
@@ -88,61 +89,67 @@
  * require any bit mask operations, which means math on the var is now even
  * faster.
  *
+ * our custom 2 bits type tagging
+ * c00        : NULL
+ * c01 ...  0 : UNDEF  (used in unused map keys)
+ *     ...  1 : VOID   (void function return void not null)
+ *     ... 10 : FALSE
+ *     ... 11 : TRUE
+ * c10        : INTEGER
+ * |
+ * '-- c is const bit.
+ *
  */
 
 #if VAR_NAN_TAGGING
 
-/**
- * Custom 3 bits type tagging
- * 000 : UNDEFINED
- * 001 : NULL
- * 010 : BOOL
- * 011 : INTEGER
- * 100 : ???
- * 101 : ???
- * 111 : ???
- */
-
 /** masks and payloads */
-#define MASK_SIGN ((uint64_t)0x8000000000000000)
-#define MASK_QNAN ((uint64_t)0x7ffc000000000000)
-#define MASK_TYPE ((uint64_t)0x0007000000000000)
+#define MASK_SIGN  ((uint64_t)0x8000000000000000)
+#define MASK_QNAN  ((uint64_t)0x7ffc000000000000)
+#define MASK_TYPE  ((uint64_t)0x0003000000000000)
+#define MASK_CONST ((uint64_t)0x0004000000000000)
 
-#define MASK_INTEGER (MASK_QNAN | (uint64_t)0x0003000000000000)
+#define MASK_INTEGER (MASK_QNAN | (uint64_t)0x0002000000000000)
 #define MASK_OBJECT  (MASK_QNAN | (uint64_t)0x8000000000000000)
 
 #define PAYLOAD_INTEGER ((uint64_t)0x00000000ffffffff)
 #define PAYLOAD_OBJECT  ((uint64_t)0x0000ffffffffffff)
 
 /** primitive types */
-#define VAR_UNDER     (MASK_QNAN | (uint64_t)0x0000000000000000)
-#define VAR_NULL      (MASK_QNAN | (uint64_t)0x0001000000000000)
-#define VAR_FALSE     (MASK_QNAN | (uint64_t)0x0002000000000000)
-#define VAR_TRUE      (MASK_QNAN | (uint64_t)0x0002000000000001)
+#define VAR_NULL  (MASK_QNAN | (uint64_t)0x0000000000000000)
+#define VAR_UNDEF (MASK_QNAN | (uint64_t)0x0001000000000000)
+#define VAR_VOID  (MASK_QNAN | (uint64_t)0x0001000000000001)
+#define VAR_FALSE (MASK_QNAN | (uint64_t)0x0001000000000002)
+#define VAR_TRUE  (MASK_QNAN | (uint64_t)0x0001000000000003)
 
 /** encode types */
-#define VAR_BOOL(value)  ((value)? VAR_TRUE : VAR_FALSE)
-#define VAR_INT(value)   (MASK_INTEGER | (uint32_t)(int32_t)(value))
-#define VAR_NUM(value)   (cafe_doubleToVar(value))
-#define VAR_OBJ(value)   ((var)(MASK_OBJECT | (uint64_t)(uintptr_t)(value)))
-#define VAR_STR(value)   VAR_OBJ(value)
+#define VAR_BOOL(value) ((value)? VAR_TRUE : VAR_FALSE)
+#define VAR_INT(value)  (MASK_INTEGER | (uint32_t)(int32_t)(value))
+#define VAR_NUM(value)  (var_doubleToVar(value))
+#define VAR_OBJ(value)  ((var)(MASK_OBJECT | (uint64_t)(uintptr_t)(value)))
+#define VAR_STR(value)  VAR_OBJ(value)
+
+/** const casting */
+#define ADD_CONST(value)    ((value) | MASK_CONST)
+#define REMOVE_CONST(value) ((value) & ~MASK_CONST)
 
 /** check types */
-#define IS_UNDEF(value)  ((value) == VAR_UNDER)
-#define IS_NULL(value)   ((value) == VAR_NULL)
-#define IS_FALSE(value)  ((value) == VAR_FALSE)
-#define IS_TRUE(value)   ((value) == VAR_TRUE)
-#define IS_BOOL(value)   (IS_TRUE(value) || IS_FALSE(value))
-#define IS_INT(value)    ((value & MASK_INTEGER) == MASK_INTEGER)
-#define IS_NUM(value)    ((value & MASK_QNAN) != MASK_QNAN)
-#define IS_OBJ(value)    ((value & MASK_OBJECT) == MASK_OBJECT)
+#define IS_CONST(value) ((value & MASK_CONST) == MASK_CONST)
+#define IS_NULL(value)  ((value) == VAR_NULL)
+#define IS_UNDEF(value) ((value) == VAR_UNDEF)
+#define IS_FALSE(value) ((value) == VAR_FALSE)
+#define IS_TRUE(value)  ((value) == VAR_TRUE)
+#define IS_BOOL(value)  (IS_TRUE(value) || IS_FALSE(value))
+#define IS_INT(value)   ((value & MASK_INTEGER) == MASK_INTEGER)
+#define IS_NUM(value)   ((value & MASK_QNAN) != MASK_QNAN)
+#define IS_OBJ(value)   ((value & MASK_OBJECT) == MASK_OBJECT)
 // TODO: IS_STRING(), ...
 
 /** decode types */
 #define AS_BOOL(value) ((value) == VAR_TRUE)
 #define AS_INT(value)  ((int32_t)((value) & PAYLOAD_INTEGER))
-#define AS_NUM(value)  (cafe_varToDouble(value))
-#define AS_OBJ(value)  ((cafe_Object*)(value & PAYLOAD_OBJECT))
+#define AS_NUM(value)  (var_varToDouble(value))
+#define AS_OBJ(value)  ((var_Object*)(value & PAYLOAD_OBJECT))
 // TODO: AS_STRING(), ...
 
 #else
@@ -155,30 +162,30 @@ typedef enum /* Object_Type */ {
 	OBJ_MAP,
 
 	OBJ_USER,
-} cafe_Object_Type;
+} var_Object_Type;
 
-typedef struct cafe_Object cafe_Object;
-typedef struct cafe_String cafe_String;
-typedef struct cafe_Class cafe_Class;
+typedef struct var_Object var_Object;
+typedef struct var_String var_String;
+typedef struct var_Class  var_Class;
 
-struct cafe_Object {
-	cafe_Object_Type type;  /**< Type of the object in \ref var_Object_Type */
-	cafe_Class* is;         /**< The class the object IS */
+struct var_Object {
+	var_Object_Type type;  /**< Type of the object in \ref var_Object_Type */
+	var_Class* is;         /**< The class the object IS */
 };
 
-struct cafe_String /* < Object */ {
-	cafe_Object* _super;
+struct var_String /* < Object */ {
+	var_Object* _super;
 
 	uint32_t length;    /**< Length of the string in \ref data */
 	uint32_t capacity;  /**< Size of allocated \ref data */
 	char data[DYNAMIC_TAIL_ARRAY];
 };
 
-struct cafe_Class /* < Object */ {
-	cafe_Object* _super;
+struct var_Class /* < Object */ {
+	var_Object* _super;
 
-	cafe_Class* _base_class;
-	cafe_String* name;
+	var_Class* _base_class;
+	var_String* name;
 };
 
 #if VAR_NAN_TAGGING
@@ -187,7 +194,7 @@ typedef uint64_t var;
 
 #else
 
-typedef enum /* cafe_var_Type */ {
+typedef enum /* var_var_Type */ {
 	VAR_UNDEFINED, /**< Internal type for exceptions */
 	VAR_NULL,      /**< Null pointer type */
 	VAR_BOOL,      /**< Yin and yang of software */
@@ -196,15 +203,15 @@ typedef enum /* cafe_var_Type */ {
 
 	VAR_STRING,    /**< Strings are also \ref var_Object type */
 	VAR_OBJECT,    /**< Base type for all \ref var_Object types */
-} cafe_var_Type;
+} var_var_Type;
 
 typedef struct /* var */ {
-	cafe_var_Type type;
+	var_var_Type type;
 	union {
 		bool _bool;
 		int _int;
 		double _float;
-		cafe_Object* _obj;
+		var_Object* _obj;
 	};
 } var;
 
@@ -212,16 +219,16 @@ typedef struct /* var */ {
 
 #if VAR_NAN_TAGGING
 /** A union to reinterpret a double as raw bits and back. */
-typedef union /* cafe_DoubleBits */ {
+typedef union /* var_DoubleBits */ {
 	uint64_t bits64;
 	uint32_t bits32[2];
 	double num;
-} cafe_DoubleBits;
+} var_DoubleBits;
 #endif
 
-static inline var cafe_doubleToVar(double value) {
+static inline var var_doubleToVar(double value) {
 #if VAR_NAN_TAGGING
-	cafe_DoubleBits bits;
+	var_DoubleBits bits;
 	bits.num = value;
 	return bits.bits64;
 #else
@@ -229,9 +236,9 @@ static inline var cafe_doubleToVar(double value) {
 #endif // VAR_NAN_TAGGING
 }
 
-static inline double cafe_varToDouble(var value) {
+static inline double var_varToDouble(var value) {
 #if VAR_NAN_TAGGING
-	cafe_DoubleBits bits;
+	var_DoubleBits bits;
 	bits.bits64 = value;
 	return bits.num;
 #else
@@ -243,7 +250,7 @@ static inline double cafe_varToDouble(var value) {
  * USING_NAMESPACE_VAR will remote all `var_` prefix from the types.
 */
 #ifdef USING_NAMESPACE_CAFE
-  #define _REMOVE_CAFE_PREFIX(type) typedef cafe_##type type
+  #define _REMOVE_VAR_PREFIX(type) typedef var_##type type
     _REMOVE_VAR_PREFIX(String);
     _REMOVE_VAR_PREFIX(Object);
     _REMOVE_VAR_PREFIX(Object_Type);

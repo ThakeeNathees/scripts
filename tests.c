@@ -13,7 +13,7 @@
 #define TEST_ASSERT(expr)                                                         \
   do {													                          \
     if (!(expr)) {										                          \
-		failed = true;															  \
+		tests_failed = true;												      \
 		clogger_logfError("[TEST_FAILED]: \"%s\" was false at line: %i\n",	      \
                              #expr, __LINE__);                                    \
 	}													                          \
@@ -27,38 +27,31 @@
 
 enum CafeColors {
 	_COL_DONTUSE_ = 0,
-	COL_WHITE  = 1,
-	COL_GREEN  = 2,
+	COL_WHITE = 1,
+	COL_GREEN = 2,
 	COL_YELLOW = 3,
-	COL_RED    = 4,
+	COL_RED = 4,
 
 	COL_BROWN,
 	COL_ORANGE,
 };
 
-void setCafeColorPallete() {
-	clogger_ColorPalette cafe_pallete;
-	// Required basic colors
-	cafe_pallete.colors[COL_WHITE]  = clogger_ColorRGB(180, 170, 150);
-	cafe_pallete.colors[COL_GREEN]  = clogger_ColorRGB(130, 160, 100);
-	cafe_pallete.colors[COL_YELLOW] = clogger_ColorRGB(180, 200,  70);
-	cafe_pallete.colors[COL_RED]    = clogger_ColorRGB(200,  70,  90);
-
-	// Our custom colors
-	cafe_pallete.colors[COL_BROWN]  = clogger_ColorRGB(160, 120,  50);
-	cafe_pallete.colors[COL_ORANGE] = clogger_ColorRGB(200, 160,  60);
-
-	clogger_setColorPalette(cafe_pallete);
-	clogger_init();
-}
-
-
-
 /**
  * Main is here used to run \ref var tests
  */
 int main() {
-	setCafeColorPallete();
+
+	// set cafe color palletes
+	clogger_ColorPalette cafe_pallete;
+	cafe_pallete.colors[COL_WHITE] = clogger_ColorRGB(180, 170, 150);
+	cafe_pallete.colors[COL_GREEN] = clogger_ColorRGB(130, 160, 100);
+	cafe_pallete.colors[COL_YELLOW] = clogger_ColorRGB(180, 200, 70);
+	cafe_pallete.colors[COL_RED] = clogger_ColorRGB(200, 70, 90);
+	cafe_pallete.colors[COL_BROWN] = clogger_ColorRGB(160, 120, 50);
+	cafe_pallete.colors[COL_ORANGE] = clogger_ColorRGB(200, 160, 60);
+	clogger_setColorPalette(cafe_pallete);
+	clogger_init();
+
 	clogger_log("==== Cafe color logger tests: ===========\n", COL_WHITE, false);
 	clogger_log("  some long message here? ", COL_WHITE, false);
 	clogger_log("more here ", COL_BROWN, false);
@@ -68,12 +61,12 @@ int main() {
 	clogger_log("  DummyError  : Oops something went wrong!\n", COL_RED, false);
 	for (int i = 0; i <= 30; i++) {
 		clogger_progress("  dummy progress...", i, 30);
-		sleep(100);
+		sleep(10);
 	} printf("\n");
 	clogger_log("=========================================\n", COL_WHITE, false);
 	printf("\n");
 
-	bool failed = false;
+	bool tests_failed = false;
 
 	// basic encoding and decoding of values
 	TEST_ASSERT(AS_BOOL(VAR_BOOL(false)) == false);
@@ -89,8 +82,13 @@ int main() {
 		var ans = VAR_INT(42);
 		double sum = AS_NUM(pi) + AS_INT(ans);
 		TEST_ASSERT(sum == (3.14 + 42));
+
+		pi = ADD_CONST(pi);
+		TEST_ASSERT(IS_CONST(pi));
+		pi = REMOVE_CONST(pi);
+		TEST_ASSERT(!IS_CONST(pi));
 	}
-	if (!failed) clogger_logfSuccess("ALL TESTS PASSED\n");
+	if (!tests_failed) clogger_logfSuccess("ALL TESTS PASSED\n");
 
 	if (_isatty(_fileno(stdout)))
 		getchar(); // pause.
