@@ -23,8 +23,7 @@
 
 /** __STDC_LIMIT_MACROS and __STDC_CONSTANT_MACROS are a workaround to
  * allow C++ programs to use stdint.h macros specified in the C99
- * standard that aren't in the C++ standard
- */
+ * standard that aren't in the C++ standard */
 #define __STDC_LIMIT_MACROS
 #include <stdint.h>
 
@@ -33,8 +32,7 @@
 
 /** To use dynamic variably-sized struct with a tail array add an array at the
  * end of the struct with size \ref DYNAMIC_TAIL_ARRAY. This method was a
- * legacy standard called "struct hack".
-*/
+ * legacy standard called "struct hack". */
 #if __STDC_VERSION__ >= 199901L
   /** for std >= c99  it's just `arr[]` */
   #define DYNAMIC_TAIL_ARRAY
@@ -43,8 +41,7 @@
 #endif
 
 /** Nan-Tagging could be disable for debugging/portability purposes. 
- * To disable define `VAR_NAN_TAGGING 0`, otherwise it defaults to Nan-Tagging
- */
+ * To disable define `VAR_NAN_TAGGING 0`, otherwise it defaults to Nan-Tagging */
 #ifndef VAR_NAN_TAGGING
   #define VAR_NAN_TAGGING 1
 #endif
@@ -247,8 +244,7 @@ static inline double var_varToDouble(var value) {
 }
 
 /** The `var_` prefix in the types are for namespace. Defining 
- * USING_NAMESPACE_VAR will remote all `var_` prefix from the types.
-*/
+ * USING_NAMESPACE_VAR will remote all `var_` prefix from the types. */
 #ifdef USING_NAMESPACE_CAFE
   #define _REMOVE_VAR_PREFIX(type) typedef var_##type type
     _REMOVE_VAR_PREFIX(String);
