@@ -6,20 +6,21 @@
 #ifndef clogger_H
 #define clogger_H
 
-/** Cafe single header color logger library
+/** @file
+ * Single header console color logger library
  *
- * // define imlpementation only a single *.c source file
- * #define CLOGGER_IMPLEMENT
- * #include "clogger.h"
+ * USAGE:
+ *     // define imlpementation only a single *.c source file like this
+ *     #define CLOGGER_IMPLEMENT
+ *     #include "clogger.h"
  *
  * You should call `clogger_init();` before any of your calling logging calls.
  * You can define your own pallete with `clogger_ColorPalette` and apply it
  * from `clogger_setColorPalette(your_pallete)` function. There is a list of 
- * public API functions declared. `clogger_iColor` is just a 8bit unsigned
- * integer value which between 0 and `PALLETE_MAX_SIZE`, for default values
- * use CLOGGER_COL_WHITE, CLOGGER_COL_GREEN, ... If you can use your own values
- * if you've defined your own pallete. For examples see the implementation in
- * `test.c`
+ * public API functions declared. `clogger_iColor` is just a 8 bit unsigned
+ * integer value which, first 4 bits represent background and last 4 bits
+ * represent forground. COL_FG | (COL_BG << 4). You can define your won
+ * pallete. For examples see the implementation in `test.c`.
 */
 
 #include <stdbool.h>
@@ -27,17 +28,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-/** Default color needed for basic logging
-*/
-#define CLOGGER_COL_DONTUSE 0
-#define CLOGGER_COL_WHITE   1
-#define CLOGGER_COL_GREEN   2
-#define CLOGGER_COL_YELLOW  3
-#define CLOGGER_COL_RED     4
-
-/** supported max 16 different colors. First four colors must be
- * white, green, yellow, red (for logging error, warning, etc.)
-*/
+/** supported max 16 different colors to maintain compatibility in windows */
 #define PALLETE_MAX_SIZE 16
 
 #define CLOGGER_PROGRESS_BAR 30
@@ -48,8 +39,8 @@ typedef struct clogger_ColorPalette clogger_ColorPalette;
 typedef uint8_t clogger_iColor;
 
 clogger_Color clogger_ColorRGB(uint8_t r, uint8_t g, uint8_t b);
+clogger_ColorPalette clogger_newPallete();
 
-clogger_ColorPalette clogger_getDefaultPallete();
 void clogger_setColorPalette(clogger_ColorPalette pallate);
 void clogger_init();
 
@@ -64,8 +55,7 @@ void clogger_logfError(const char* fmt, ...);
 
 void clogger_progress(const char* msg, int done, int total);
 
-/** Define our own platform macro
- */
+/** Define our own platform macro */
 #ifndef _PLATFORM_DEFINED_
   #define _PLATFORM_DEFINED_
   #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
@@ -92,36 +82,51 @@ void clogger_progress(const char* msg, int done, int total);
   #endif
 #endif // _PLATFORM_DEFINED_
 
-/** The buffer size for vnsprintf(...)
- */
+/** The buffer size for vnsprintf(...) */
 #ifndef VSNPRINTF_BUFF_SIZE
 #define VSNPRINTF_BUFF_SIZE 8192
 #endif
 
-/** The platform independant color values
- */
+/** The platform independant color values */
 struct clogger_Color {
 	uint8_t r, g, b;
+};
+
+typedef enum clogger_Colors clogger_Colors;
+enum clogger_Colors {
+	CLOGGER_COL_BLACK  = 0,
+	CLOGGER_COL_WHITE  = 7,
+	CLOGGER_COL_GREEN  = 2,
+	CLOGGER_COL_YELLOW = 14,
+	CLOGGER_COL_RED    = 12,
+
+	CLOGGER_COL_CUSTOM_1 = 1,
+	CLOGGER_COL_CUSTOM_2 = 3,
+	CLOGGER_COL_CUSTOM_3 = 4,
+	CLOGGER_COL_CUSTOM_4 = 5,
+	CLOGGER_COL_CUSTOM_5 = 6,
+	CLOGGER_COL_CUSTOM_6 = 8,
+	CLOGGER_COL_CUSTOM_7 = 9,
+	CLOGGER_COL_CUSTOM_8 = 10,
+	CLOGGER_COL_CUSTOM_9 = 11,
+	CLOGGER_COL_CUSTOM_10 = 13,
+	CLOGGER_COL_CUSTOM_11 = 15,
 };
 
 struct clogger_ColorPalette  {
 	clogger_Color colors[PALLETE_MAX_SIZE];
 };
 
-
 #endif // clogger_H
 
 #ifdef CLOGGER_IMPLEMENT
 
-/** The default color palette of cprint (global)
-*/
+/** The default color palette of cprint (global) */
 clogger_ColorPalette* g_clogger_color_pallete;
-
-//void clogger_progress(const char* msg, int done, int total)
 
 void clogger_init() {
 	if (g_clogger_color_pallete == NULL) {
-		clogger_setColorPalette(clogger_getDefaultPallete());
+		clogger_setColorPalette(clogger_newPallete());
 	}
 }
 
@@ -170,22 +175,7 @@ void clogger_logfVA(const char* fmt, va_list args, bool _stderr, clogger_iColor 
 	clogger_log((const char*)buf, color, _stderr);
 }
 
-clogger_ColorPalette clogger_getDefaultPallete() {
-	static clogger_ColorPalette s_pallete = { {
-		/* _COL_DONTUSE_ */ { 0, 0, 0 },
-
-		/* COL_WHITE  */ { 255, 255, 255 },
-		/* COL_GREEN  */ {   0, 255,   0 },
-		/* COL_YELLOW */ { 255, 255,   0 },
-		/* COL_RED    */ { 255,   0,   0 },
-		
-		/* _COL_MAX_  */
-	}};
-	return s_pallete;
-}
-
-/** for other terminal emulator which support ANSI (git base, mysys, putty, ...)
-*/
+/** for other terminal emulator which support ANSI (git base, mysys, putty, ...) */
 void cclogger_logANSI(const char* message, clogger_iColor color, bool _stderr) {
 	// \033[38;2;R;G;Bm msg \033[0;00m
 	assert(g_clogger_color_pallete != NULL && "did you forgot to call clogger_init()");
@@ -231,11 +221,32 @@ void clogger_progress(const char* msg, int done, int total) {
 
 #include <direct.h>
 
+clogger_ColorPalette clogger_newPallete() {
+	clogger_ColorPalette pallete;
+#ifndef __TINYC__
+	if (_isatty(_fileno(stdout))) {
+		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		CONSOLE_SCREEN_BUFFER_INFOEX info;
+		info.cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX);
+
+		GetConsoleScreenBufferInfoEx(hConsole, &info);
+		for (int i = 1; i < PALLETE_MAX_SIZE; i++) {
+			COLORREF color = info.ColorTable[i];
+			pallete.colors[i].r = GetRValue(color);
+			pallete.colors[i].g = GetGValue(color);
+			pallete.colors[i].b = GetBValue(color);
+		}
+	}
+#endif
+
+	return pallete;
+}
+
 void clogger_setColorPalette(clogger_ColorPalette pallete) {
 	static clogger_ColorPalette s_pallete;
 	s_pallete = pallete;
 	g_clogger_color_pallete = &s_pallete;
-
+#ifndef __TINYC__
 	if (_isatty(_fileno(stdout))) {
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 		CONSOLE_SCREEN_BUFFER_INFOEX info;
@@ -250,6 +261,7 @@ void clogger_setColorPalette(clogger_ColorPalette pallete) {
 		}
 		SetConsoleScreenBufferInfoEx(hConsole, &info);
 	}
+#endif
 	// else we use ANSI color codes
 }
 

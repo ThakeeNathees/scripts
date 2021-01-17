@@ -3,12 +3,18 @@
  *  Licensed under: MIT License
  */
 
+#include <stdio.h>
+#include <assert.h>
+
+#define VAR_IMPLEMENT
 #include "var.h"
 #define CLOGGER_IMPLEMENT
 #include "clogger.h"
-
-#include <stdio.h>
-#include <assert.h>
+#define UTF8_IMPLEMENT
+#include "utf8.h"
+#pragma execution_character_set("utf-8")
+#define BUFFER_IMPLEMENT
+#include "buffer.h"
 
 #define TEST_ASSERT(expr)                                                         \
   do {													                          \
@@ -25,24 +31,23 @@
   #error "define sleep here for dummy progress"
 #endif
 
+/** Remap the colors */
 enum CafeColors {
-	_COL_DONTUSE_ = 0,
-	COL_WHITE = 1,
-	COL_GREEN = 2,
-	COL_YELLOW = 3,
-	COL_RED = 4,
+	COL_BLACK = CLOGGER_COL_BLACK,
+	COL_WHITE = CLOGGER_COL_WHITE,
+	COL_GREEN = CLOGGER_COL_GREEN,
+	COL_YELLOW = CLOGGER_COL_YELLOW,
+	COL_RED = CLOGGER_COL_RED,
 
-	COL_BROWN,
-	COL_ORANGE,
+	COL_BROWN = CLOGGER_COL_CUSTOM_1,
+	COL_ORANGE = CLOGGER_COL_CUSTOM_2,
 };
 
-/**
- * Main is here used to run \ref var tests
- */
+/** Main is here used to run \ref var tests */
 int main() {
 
 	// set cafe color palletes
-	clogger_ColorPalette cafe_pallete;
+	clogger_ColorPalette cafe_pallete = clogger_newPallete();
 	cafe_pallete.colors[COL_WHITE] = clogger_ColorRGB(180, 170, 150);
 	cafe_pallete.colors[COL_GREEN] = clogger_ColorRGB(130, 160, 100);
 	cafe_pallete.colors[COL_YELLOW] = clogger_ColorRGB(180, 200, 70);
@@ -88,8 +93,11 @@ int main() {
 		pi = REMOVE_CONST(pi);
 		TEST_ASSERT(!IS_CONST(pi));
 	}
-	if (!tests_failed) clogger_logfSuccess("ALL TESTS PASSED\n");
 
+	/* UTF8 TESTS */
+	// TODO:
+
+	if (!tests_failed) clogger_logfSuccess("ALL TESTS PASSED\n");
 	if (_isatty(_fileno(stdout)))
 		getchar(); // pause.
 

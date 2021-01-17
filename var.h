@@ -243,18 +243,8 @@ static inline double var_varToDouble(var value) {
 #endif // VAR_NAN_TAGGING
 }
 
-/** The `var_` prefix in the types are for namespace. Defining 
- * USING_NAMESPACE_VAR will remote all `var_` prefix from the types. */
-#ifdef USING_NAMESPACE_CAFE
-  #define _REMOVE_VAR_PREFIX(type) typedef var_##type type
-    _REMOVE_VAR_PREFIX(String);
-    _REMOVE_VAR_PREFIX(Object);
-    _REMOVE_VAR_PREFIX(Object_Type);
-    _REMOVE_VAR_PREFIX(DoubleBits);
-
-    _REMOVE_VAR_PREFIX(var_to_double);
-    _REMOVE_VAR_PREFIX(double_to_var);
-  #undef _REMOVE_VAR_PREFIX
-#endif // USING_NAMESPACE_VAR
-
 #endif // VAR_H
+
+#ifdef VAR_IMPLEMENT
+
+#endif // VAR_IMPLEMENT
