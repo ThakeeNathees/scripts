@@ -23,6 +23,7 @@
  * pallete. For examples see the implementation in `test.c`.
 */
 
+#include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
