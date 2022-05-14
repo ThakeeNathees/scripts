@@ -1,5 +1,15 @@
 ﻿
-#error "WIP"
+// Doc: [VT100](https://en.wikipedia.org/wiki/VT100) escape squence support only.
+// 
+// See: https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
+
+
+/*
+* direction.
+* title and restore it.
+*
+*
+*/
 
 #include <ctype.h>
 
@@ -17,46 +27,39 @@
 
 // Compiler warnings.
 #ifdef _MSC_VER
-  #pragma warning(disable:6308)
+#pragma warning(disable:6308)
 #endif
 
 
 // Platform detection macros.
 #ifdef _WIN32
-  #define TUI_SYS_WINDOWS
+#define TUI_SYS_WINDOWS
 #else
-  #define TUI_SYS_NIX
+#define TUI_SYS_NIX
 #endif
 
 
 // Platform specific includes.
 #if defined(TUI_SYS_WINDOWS)
-  #include <Windows.h>
+#include <Windows.h>
 
 #elif defined(TUI_SYS_NIX)
-  #include <termios.h>
-  #include <sys/ioctl.h>
+#include <termios.h>
+#include <sys/ioctl.h>
+#include <signal.h>
 #endif
 
 
 // We define TUI_CC_VC_TCC for MSVC, TCC running on windows. They does't
 // provide some POSIX compliant headres like <unistd.h>, <dirent.h>, etc.
 #if defined(_MSC_VER) || (defined(_WIN32) && defined(__TINYC__))
-  #define TUI_CC_VC_TCC
-#endif
-
-
-#if defined(TUI_CC_VC_TCC)
-  #include <io.h>
-  #define isatty _isatty
-  #define fileno _fileno
-#else
-  #include <unistd.h>
+#define TUI_CC_VC_TCC
 #endif
 
 
 #define TUI_REALLOC(ptr, size) realloc(ptr, size)
 #define TUI_FREE(ptr) free(ptr)
+
 
 // Maximum buffer size for sprintf to write an integer to it.
 // INT_MAX = 10 digits, '+/-' = 1 digit, '\0' = 1 digit.
@@ -107,96 +110,123 @@ typedef enum {
 
   TUI_KC_UNKNOWN = 0,
 
-  TUI_KC_ENTER = '\r',
-
   TUI_KC_0 = '0',
-  TUI_KC_1,
-  TUI_KC_2,
-  TUI_KC_3,
-  TUI_KC_4,
-  TUI_KC_5,
-  TUI_KC_6,
-  TUI_KC_7,
-  TUI_KC_8,
-  TUI_KC_9,
+  TUI_KC_1 = '1',
+  TUI_KC_2 = '2',
+  TUI_KC_3 = '3',
+  TUI_KC_4 = '4',
+  TUI_KC_5 = '5',
+  TUI_KC_6 = '6',
+  TUI_KC_7 = '7',
+  TUI_KC_8 = '8',
+  TUI_KC_9 = '9',
 
   TUI_KC_A = 'A',
-  TUI_KC_B,
-  TUI_KC_C,
-  TUI_KC_D,
-  TUI_KC_E,
-  TUI_KC_F,
-  TUI_KC_G,
-  TUI_KC_H,
-  TUI_KC_I,
-  TUI_KC_J,
-  TUI_KC_K,
-  TUI_KC_L,
-  TUI_KC_M,
-  TUI_KC_N,
-  TUI_KC_O,
-  TUI_KC_P,
-  TUI_KC_Q,
-  TUI_KC_R,
-  TUI_KC_S,
-  TUI_KC_T,
-  TUI_KC_U,
-  TUI_KC_V,
-  TUI_KC_W,
-  TUI_KC_X,
-  TUI_KC_Y,
-  TUI_KC_Z,
+  TUI_KC_B = 'B',
+  TUI_KC_C = 'C',
+  TUI_KC_D = 'D',
+  TUI_KC_E = 'E',
+  TUI_KC_F = 'F',
+  TUI_KC_G = 'G',
+  TUI_KC_H = 'H',
+  TUI_KC_I = 'I',
+  TUI_KC_J = 'J',
+  TUI_KC_K = 'K',
+  TUI_KC_L = 'L',
+  TUI_KC_M = 'M',
+  TUI_KC_N = 'N',
+  TUI_KC_O = 'O',
+  TUI_KC_P = 'P',
+  TUI_KC_Q = 'Q',
+  TUI_KC_R = 'R',
+  TUI_KC_S = 'S',
+  TUI_KC_T = 'T',
+  TUI_KC_U = 'U',
+  TUI_KC_V = 'V',
+  TUI_KC_W = 'W',
+  TUI_KC_X = 'X',
+  TUI_KC_Y = 'Y',
+  TUI_KC_Z = 'Z',
 
-  TUI_KC_END = 0x23,
-  TUI_KC_HOME = 0x24,
-  TUI_KC_LEFT = 0x25,
-  TUI_KC_UP = 0x26,
-  TUI_KC_RIGHT = 0x27,
-  TUI_KC_DOWN = 0x28,
-  TUI_KC_INSERT = 0x2D,
-  TUI_KC_DELETE = 0x2E,
 
-  TUI_KC_F1 = 0x70,
-  TUI_KC_F2 = 0x71,
-  TUI_KC_F3 = 0x72,
-  TUI_KC_F4 = 0x73,
-  TUI_KC_F5 = 0x74,
-  TUI_KC_F6 = 0x75,
-  TUI_KC_F7 = 0x76,
-  TUI_KC_F8 = 0x77,
-  TUI_KC_F9 = 0x78,
-  TUI_KC_F10 = 0x79,
-  TUI_KC_F11 = 0x7A,
-  TUI_KC_F12 = 0x7B,
-  TUI_KC_F13 = 0x7C,
-  TUI_KC_F14 = 0x7D,
-  TUI_KC_F15 = 0x7E,
-  TUI_KC_F16 = 0x7F,
-  TUI_KC_F17 = 0x80,
-  TUI_KC_F18 = 0x81,
-  TUI_KC_F19 = 0x82,
-  TUI_KC_F20 = 0x83,
-  TUI_KC_F21 = 0x84,
-  TUI_KC_F22 = 0x85,
-  TUI_KC_F23 = 0x86,
-  TUI_KC_F24 = 0x87,
+  //TUI_KC_BANG = '!',
+  //TUI_KC_AT = '@',
+  //TUI_KC_HASH = '#',
+  //TUI_KC_DOLLAR = '$',
+  //TUI_KC_PERCENT = '%',
+  //TUI_KC_CARET = '^',
+  //TUI_KC_AMPERSANT = '&',
+  //TUI_KC_STAR = '*',
+  //TUI_KC_LEFT_PAREN = '(',
+  //TUI_KC_RIGHT_PAREN = ')',
+  //TUI_KC_PLUS = '+',
+  //TUI_KC_MINUS = '-',
+  //TUI_KC_LEFT_SQUARE_BRACKET = '[',
+  //TUI_KC_RIGHT_SQUARE_BRACKET = ']',
+  //TUI_KC_LEFT_CURLY_BRACKET = '{',
+  //TUI_KC_RIGHT_CURLY_BRACKET = '}',
+  //TUI_KC_BACKSLASH = '\\',
+  //TUI_KC_SLASH = '/',
+  //TUI_KC_DOUBLE_QUOTE = '"',
+  //TUI_KC_SINGLE_QUOTE = '\'',
+  //TUI_KC_COMMA = ',',
+  //TUI_KC_DOT = '.',
+  //TUI_KC_COLON = ':',
+  //TUI_KC_SEMICOLON = ';',
+  //TUI_KC_LESS_THAN = '<',
+  //TUI_KC_EQUAL = '=',
+  //TUI_KC_GREATER_THAN = '>',
+  //TUI_KC_QUESTION_MARK = '?',
+  //TUI_KC_UNDERSCORE = '_',
+  //TUI_KC_BACKTICK = '`',
+  //TUI_KC_VERTICAL_BAR = '|',
+  //TUI_KC_TILDE = '~',
+
+  TUI_KC_ESC,
+  TUI_KC_ENTER,
+  TUI_KC_SPACE,
+  TUI_KC_HOME,
+  TUI_KC_END,
+  TUI_KC_PAGEUP,
+  TUI_KC_PAGEDOWN,
+  TUI_KC_LEFT,
+  TUI_KC_UP,
+  TUI_KC_RIGHT,
+  TUI_KC_DOWN,
+  TUI_KC_INSERT,
+  TUI_KC_DELETE,
+  TUI_KC_BACKSPACE,
+  TUI_KC_TAB,
+
+  TUI_KC_F1,
+  TUI_KC_F2,
+  TUI_KC_F3,
+  TUI_KC_F4,
+  TUI_KC_F5,
+  TUI_KC_F6,
+  TUI_KC_F7,
+  TUI_KC_F8,
+  TUI_KC_F9,
+  TUI_KC_F10,
+  TUI_KC_F11,
+  TUI_KC_F12,
 
 } tui_KeyCode;
 
 
 typedef enum {
-  TUI_KM_NONE  = 0,
-  TUI_KM_CTRL  = 1 << 0,
-  TUI_KM_ALT   = 1 << 1,
-  TUI_KM_SHIFT = 1 << 2,
-} tui_KeyModifiers;
+  TUI_MD_NONE = 0,
+  TUI_MD_CTRL = 0b001,
+  TUI_MD_ALT = 0b010,
+  TUI_MD_SHIFT = 0b100,
+} tui_Modifiers;
 
 
 typedef enum {
   TUI_MB_UNKNOWN = 0,
-  TUI_MB_LEFT,
-  TUI_MB_RIGHT,
-  TUI_MB_MIDDLE,
+  TUI_MB_LEFT = 1,
+  TUI_MB_MIDDLE = 2,
+  TUI_MB_RIGHT = 3,
 } tui_MouseBtn;
 
 
@@ -215,14 +245,15 @@ typedef enum {
 typedef struct {
   tui_KeyCode keycode;
   char ascii;
-  tui_KeyModifiers modifiers;
+  tui_Modifiers modifiers;
 } tui_EventKey;
 
 
 typedef struct {
   tui_MouseBtn button;
-  tui_Vec2 position;
+  int x, y;
   tui_Direction scroll;
+  tui_Modifiers modifiers;
 } tui_EventMouse;
 
 
@@ -236,11 +267,15 @@ typedef struct {
 } tui_Event;
 
 
+typedef void (*tui_eventCallback) (tui_Event*);
+
+
 typedef struct {
   void* user_data;
   bool use_alternative_buffer;
   bool hide_cursor;
   bool capture_input_events;
+  tui_eventCallback callback;
 } tui_Config;
 
 
@@ -257,6 +292,7 @@ typedef struct {
 
   int event_buff_count;
   tui_Event event_buff[TUI_EVENT_BUFF_SIZE];
+  tui_Vec2 screensize;
 
   tui_Config config;
   const char* err; // Contain error message if any.
@@ -266,7 +302,6 @@ typedef struct {
 /*****************************************************************************/
 /* TUI PUBLIC API                                                            */
 /*****************************************************************************/
-
 
 void tui_bufferInit(tui_Buffer* buff);
 void tui_bufferClean(tui_Buffer* buff);
@@ -282,6 +317,7 @@ void tui_eraseTillEol(tui_Buffer* buff);
 
 tui_Config tui_newConfig();
 void tui_initialize(tui_Config* config);
+void tui_run();
 void tui_finalize(void);
 
 bool tui_isatty();
@@ -297,6 +333,14 @@ void tui_showCursor();
 /*****************************************************************************/
 /* TUI IMPLEMENTATION                                                        */
 /*****************************************************************************/
+
+#if defined(TUI_CC_VC_TCC)
+#include <io.h>
+#define isatty _isatty
+#define fileno _fileno
+#else
+#include <unistd.h>
+#endif
 
 // _CTRL_KEY('a') or _CTRL_KEY('A') == Ctrl+A
 #define _CTRL_KEY(k) ((k) & 0x1f)
@@ -323,14 +367,22 @@ void tui_initialize(tui_Config* config) {
   assert(tui_isatty(NULL));
   memset(&_ctx, 0, sizeof(_ctx));
   _ctx.config = (config != NULL) ? *config : tui_newConfig();
+
   _initTerminal();
+  _ctx.screensize = tui_getSize();
+
   if (_ctx.config.use_alternative_buffer) _newScreenBuffer();
   if (_ctx.config.hide_cursor) tui_hideCursor();
+
+  // Clear screen.
+  fprintf(stdout, "\x1b[2J\x1b[3J\x1b[1;1H");
+
   atexit(tui_finalize);
 }
 
 
 void tui_finalize(void) {
+  if (_ctx.config.hide_cursor) tui_showCursor();
   _restoreTerminal();
   if (_ctx.config.use_alternative_buffer) _restoreScreenBuffer();
   if (_ctx.config.hide_cursor) tui_showCursor();
@@ -363,41 +415,52 @@ static void _buffSfhit(tui_Buffer* buff, uint32_t count) {
 
 // FIXME: remove this.
 static void _printEvent(tui_Event* event) {
+  printf("\n");
+
   switch (event->type) {
-    case TUI_ET_UNKNOWN:
-      printf("event.unknown\n");
-      return;
+  case TUI_ET_UNKNOWN:
+    printf("event.unknown\x1b[K\n");
+    return;
 
-    case TUI_ET_KEY_DOWN: {
-      printf("event.key_down\n");
-      printf("event.keycode = %i\n", event->key.keycode);
-      if (!iscntrl(event->key.keycode)) {
-        printf("event.ascii = %c\n", event->key.ascii);
-      }
-      return;
+  case TUI_ET_KEY_DOWN:
+  {
+    printf("event.key_down\x1b[K\n");
+    printf("event.keycode = %i\x1b[K\n", event->key.keycode);
+    if (!iscntrl(event->key.ascii)) {
+      printf("event.ascii = %c\x1b[K\n", event->key.ascii);
     }
 
-    case TUI_ET_RESIZE: {
-      printf("event.resize\n");
-      printf("event.size = (%i, %i)\n", event->resize.w, event->resize.h);
-      return;
-    }
+    // modifiers.
+    printf("event.modifiers = %i\x1b[K\n", event->key.modifiers);
 
-    case TUI_ET_MOUSE_DOWN:
-      printf("event.mouse_down\n");
-      return;
-    case TUI_ET_MOUSE_UP:
-      printf("event.mouse_up\n");
-      return;
-    case TUI_ET_MOUSE_MOVE:
-      printf("event.mouse_move\n");
-      return;
-    case TUI_ET_MOUSE_DRAG:
-      printf("event.drag\n");
-      return;
-    case TUI_ET_MOUSE_SCROLL:
-      printf("event.scroll\n");
-      return;
+    return;
+  }
+
+  case TUI_ET_RESIZE:
+  {
+    printf("event.resize\x1b[K\n");
+    printf("event.size = (%i, %i)\x1b[K\n", event->resize.w, event->resize.h);
+    return;
+  }
+
+  case TUI_ET_MOUSE_DOWN:
+    printf("event.mouse_down %i %i\x1b[K\n", event->mouse.x, event->mouse.y);
+    return;
+  case TUI_ET_MOUSE_UP:
+    printf("event.mouse_up %i %i\x1b[K\n", event->mouse.x, event->mouse.y);
+    return;
+  case TUI_ET_MOUSE_MOVE:
+    printf("event.mouse_move %i %i\x1b[K\n", event->mouse.x, event->mouse.y);
+    return;
+  case TUI_ET_MOUSE_DRAG:
+    printf("event.drag %i %i\x1b[K\n", event->mouse.x, event->mouse.y);
+    return;
+  case TUI_ET_MOUSE_SCROLL:
+  {
+    const char* dir = (event->mouse.scroll == TUI_D_UP) ? "up" : "down";
+    printf("event.scroll %i %i dir = %s\x1b[K\n", event->mouse.x, event->mouse.y, dir);
+    return;
+  }
   }
 }
 
@@ -493,7 +556,7 @@ void tui_fmt(tui_Buffer* buff, const char* fmt, ...) {
 
 
 void tui_clear(tui_Buffer* buff) {
-  tui_string(buff, "\x1b[H\x1b[J");
+  tui_string(buff, "\x1b[2J\x1b[H");
 }
 
 
@@ -597,8 +660,8 @@ tui_Vec2 tui_getSize() {
 #if defined(TUI_SYS_WINDOWS)
   CONSOLE_SCREEN_BUFFER_INFO binfo;
   GetConsoleScreenBufferInfo(_ctx.h_stdout, &binfo);
-  size.x = binfo.dwSize.X;
-  size.y = binfo.dwSize.Y;
+  size.w = binfo.srWindow.Right - binfo.srWindow.Left + 1;
+  size.y = binfo.srWindow.Bottom - binfo.srWindow.Top + 1;
 
 #elif defined(TUI_SYS_NIX)
   struct winsize wsize;
@@ -679,7 +742,7 @@ void tui_setPosition(tui_Vec2 pos) {
 
 
 void tui_move(int n, tui_Direction direction) {
-  fprintf(stdout, "\x1b[%i%c", n, (char) direction);
+  fprintf(stdout, "\x1b[%i%c", n, (char)direction);
 }
 
 
@@ -707,6 +770,7 @@ static inline void _restoreScreenBuffer() {
 // Platform specific _initTerminal() implementation.
 #if defined(TUI_SYS_WINDOWS)
 
+
 static void _initTerminal() {
   _ctx.h_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
   GetConsoleMode(_ctx.h_stdout, &_ctx.outmode);
@@ -724,6 +788,19 @@ static void _initTerminal() {
 }
 
 #elif defined(TUI_SYS_NIX)
+
+static void _resizeHandler(int sig) {
+  _ctx.screensize = tui_getSize();
+
+  if (_ctx.config.callback != NULL) {
+    tui_Event event;
+    memset(&event, 0, sizeof(tui_Event));
+    event.type = TUI_ET_RESIZE;
+    event.resize = _ctx.screensize;
+    _ctx.config.callback(&event);
+  }
+}
+
 static void _initTerminal() {
 
   // Backup the older termios.
@@ -735,6 +812,7 @@ static void _initTerminal() {
   struct termios tio;
   tcgetattr(fileno(stdin), &tio);
 
+  signal(SIGWINCH, _resizeHandler);
 
   // References:
   // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html#turn-off-ctrl-c-and-ctrl-z-signals
@@ -759,21 +837,170 @@ static void _initTerminal() {
 #endif
 
 
-
 #if defined(TUI_SYS_WINDOWS)
+
 static void _restoreTerminal() {
   SetConsoleMode(_ctx.h_stdout, _ctx.outmode);
   SetConsoleMode(_ctx.h_stdin, _ctx.inmode);
 }
 
 #elif defined(TUI_SYS_NIX)
+
 static void _restoreTerminal() {
   tui_bufferClean(&_ctx.input_buff);
   tcsetattr(fileno(stdin), TCSAFLUSH, &(_ctx.tio));
   fprintf(stdout, "\x1b[?1003l\x1b[?1006l\x1b[?25h");
 }
+
 #endif
 
+
+#if defined(TUI_SYS_WINDOWS)
+
+// Returns false if the key should be ignored as an event (ex: shift, ctrl, ...).
+static bool _toTuiKeyCode(WORD vk, tui_KeyCode * kc) {
+
+  if (0x30 <= vk && vk <= 0x39) { *kc = (tui_KeyCode)TUI_KC_0 + (vk - 0x30);; return true; }
+  if (0x60 <= vk && vk <= 0x69) { *kc = (tui_KeyCode)TUI_KC_0 + (vk - 0x60); return true; }
+  if (0x41 <= vk && vk <= 0x5a) { *kc = (tui_KeyCode)TUI_KC_A + (vk - 0x41); return true; }
+  if (0x70 <= vk && vk <= 0x7b) { *kc = (tui_KeyCode)TUI_KC_F1 + (vk - 0x70); return true; }
+
+  // Note that shift, ctrl, alt keys are returned as TUI_KC_UNKNOWN since *nix systems
+  // don't support them.
+  switch (vk) {
+  case VK_BACK: *kc = TUI_KC_BACKSPACE; break;
+  case VK_TAB: *kc = TUI_KC_TAB; break;
+  case VK_RETURN: *kc = TUI_KC_ENTER; break;
+  case VK_ESCAPE: *kc = TUI_KC_ESC; break;
+  case VK_SPACE: *kc = TUI_KC_SPACE; break;
+  case VK_PRIOR: *kc = TUI_KC_PAGEUP; break;
+  case VK_NEXT: *kc = TUI_KC_PAGEDOWN; break;
+  case VK_END: *kc = TUI_KC_END; break;
+  case VK_HOME: *kc = TUI_KC_HOME; break;
+  case VK_LEFT: *kc = TUI_KC_LEFT; break;
+  case VK_RIGHT: *kc = TUI_KC_RIGHT; break;
+  case VK_UP: *kc = TUI_KC_UP; break;
+  case VK_DOWN: *kc = TUI_KC_DOWN; break;
+  case VK_INSERT: *kc = TUI_KC_INSERT; break;
+  case VK_DELETE: *kc = TUI_KC_DELETE; break;
+
+  case VK_SHIFT:
+  case VK_CONTROL:
+  case VK_MENU:
+  case VK_PAUSE:
+  case VK_CAPITAL: //< Capslock.
+    return false;
+  }
+
+  return true;
+}
+
+static bool _readEvent(tui_Event * event) {
+
+  memset(event, 0, sizeof(tui_Event));
+  event->type = TUI_ET_UNKNOWN;
+
+  // Dispatch prevous events first to make room for the newer ones.
+  if (_ctx.event_buff_count >= TUI_EVENT_BUFF_SIZE) {
+    return false;
+  }
+
+  //tui_Event* event = &_ctx.event_buff[_ctx.event_buff_count];
+  //event->type = TUI_ET_UNKNOWN;
+
+  DWORD count;
+  if (!GetNumberOfConsoleInputEvents(_ctx.h_stdin, &count)) {
+    _ctx.err = "GetNumberOfConsoleInputEvents() failed.";
+    return false;
+  }
+
+  if (count == 0) return false;
+
+  INPUT_RECORD ir;
+  if (!ReadConsoleInput(_ctx.h_stdin, &ir, 1, &count)) {
+    _ctx.err = "ReadConsoleInput() failed.";
+    return false;
+  }
+
+  switch (ir.EventType) {
+  case KEY_EVENT:
+  {
+    KEY_EVENT_RECORD* ker = &ir.Event.KeyEvent;
+
+    // Key up event not available in *nix systems. So we're ignoring here as well.
+    if (!ker->bKeyDown) return false;
+
+    if (!_toTuiKeyCode(ker->wVirtualKeyCode, &event->key.keycode)) return false;
+
+    event->type = TUI_ET_KEY_DOWN;
+    event->key.ascii = ker->uChar.AsciiChar;
+
+    if ((ker->dwControlKeyState & LEFT_ALT_PRESSED) || (ker->dwControlKeyState & RIGHT_ALT_PRESSED))
+      event->key.modifiers |= TUI_MD_ALT;
+    if ((ker->dwControlKeyState & LEFT_CTRL_PRESSED) || (ker->dwControlKeyState & RIGHT_CTRL_PRESSED))
+      event->key.modifiers |= TUI_MD_CTRL;
+    if (ker->dwControlKeyState & SHIFT_PRESSED)
+      event->key.modifiers |= TUI_MD_SHIFT;
+
+  } break;
+
+  case MOUSE_EVENT:
+  {
+
+    MOUSE_EVENT_RECORD* mer = &ir.Event.MouseEvent;
+
+    static bool pressed = false;
+
+    if (mer->dwEventFlags == 0) {
+      pressed = !pressed;
+      event->type = (pressed) ? TUI_ET_MOUSE_DOWN : TUI_ET_MOUSE_UP;
+
+    } else if (mer->dwEventFlags & MOUSE_MOVED) {
+      event->type = (pressed) ? TUI_ET_MOUSE_DRAG : TUI_ET_MOUSE_MOVE;
+
+    } else if (mer->dwEventFlags & MOUSE_WHEELED) {
+      event->type = TUI_ET_MOUSE_SCROLL;
+      event->mouse.scroll = (mer->dwButtonState & 0xFF000000) ? TUI_D_DOWN : TUI_D_UP;
+    }
+    // Note: dwEventFlags & DOUBLE_CLICK == is double click.
+
+    event->mouse.x = mer->dwMousePosition.X;
+    event->mouse.y = mer->dwMousePosition.Y;
+
+    // What if the mouse doesn't have the middle button and right button is the second button?.
+    if (mer->dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) event->mouse.button = TUI_MB_LEFT;
+    else if (mer->dwButtonState & FROM_LEFT_2ND_BUTTON_PRESSED) event->mouse.button = TUI_MB_MIDDLE;
+    else if (mer->dwButtonState & FROM_LEFT_3RD_BUTTON_PRESSED) event->mouse.button = TUI_MB_RIGHT;
+
+
+    if ((mer->dwControlKeyState & LEFT_ALT_PRESSED) || (mer->dwControlKeyState & RIGHT_ALT_PRESSED))
+      event->mouse.modifiers |= TUI_MD_ALT;
+    if ((mer->dwControlKeyState & LEFT_CTRL_PRESSED) || (mer->dwControlKeyState & RIGHT_CTRL_PRESSED))
+      event->mouse.modifiers |= TUI_MD_CTRL;
+    if (mer->dwControlKeyState & SHIFT_PRESSED)
+      event->mouse.modifiers |= TUI_MD_SHIFT;
+
+
+  } break;
+
+  case WINDOW_BUFFER_SIZE_EVENT:
+  {
+    WINDOW_BUFFER_SIZE_RECORD* wbs = &ir.Event.WindowBufferSizeEvent;
+    event->type = TUI_ET_RESIZE;
+    _ctx.screensize = tui_getSize();
+    event->resize = _ctx.screensize;
+  } break;
+
+  // Not handling as it's not available in *nix.
+  case MENU_EVENT:
+  case FOCUS_EVENT:
+    return false;
+  }
+
+  return true;
+}
+
+#elif defined(TUI_SYS_NIX)
 
 // Returns the length of an escape sequence.
 static int _escapeLength(const char* buff, uint32_t size) {
@@ -783,7 +1010,6 @@ static int _escapeLength(const char* buff, uint32_t size) {
     char c = buff[length++];
 
     if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || (c == '~')) {
-      printf("[el] -- %c\n", c);
       if (c == 'O' && length < size) {
         c = buff[length];
         if ((c >= 'A' && c <= 'D') || (c >= 'P' && c <= 'S') || c == 'F' || c == 'H') {
@@ -801,155 +1027,206 @@ static int _escapeLength(const char* buff, uint32_t size) {
   return length;
 }
 
-#if defined(TUI_SYS_WINDOWS)
 
-static void _ReadEvent(tui_Event* event) {
+static void _keyEvent(char c, tui_Event * event) {
+  event->type = TUI_ET_KEY_DOWN;
+  event->key.ascii = c;
 
-  memset(event, 0, sizeof(tui_Event));
-  event->type = TUI_ET_UNKNOWN;
+  // Note: Ctrl+M and <enter> both reads as '\r'.
+  if (c == '\r') { event->key.keycode = TUI_KC_ENTER; return; }
+  if (c == 127) { event->key.keycode = TUI_KC_BACKSPACE; return; }
+  if (c == 9) { event->key.keycode = TUI_KC_TAB; return; }
+  if (c == 32) { event->key.keycode = TUI_KC_SPACE; return; }
 
-  // Dispatch prevous events first to make room for the newer ones.
-  if (_ctx.event_buff_count >= TUI_EVENT_BUFF_SIZE) {
-    return;
+  event->key.keycode = (tui_KeyCode)c;
+
+  // Ctrl + key
+  if (1 <= c && c <= 26) {
+    event->key.modifiers |= TUI_MD_CTRL;
+    event->key.keycode = (tui_KeyCode)('A' + (c - 1));
+
+  } else if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9')) {
+    event->key.keycode = (tui_KeyCode)c;
+    if ('A' <= c && c <= 'Z') event->key.modifiers |= TUI_MD_SHIFT;
   }
+}
 
-  //tui_Event* event = &_ctx.event_buff[_ctx.event_buff_count];
-  //event->type = TUI_ET_UNKNOWN;
 
-  DWORD count;
-  if (!GetNumberOfConsoleInputEvents(_ctx.h_stdin, &count)) {
-    // ERROR:
-  }
+// Reference: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+static void _mouseEvent(const char* buff, uint32_t count, tui_Event * event) {
 
-  INPUT_RECORD buff[64];
+  // buff = cb ; cx ; cy m|M
 
-  if (count >= 1) {
-    ReadConsoleInput(_ctx.h_stdin, buff, 64, &count);
-    for (int i = 0; i < (int) count; i++) {
+  const char* c = buff;
+  if (!('0' <= *c && *c <= '9')) return;
 
-      switch (buff[i].EventType) {
-      case KEY_EVENT: // keyboard input
-        printf("keyevent\n");
-        break;
+  int cb = 0, cx = 0, cy = 0;
+  char m;
 
-      case MOUSE_EVENT: // mouse input
-        printf("mouse ev\n");
-        break;
+  while ('0' <= *c && *c <= '9') cb = cb * 10 + (*c++ - '0');
+  if (*c++ != ';') return;
+  while ('0' <= *c && *c <= '9') cx = cx * 10 + (*c++ - '0');
+  if (*c++ != ';') return;
+  while ('0' <= *c && *c <= '9') cy = cy * 10 + (*c++ - '0');
 
-      case WINDOW_BUFFER_SIZE_EVENT: // scrn buf. resizing
-        printf("buff ev\n");
-        break;
+  m = *c++;
+  if (m != 'm' && m != 'M') return;
 
-        //case FOCUS_EVENT:  // disregard focus events
-        //case MENU_EVENT:   // disregard menu events
+  // low two bits = button information.
+  // next three bits = modifiers.
+  // next bits = event type.
+  int low = cb & 0b11;
+  int high = (cb & 0b11100) >> 2;
+  int type = cb >> 5;
 
-      }
+  // Note that the modifiers won't work/incorrect in WSL.
+  if (high & 0b001) event->mouse.modifiers |= TUI_MD_SHIFT;
+  if (high & 0b010) event->mouse.modifiers |= TUI_MD_ALT;
+  if (high & 0b100) event->mouse.modifiers |= TUI_MD_CTRL;
 
+  event->mouse.x = cx - 1;
+  event->mouse.y = cy - 1;
+
+  switch (type) {
+  case 0:
+  {
+    event->type = (m == 'M') ? TUI_ET_MOUSE_DOWN : TUI_ET_MOUSE_UP;
+    event->mouse.button = (tui_MouseBtn)(low + 1);
+  } break;
+
+  case 1:
+  {
+    if (low == 0b11) {  // Mouse move.
+      event->type = TUI_ET_MOUSE_MOVE;
+
+    } else { // Drag.
+      event->type = TUI_ET_MOUSE_DRAG;
+      event->mouse.button = (tui_MouseBtn)(low + 1);
     }
+  } break;
 
+  case 2:
+  { // Scroll.
+    event->type = TUI_ET_MOUSE_SCROLL;
+
+    if (low == 0) event->mouse.scroll = TUI_D_UP;
+    else if (low == 1) event->mouse.scroll = TUI_D_DOWN;
+
+  } break;
   }
+
 
 }
 
-#elif defined(TUI_SYS_NIX)
+void _parseEscapeSequence(const char* buff, uint32_t count, tui_Event * event) {
+  assert(buff[0] == '\x1b');
 
-static void _readEvent(tui_Event* event) {
-#define match(p, c) ((*(p) == (c)) && ((p)++, true))
-#define next(p) (*((p)++))
+  if (count == 1) {
+    event->type = TUI_ET_KEY_DOWN;
+    event->key.ascii = *buff;
+    event->key.keycode = TUI_KC_ESC;
+    return;
+  }
+
+  if (count == 2) {
+    _keyEvent(buff[1], event);
+    event->key.modifiers |= TUI_MD_ALT;
+    return;
+  }
+
+
+#define _SET_KEY(code)              \
+  do {                              \
+    event->type = TUI_ET_KEY_DOWN;  \
+    event->key.keycode = code;      \
+  } while (false)
+
+
+#define _MATCH(str) ((count >= strlen(str) + 1) && (strncmp(buff + 1, (str), strlen(str)) == 0))
+
+  if (_MATCH("[<")) _mouseEvent(buff + 3, count - 3, event);
+
+  else if (_MATCH("[A") || _MATCH("OA")) _SET_KEY(TUI_KC_UP);
+  else if (_MATCH("[B") || _MATCH("OB")) _SET_KEY(TUI_KC_DOWN);
+  else if (_MATCH("[C") || _MATCH("OC")) _SET_KEY(TUI_KC_RIGHT);
+  else if (_MATCH("[D") || _MATCH("OD")) _SET_KEY(TUI_KC_LEFT);
+  else if (_MATCH("[5~") || _MATCH("[[5~")) _SET_KEY(TUI_KC_PAGEUP);
+  else if (_MATCH("[6~") || _MATCH("[[6~")) _SET_KEY(TUI_KC_PAGEDOWN);
+
+  else if (_MATCH("[H") || _MATCH("OH") || _MATCH("[1~") || _MATCH("[[7~")) _SET_KEY(TUI_KC_HOME);
+  else if (_MATCH("[F") || _MATCH("OF") || _MATCH("[4~") || _MATCH("[[8~")) _SET_KEY(TUI_KC_END);
+
+  else if (_MATCH("[2~")) _SET_KEY(TUI_KC_INSERT);
+  else if (_MATCH("[3~")) _SET_KEY(TUI_KC_DELETE);
+
+  else if (_MATCH("OP") || _MATCH("[11~")) _SET_KEY(TUI_KC_F1);
+  else if (_MATCH("OQ") || _MATCH("[12~")) _SET_KEY(TUI_KC_F2);
+  else if (_MATCH("OR") || _MATCH("[13~")) _SET_KEY(TUI_KC_F3);
+  else if (_MATCH("OS") || _MATCH("[14~")) _SET_KEY(TUI_KC_F4);
+
+  else if (_MATCH("[15~")) _SET_KEY(TUI_KC_F5);
+  else if (_MATCH("[17~")) _SET_KEY(TUI_KC_F6);
+  else if (_MATCH("[18~")) _SET_KEY(TUI_KC_F7);
+  else if (_MATCH("[19~")) _SET_KEY(TUI_KC_F8);
+  else if (_MATCH("[20~")) _SET_KEY(TUI_KC_F9);
+  else if (_MATCH("[21~")) _SET_KEY(TUI_KC_F10);
+  else if (_MATCH("[23~")) _SET_KEY(TUI_KC_F11);
+  else if (_MATCH("[24~")) _SET_KEY(TUI_KC_F12);
+
+#undef _MATCH
+#undef _SET_KEY
+
+}
+
+
+static bool _readEvent(tui_Event * event) {
 
   memset(event, 0, sizeof(tui_Event));
   event->type = TUI_ET_UNKNOWN;
   tui_Buffer* buff = &_ctx.input_buff;
 
-  buff->count += read(fileno(stdin), buff->data + buff->count, buff->capacity - buff->count);
-  if (buff->count == 0) return;
+  int count = read(fileno(stdin), buff->data + buff->count, buff->capacity - buff->count);
+  if (count == 0) return false;
+
+  buff->count += count;
 
   int event_length = 1; // Num of character for the event in the buffer.
 
   if (buff->data[0] == '\x1b') {
-    event_length = _escapeLength(buff->data + 1, buff->count - 1);
-
+    event_length = _escapeLength(buff->data + 1, buff->count - 1) + 1;
+    _parseEscapeSequence(buff->data, event_length, event);
 
   } else {
-
+    _keyEvent(buff->data[0], event);
   }
 
-  
   _buffSfhit(buff, event_length);
 
-
-
-  const char* c = buff->data;
-
-  if (match(c, '\x1b')) {
-    _escapeLength(c, )
-  }
-
-  if (match(c, '\x1b')) {
-    if (match(c, '[')) {
-      switch (next(c)) {
-        case 'A':{
-          event->type = TUI_ET_KEY_DOWN;
-          event->key.keycode = TUI_KC_UP;
-        } break;
-
-        case 'B': {
-          event->type = TUI_ET_KEY_DOWN;
-          event->key.keycode = TUI_KC_DOWN;
-        } break;
-
-        case 'C':{
-          event->type = TUI_ET_KEY_DOWN;
-          event->key.keycode = TUI_KC_RIGHT;
-        } break;
-
-        case 'D':{
-          event->type = TUI_ET_KEY_DOWN;
-          event->key.keycode = TUI_KC_LEFT;
-        } break;
-
-        default:
-          break;
-      }
-    }
-
-    // Since Ctrl+M and <enter> both reads as '\r'.
-  } else if (match(c, '\r')) {
-      event->type = TUI_ET_KEY_DOWN;
-      event->key.keycode = TUI_KC_ENTER;
-
-  } else {
-
-    event->type = TUI_ET_KEY_DOWN;
-    event->key.ascii = *c;
-
-    // 
-    if (1 <= *c && *c <= 26) {
-      event->key.modifiers |= TUI_KM_CTRL;
-      event->key.keycode = TUI_KC_A + *c - 1;
-    }
-
-  }
-
-#undef match
-#undef next
+  return true;
 
 }
 #endif
 
 
-void foobar () {
-  tui_Event* event;
+void tui_run() {
 
-  
-  
-  tui_Buffer* buff;
+  if (_ctx.config.callback == NULL) return;
 
-  
+  while (true) {
+    tui_Event event;
+    if (_readEvent(&event)) {
+      if (event.type == TUI_ET_UNKNOWN) continue;
+      // On windows resizeing the window makes the cursor re appear.
+      if (_ctx.config.hide_cursor) tui_hideCursor();
 
-  
-  
-  
+      // FIXME: temproary.
+      if (event.type == TUI_ET_KEY_DOWN && event.key.keycode == TUI_KC_Q) {
+        break;
+      }
+
+      _ctx.config.callback(&event);
+    }
+  }
 }
 
 
@@ -961,17 +1238,20 @@ void foobar () {
 
 
 
+void _eventCallback(tui_Event * event) {
+  tui_setPosition(tui_vec2(0, 0));
+  _printEvent(event);
+}
 
 
 
 
 
 
-
-void _drawBox(tui_Buffer* buff) {
+void _drawBox(tui_Buffer * buff) {
 
   tui_Vec2 size = tui_getSize();
-  int l = (int) (size.x - strlen("test") - 2);
+  int l = (int)(size.x - strlen("test") - 2);
   printf("x = %i\n", size.x);
 
   tui_boxChar(buff, 'l');
@@ -979,9 +1259,9 @@ void _drawBox(tui_Buffer* buff) {
     tui_boxChar(buff, 'q');
   }
   tui_boxChar(buff, 'k');
-  
+
   tui_char(buff, '\n');
-  
+
   tui_boxChar(buff, 'x');
   {
     tui_fmt(buff, "%*.*s", l, l, " ");
@@ -990,9 +1270,9 @@ void _drawBox(tui_Buffer* buff) {
     tui_colorBgEnd(buff);
   }
   tui_boxChar(buff, 'x');
-  
+
   tui_char(buff, '\n');
-  
+
   tui_boxChar(buff, 'm');
   for (int i = 0; i < size.x - 2; i++) {
     tui_boxChar(buff, 'q');
@@ -1034,19 +1314,14 @@ int main() {
   setlocale(LC_ALL, "");
 
   tui_Config config = tui_newConfig();
-  config.use_alternative_buffer = false;
+  config.use_alternative_buffer = true;
   config.capture_input_events = true;
+  config.hide_cursor = true;
+  config.callback = _eventCallback;
 
   tui_initialize(&config);
+  tui_run();
 
-  /*
-  //tui_Event event;
-  while (1) {
-    tui_Event event;
-    _ReadEvent(&event);
-    //_printEvent();
-  }
-  //*/
 
   /*
   while (1) {
@@ -1066,7 +1341,7 @@ int main() {
     int l = read(fileno(stdin), buff, 100);
     if (l < 1) continue;
     if (buff[0] == _CTRL_KEY('q')) break;
-    
+
     for (int i = 0; i < l; i++) {
       char c = buff[i];
       if (iscntrl(c)) {
