@@ -1,62 +1,8 @@
-﻿
-#error "WIP"
+﻿#ifndef TUI_H
+#define TUI_H
 
-#include <ctype.h>
-
-#include <assert.h>
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-
-// Compiler warnings.
-#ifdef _MSC_VER
-  #pragma warning(disable:6308)
-#endif
-
-
-// Platform detection macros.
-#ifdef _WIN32
-  #define TUI_SYS_WINDOWS
-#else
-  #define TUI_SYS_NIX
-#endif
-
-
-// Platform specific includes.
-#if defined(TUI_SYS_WINDOWS)
-  #include <Windows.h>
-
-#elif defined(TUI_SYS_NIX)
-  #include <termios.h>
-  #include <sys/ioctl.h>
-  #include <signal.h>
-#endif
-
-
-// We define TUI_CC_VC_TCC for MSVC, TCC running on windows. They does't
-// provide some POSIX compliant headres like <unistd.h>, <dirent.h>, etc.
-#if defined(_MSC_VER) || (defined(_WIN32) && defined(__TINYC__))
-  #define TUI_CC_VC_TCC
-#endif
-
-
-#define TUI_REALLOC(ptr, size) realloc(ptr, size)
-#define TUI_FREE(ptr) free(ptr)
-
-
-// Maximum buffer size for sprintf to write an integer to it.
-// INT_MAX = 10 digits, '+/-' = 1 digit, '\0' = 1 digit.
-#define TUI_INTBUFF_MAX 12
-
-#define TUI_MAX(a, b) ((a) > (b) ? (a) : (b))
-#define TUI_MIN(a, b) ((a) < (b) ? (a) : (b))
-
-#define tui_vec2(x, y) (tui_Vec2) { (x), (y) }
-#define tui_color(r, g, b) (tui_Color) { (r), (g), (b) }
 
 typedef struct {
   union {
@@ -185,6 +131,7 @@ typedef enum {
   TUI_ET_UNKNOWN = 0,
   TUI_ET_KEY_DOWN,
   TUI_ET_RESIZE,
+  TUI_ET_DOUBLE_CLICK,
   TUI_ET_MOUSE_DOWN,
   TUI_ET_MOUSE_UP,
   TUI_ET_MOUSE_MOVE,
@@ -219,6 +166,7 @@ typedef struct {
 
 
 typedef void (*tui_eventCallback) (tui_Event*);
+typedef void (*tui_callback) ();
 
 
 typedef struct {
@@ -226,73 +174,136 @@ typedef struct {
   bool use_alternative_buffer;
   bool hide_cursor;
   bool capture_input_events;
-  tui_eventCallback callback;
+  tui_eventCallback event_callback;
+  tui_callback init_callback;
+  tui_callback clean_callback;
 } tui_Config;
-
-
-typedef struct {
-
-#if defined(TUI_SYS_WINDOWS)
-  DWORD outmode, inmode; // Initial modes to restore.
-  HANDLE h_stdout, h_stdin; // Handles.
-
-#elif defined(TUI_SYS_NIX)
-  struct termios tio;
-  tui_Buffer input_buff;
-#endif
-
-  tui_Vec2 screensize;
-  tui_Buffer screenbuff;
-
-  tui_Config config;
-  const char* err; // Contain error message if any.
-} tui_Ctx;
 
 
 /*****************************************************************************/
 /* TUI PUBLIC API                                                            */
 /*****************************************************************************/
 
+tui_Config tui_newConfig();
+void tui_run(tui_Config* config);
+void tui_endLoop();
+
 tui_Color tui_colorHex(const char* color);
+#define tui_vec2(x, y) (tui_Vec2) { (x), (y) }
+#define tui_color(r, g, b) (tui_Color) { (r), (g), (b) }
 
 void tui_bufferInit(tui_Buffer* buff);
 void tui_bufferClean(tui_Buffer* buff);
 void tui_write(tui_Buffer* buff, const char* data, uint32_t count);
 
-void tui_char(tui_Buffer* buff, char c);
-void tui_boxChar(tui_Buffer* buff, char c);
-void tui_string(tui_Buffer* buff, const char* str);
-void tui_int(tui_Buffer* buff, int num);
-void tui_fmt(tui_Buffer* buff, const char* fmt, ...);
+void tui_char(char c);
+void tui_charLen(char c, uint32_t len);
+void tui_boxChar(char c);
+void tui_boxCharLen(char c, uint32_t len);
+void tui_string(const char* str);
+void tui_stringLen(const char* str, uint32_t length);
+void tui_int(int num);
+void tui_fmt(const char* fmt, ...);
 
-void tui_clear(tui_Buffer* buff);
-void tui_endLine(tui_Buffer* buff);
-void tui_flush(tui_Buffer* buff);
-
-tui_Config tui_newConfig();
-void tui_initialize(tui_Config* config);
-void tui_run();
-void tui_finalize(void);
+void tui_clear();
+void tui_eraseTillEol();
+void tui_eraseTillEof();
+void tui_flush();
 
 bool tui_isatty();
 void tui_setTitle(const char* title);
 tui_Vec2 tui_getSize();
 tui_Vec2 tui_getPosition();
 
-void tui_setPosition(tui_Buffer* buff, tui_Vec2 pos);
-void tui_move(tui_Buffer* buff, int n, tui_Direction direction);
-void tui_hideCursor(tui_Buffer* buff);
-void tui_showCursor(tui_Buffer* buff);
+void tui_setPosition(tui_Vec2 pos);
+void tui_move(int n, tui_Direction direction);
+void tui_hideCursor();
+void tui_showCursor();
 
+void tui_boldBegin();
+void tui_boldEnd();
+void tui_dimBegin();
+void tui_dimEnd();
+void tui_italicBegin();
+void tui_italicEnd();
+void tui_underlineBegin();
+void tui_underlineEnd();
+void tui_hiddenBegin();
+void tui_hiddenEnd();
+void tui_strikethroughBegin();
+void tui_strikethroughEnd();
+
+void tui_colorPush(tui_Color color);
+void tui_colorPop();
+void tui_colorBgPush(tui_Color color);
+void tui_colorBgPop();
+
+void tui_colorBegin(tui_Color col);
+void tui_colorEnd();
+void tui_colorBgBegin(tui_Color col);
+void tui_colorBgEnd();
+
+void tui_black();
+void tui_blackBg();
+void tui_red();
+void tui_redBg();
+void tui_green();
+void tui_greenBg();
+void tui_yellow();
+void tui_yellowBg();
+void tui_blue();
+void tui_blueBg();
+void tui_magenta();
+void tui_magentaBg();
+void tui_cyan();
+void tui_cyanBg();
+void tui_white();
+void tui_whiteBg();
+void tui_default();
+void tui_defaultBg();
 
 /*****************************************************************************/
 /* TUI IMPLEMENTATION                                                        */
 /*****************************************************************************/
 
-#define TUI_EVENT_BUFF_SIZE 64
-#define TUI_INPUT_BUFF_SIZE 128
+#if defined(TUI_IMPL)
 
-#if defined(TUI_CC_VC_TCC)
+#include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+
+// Compiler warnings.
+#ifdef _MSC_VER
+  #pragma warning(disable:6308)
+#elif defined(__GNUC__)
+  // Bug 53119 - -Wmissing-braces wrongly warns about universal zero initializer {0}.
+  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53119
+  #pragma GCC diagnostic ignored "-Wmissing-braces"
+#endif
+
+// Platform detection macros.
+#ifdef _WIN32
+  #define TUI_SYS_WINDOWS
+#else
+  #define TUI_SYS_NIX
+#endif
+
+
+// Platform specific includes.
+#if defined(TUI_SYS_WINDOWS)
+  #include <Windows.h>
+
+#elif defined(TUI_SYS_NIX)
+  #include <termios.h>
+  #include <sys/ioctl.h>
+  #include <signal.h>
+#endif
+
+#if defined(_MSC_VER) || (defined(_WIN32) && defined(__TINYC__))
   #include <io.h>
   #define isatty _isatty
   #define fileno _fileno
@@ -300,10 +311,46 @@ void tui_showCursor(tui_Buffer* buff);
   #include <unistd.h>
 #endif
 
-// _CTRL_KEY('a') or _CTRL_KEY('A') == Ctrl+A
-#define _CTRL_KEY(k) ((k) & 0x1f)
+#define TUI_REALLOC(ptr, size) realloc(ptr, size)
+#define TUI_FREE(ptr) free(ptr)
+
+// Maximum buffer size for sprintf to write an integer to it.
+// INT_MAX = 10 digits, '+/-' = 1 digit, '\0' = 1 digit.
+#define TUI_INTBUFF_MAX 12
+
+#define TUI_EVENT_BUFF_SIZE 64
+#define TUI_INPUT_BUFF_SIZE 128
+#define TUI_COLOR_STACK_SIZE 256
+
+#define TUI_MAX(a, b) ((a) > (b) ? (a) : (b))
+#define TUI_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #define _BETWEEN(a, c, b) ((a) <= (c) && (c) <= (b))
+
+typedef struct {
+
+#if defined(TUI_SYS_WINDOWS)
+  DWORD outmode, inmode; // Initial modes to restore.
+  HANDLE h_stdout, h_stdin; // Handles.
+
+
+#elif defined(TUI_SYS_NIX)
+  struct termios tio;
+  tui_Buffer input_buff;
+#endif
+
+  tui_Vec2 screensize;
+  tui_Vec2 mouse_pos;
+  tui_Buffer screenbuff;
+
+  int color_sp_fg, color_sp_bg; // Color stack pointers.
+  tui_Color color_stack_fg[TUI_COLOR_STACK_SIZE];
+  tui_Color color_stack_bg[TUI_COLOR_STACK_SIZE];
+
+  tui_Config config;
+  bool isdone;
+  const char* err; // Contain error message if any.
+} tui_Ctx;
 
 static tui_Ctx _ctx;
 
@@ -322,11 +369,24 @@ tui_Config tui_newConfig() {
 }
 
 
+static void _finalize(void) {
+  if (_ctx.config.clean_callback) _ctx.config.clean_callback();
+
+  tui_bufferClean(&_ctx.screenbuff);
+  if (_ctx.config.hide_cursor) tui_showCursor(NULL);
+  if (_ctx.config.use_alternative_buffer) _restoreScreenBuffer();
+  if (_ctx.config.hide_cursor) tui_showCursor(NULL);
+  _restoreTerminal();
+}
+
+
 // Should be running in a tty otherwise it'll fail.
-void tui_initialize(tui_Config* config) {
+static void _initialize(tui_Config* config) {
   assert(tui_isatty(NULL));
+
   memset(&_ctx, 0, sizeof(_ctx));
   _ctx.config = (config != NULL) ? *config : tui_newConfig();
+  _ctx.isdone = false;
 
   _initTerminal();
   _ctx.screensize = tui_getSize();
@@ -335,19 +395,9 @@ void tui_initialize(tui_Config* config) {
   if (_ctx.config.use_alternative_buffer) _newScreenBuffer();
   if (_ctx.config.hide_cursor) tui_hideCursor(NULL);
 
-  // Clear screen.
-  fprintf(stdout, "\x1b[2J\x1b[3J\x1b[1;1H");
+  atexit(_finalize);
 
-  atexit(tui_finalize);
-}
-
-
-void tui_finalize(void) {
-  tui_bufferClean(&_ctx.screenbuff);
-  if (_ctx.config.hide_cursor) tui_showCursor(NULL);
-  if (_ctx.config.use_alternative_buffer) _restoreScreenBuffer();
-  if (_ctx.config.hide_cursor) tui_showCursor(NULL);
-  _restoreTerminal();
+  if (_ctx.config.init_callback) _ctx.config.init_callback();
 }
 
 
@@ -393,67 +443,6 @@ void tui_bufferClean(tui_Buffer* buff) {
 }
 
 
-static void _buffSfhit(tui_Buffer* buff, uint32_t count) {
-  assert(buff != NULL);
-  if (count < buff->count) {
-    memmove(buff->data, buff->data + count, buff->count - count);
-    buff->count -= count;
-  } else {
-    buff->count = 0;
-  }
-}
-
-
-// FIXME: remove this.
-static void _printEvent(tui_Event* event) {
-  printf("\n");
-
-  switch (event->type) {
-    case TUI_ET_UNKNOWN:
-      printf("event.unknown\x1b[K\n");
-      return;
-
-    case TUI_ET_KEY_DOWN: {
-      printf("event.key_down\x1b[K\n");
-      printf("event.keycode = %i\x1b[K\n", event->key.keycode);
-      if (!iscntrl(event->key.ascii)) {
-        printf("event.ascii = %c\x1b[K\n", event->key.ascii);
-      }
-
-      // modifiers.
-      printf("event.modifiers = %i\x1b[K\n", event->key.modifiers);
-
-      return;
-    }
-
-    case TUI_ET_RESIZE: {
-      printf("event.resize\x1b[K\n");
-      printf("event.size = (%i, %i)\x1b[K\n", event->resize.w, event->resize.h);
-      return;
-    }
-
-    case TUI_ET_MOUSE_DOWN:
-      printf("event.mouse_down %i %i\x1b[K\n", event->mouse.x, event->mouse.y);
-      return;
-    case TUI_ET_MOUSE_UP:
-      printf("event.mouse_up %i %i\x1b[K\n", event->mouse.x, event->mouse.y);
-      return;
-    case TUI_ET_MOUSE_MOVE:
-      printf("event.mouse_move %i %i\x1b[K\n", event->mouse.x, event->mouse.y);
-      return;
-    case TUI_ET_MOUSE_DRAG:
-      printf("event.drag %i %i\x1b[K\n", event->mouse.x, event->mouse.y);
-      return;
-    case TUI_ET_MOUSE_SCROLL: {
-      const char* dir = (event->mouse.scroll == TUI_D_UP) ? "up" : "down";
-      printf("event.scroll %i %i dir = %s\x1b[K\n", event->mouse.x, event->mouse.y, dir);
-      return;
-    }
-  }
-}
-
-
-
 // Returns the smallest power of two that is equal to or greater than [n].
 // Reference: https://github.com/wren-lang/wren/blob/main/src/vm/wren_utils.h
 static inline int _powerOf2Ceil(int n) {
@@ -487,13 +476,18 @@ void tui_write(tui_Buffer* buff, const char* data, uint32_t count) {
 }
 
 
-void tui_char(tui_Buffer* buff, char c) {
-  if (buff == NULL) {
-    fprintf(stdout, "%c", c);
-  } else {
-    _bufferReserve(buff, buff->count + 1);
-    buff->data[buff->count++] = c;
-  }
+void tui_char(char c) {
+  tui_Buffer* buff = &_ctx.screenbuff;
+  _bufferReserve(buff, buff->count + 1);
+  buff->data[buff->count++] = c;
+}
+
+
+void tui_charLen(char c, uint32_t len) {
+  tui_Buffer* buff = &_ctx.screenbuff;
+  _bufferReserve(buff, buff->count + len);
+  memset(buff->data + buff->count, c, (size_t) len);
+  buff->count += len;
 }
 
 
@@ -512,139 +506,157 @@ void tui_char(tui_Buffer* buff, char c) {
 *  0x77    w        ┬
 *  0x78    x        │
 */
-void tui_boxChar(tui_Buffer* buff, char c) {
-  if (buff == NULL) {
-    fprintf(stdout, "\x1b(0");
-    fprintf(stdout, "%c", c);
-    fprintf(stdout, "\x1b(B");
-  } else {
-    tui_string(buff, "\x1b(0");
-    tui_char(buff, c);
-    tui_string(buff, "\x1b(B");
-  }
+void tui_boxChar(char c) {
+  tui_Buffer* buff = &_ctx.screenbuff;
+  tui_string("\x1b(0");
+  tui_char(c);
+  tui_string("\x1b(B");
 }
 
 
-void tui_string(tui_Buffer* buff, const char* str) {
-  if (buff == NULL) {
-    fprintf(stdout, "%s", str);
-  } else {
-    tui_write(buff, str, (uint32_t) strlen(str));
-  }
+void tui_boxCharLen(char c, uint32_t len) {
+  tui_Buffer* buff = &_ctx.screenbuff;
+  tui_string("\x1b(0");
+  tui_charLen(c, len);
+  tui_string("\x1b(B");
 }
 
 
-void tui_int(tui_Buffer* buff, int num) {
-  if (buff == NULL) {
-    fprintf(stdout, "%i", num);
-  } else {
-    char int_buff[TUI_INTBUFF_MAX];
-    sprintf(int_buff, "%d", num);
-    tui_string(buff, int_buff);
-  }
+void tui_string(const char* str) {
+  tui_Buffer* buff = &_ctx.screenbuff;
+  tui_write(buff, str, (uint32_t) strlen(str));
 }
 
 
-void tui_fmt(tui_Buffer* buff, const char* fmt, ...) {
-
-  if (buff == NULL) {
-
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(stdout, fmt, args);
-    va_end(args);
-
-  } else {
-    va_list args;
-    va_start(args, fmt);
-
-    va_list args_copy;
-    va_copy(args_copy, args);
-    int size = vsnprintf(NULL, 0, fmt, args_copy);
-    va_end(args_copy);
-
-    // vnsprintf will only copy n-1 characters (so we're using size + 1).
-    _bufferReserve(buff, buff->count + size + 1);
-    vsnprintf(buff->data + buff->count, (size_t)size + 1, fmt, args);
-    buff->count += size;
-
-    va_end(args);
-  }
+void tui_stringLen(const char* str, uint32_t length) {
+  tui_Buffer* buff = &_ctx.screenbuff;
+  tui_write(buff, str, length);
 }
 
 
-void tui_clear(tui_Buffer* buff) {
-  if (buff == NULL) {
-    fprintf(stdout, "\x1b[2J\x1b[H");
-
-  } else {
-    tui_string(buff, "\x1b[2J\x1b[H");
-  }
+void tui_int(int num) {
+  char int_buff[TUI_INTBUFF_MAX];
+  sprintf(int_buff, "%d", num);
+  tui_string(int_buff);
 }
 
 
-void tui_endLine(tui_Buffer* buff) {
-  if (buff == NULL) {
-    fprintf(stdout, "\x1b[K");
+void tui_fmt(const char* fmt, ...) {
+  tui_Buffer* buff = &_ctx.screenbuff;
+  va_list args;
+  va_start(args, fmt);
 
-  } else {
-    tui_string(buff, "\x1b[K");
-  }
+  va_list args_copy;
+  va_copy(args_copy, args);
+  int size = vsnprintf(NULL, 0, fmt, args_copy);
+  va_end(args_copy);
+
+  // vnsprintf will only copy n-1 characters (so we're using size + 1).
+  _bufferReserve(buff, buff->count + size + 1);
+  vsnprintf(buff->data + buff->count, (size_t)size + 1, fmt, args);
+  buff->count += size;
+
+  va_end(args);
 }
 
 
-void tui_flush(tui_Buffer* buff) {
-  assert(buff != NULL);
-  tui_char(buff, '\0');
+void tui_clear() {
+  tui_string("\x1b[2J\x1b[H");
+}
+
+
+void tui_eraseTillEol() {
+  tui_string("\x1b[K");
+}
+
+
+void tui_eraseTillEof() {
+  tui_string("\x1b[0J");
+}
+
+
+void tui_flush() {
+  tui_char('\0');
+  tui_Buffer* buff = &_ctx.screenbuff;
   fprintf(stdout, "%s", buff->data);
   buff->count = 0;
 }
 
 
 // "\x1b[{escape}m"
-static inline void _escape(tui_Buffer* buff, const char* escape) {
-  tui_fmt(buff, "\x1b[%sm", escape);
+static inline void _escape(const char* escape) {
+  tui_fmt("\x1b[%sm", escape);
 }
 
 
 // "\x1b[{escape};2;{r};{g};{b}m" Note: %hhu = unsigned char.
-static inline void _escapeCol(tui_Buffer* buff, tui_Color col, const char* escape) {
-  tui_fmt(buff, "\x1b[%s;2;%hhu;%hhu;%hhum", escape, col.r, col.g, col.b);
+static inline void _escapeCol(tui_Color col, const char* escape) {
+  tui_fmt("\x1b[%s;2;%hhu;%hhu;%hhum", escape, col.r, col.g, col.b);
 }
 
 
-void tui_reset(tui_Buffer* buff) {
-  _escape(buff, "0"); // "\x1b[0m"
+void tui_reset() {
+  _escape("0"); // "\x1b[0m"
 }
 
 
-void tui_colorBegin(tui_Buffer* buff, tui_Color col) {
-  _escapeCol(buff, col, "38");
+void tui_colorPush(tui_Color color) {
+  assert(_ctx.color_sp_fg + 1 < TUI_COLOR_STACK_SIZE);
+  _ctx.color_stack_fg[++_ctx.color_sp_fg] = color;
+  tui_colorBegin(color);
 }
 
 
-void tui_colorEnd(tui_Buffer* buff) {
-  _escape(buff, "39");
+void tui_colorPop() {
+  assert(_ctx.color_sp_fg > 0);
+  --_ctx.color_sp_fg;
+  if (_ctx.color_sp_fg == 0) tui_colorEnd();
+  else tui_colorBegin(_ctx.color_stack_fg[_ctx.color_sp_fg]);
 }
 
 
-void tui_colorBgBegin(tui_Buffer* buff, tui_Color col) {
-  _escapeCol(buff, col, "48");
+void tui_colorBgPush(tui_Color color) {
+  assert(_ctx.color_sp_bg + 1 < TUI_COLOR_STACK_SIZE);
+  _ctx.color_stack_bg[++_ctx.color_sp_bg] = color;
+  tui_colorBgBegin(color);
 }
 
 
-void tui_colorBgEnd(tui_Buffer* buff) {
-  _escape(buff, "49");
+void tui_colorBgPop() {
+  assert(_ctx.color_sp_bg > 0);
+  --_ctx.color_sp_bg;
+  if (_ctx.color_sp_bg == 0) tui_colorEnd();
+  else tui_colorBgBegin(_ctx.color_stack_bg[_ctx.color_sp_bg]);
+}
+
+
+void tui_colorBegin(tui_Color col) {
+  _escapeCol(col, "38");
+}
+
+
+void tui_colorEnd() {
+  _escape("39");
+}
+
+
+void tui_colorBgBegin(tui_Color col) {
+  _escapeCol(col, "48");
+}
+
+
+void tui_colorBgEnd() {
+  _escape("49");
 }
 
 
 #define _TUI_GRAPHICS_FN(name, esc_begin, esc_end) \
-  void tui_##name##Begin(tui_Buffer* buff) {       \
-    _escape(buff, #esc_begin);                     \
+  void tui_##name##Begin() {                       \
+    _escape(#esc_begin);                           \
   }                                                \
                                                    \
-  void tui_##name##End(tui_Buffer* buff) {         \
-    _escape(buff, #esc_end);                       \
+  void tui_##name##End() {                         \
+    _escape(#esc_end);                             \
   }
 
 _TUI_GRAPHICS_FN(bold, 1, 22)
@@ -657,12 +669,12 @@ _TUI_GRAPHICS_FN(strikethrough, 9, 29)
 #undef _TUI_GRAPHICS_FN
 
 #define _TUI_COLOR_FN(name, fg, bg)       \
-  void tui_##name(tui_Buffer* buff) {     \
-    _escape(buff, #fg);                   \
+  void tui_##name() {                     \
+    _escape(#fg);                         \
   }                                       \
                                           \
-  void tui_##name##Bg(tui_Buffer* buff) { \
-    _escape(buff, #bg);                   \
+  void tui_##name##Bg() {                 \
+    _escape(#bg);                         \
   }
 
 
@@ -773,23 +785,23 @@ L_done:
 }
 
 
-void tui_setPosition(tui_Buffer* buff, tui_Vec2 pos) {
-  tui_fmt(buff, "\x1b[%i;%iH", pos.y + 1, pos.x + 1);
+void tui_setPosition(tui_Vec2 pos) {
+  tui_fmt("\x1b[%i;%iH", pos.y + 1, pos.x + 1);
 }
 
 
-void tui_move(tui_Buffer* buff, int n, tui_Direction direction) {
-  tui_fmt(buff, "\x1b[%i%c", n, (char) direction);
+void tui_move(int n, tui_Direction direction) {
+  tui_fmt("\x1b[%i%c", n, (char) direction);
 }
 
 
-void tui_hideCursor(tui_Buffer* buff) {
-  tui_string(buff, "\x1b[?25l");
+void tui_hideCursor() {
+  tui_string("\x1b[?25l");
 }
 
 
-void tui_showCursor(tui_Buffer* buff) {
-  tui_string(buff, "\x1b[?25h");
+void tui_showCursor() {
+  tui_string("\x1b[?25h");
 }
 
 
@@ -831,12 +843,12 @@ static void _resizeHandler(int sig) {
   if (_ctx.screensize.x == newsize.x && _ctx.screensize.y == newsize.y) return;
   _ctx.screensize = newsize;
 
-  if (_ctx.config.callback != NULL) {
+  if (_ctx.config.event_callback != NULL) {
     tui_Event event;
     memset(&event, 0, sizeof(tui_Event));
     event.type = TUI_ET_RESIZE;
     event.resize = _ctx.screensize;
-    _ctx.config.callback(&event);
+    _ctx.config.event_callback(&event);
   }
 }
 
@@ -934,7 +946,7 @@ static bool _toTuiKeyCode(WORD vk, tui_KeyCode * kc) {
   return true;
 }
 
-static bool _readEvent(tui_Event * event) {
+static bool _readEvent(tui_Event* event) {
 
   memset(event, 0, sizeof(tui_Event));
   event->type = TUI_ET_UNKNOWN;
@@ -978,29 +990,51 @@ static bool _readEvent(tui_Event * event) {
 
       MOUSE_EVENT_RECORD* mer = &ir.Event.MouseEvent;
 
-      static bool pressed = false;
+      static DWORD last_state = 0; // < Last state to compare if a new button pressed.
+      bool pressed = mer->dwButtonState; // If any state is on pressed will be true.
+
+      // Xor will give != 0 if any button changed.
+      DWORD change = last_state ^ mer->dwButtonState;
+
+      if (change != 0) {
+        // What if the mouse doesn't have the middle button and right button is the second button?.
+        if (change & FROM_LEFT_1ST_BUTTON_PRESSED) {
+          pressed = mer->dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED;
+          event->mouse.button = TUI_MB_LEFT;
+
+        } else if (change & RIGHTMOST_BUTTON_PRESSED) {
+          pressed = mer->dwButtonState & RIGHTMOST_BUTTON_PRESSED;
+          event->mouse.button = TUI_MB_RIGHT;
+
+        } else if (change & FROM_LEFT_2ND_BUTTON_PRESSED) {
+          pressed = mer->dwButtonState & FROM_LEFT_2ND_BUTTON_PRESSED;
+          event->mouse.button = TUI_MB_MIDDLE;
+        }
+      }
+      last_state = mer->dwButtonState;
+
+      event->mouse.x = mer->dwMousePosition.X;
+      event->mouse.y = mer->dwMousePosition.Y;
 
       if (mer->dwEventFlags == 0) {
-        pressed = !pressed;
         event->type = (pressed) ? TUI_ET_MOUSE_DOWN : TUI_ET_MOUSE_UP;
 
       } else if (mer->dwEventFlags & MOUSE_MOVED) {
+        if (_ctx.mouse_pos.x == event->mouse.x && _ctx.mouse_pos.y == event->mouse.y) {
+          return false;
+        }
         event->type = (pressed) ? TUI_ET_MOUSE_DRAG : TUI_ET_MOUSE_MOVE;
 
       } else if (mer->dwEventFlags & MOUSE_WHEELED) {
         event->type = TUI_ET_MOUSE_SCROLL;
         event->mouse.scroll = (mer->dwButtonState & 0xFF000000) ? TUI_D_DOWN : TUI_D_UP;
+
+      } else if (mer->dwEventFlags & DOUBLE_CLICK) {
+        event->type = TUI_ET_DOUBLE_CLICK;
       }
-      // Note: dwEventFlags & DOUBLE_CLICK == is double click.
 
-      event->mouse.x = mer->dwMousePosition.X;
-      event->mouse.y = mer->dwMousePosition.Y;
-
-      // What if the mouse doesn't have the middle button and right button is the second button?.
-      if (mer->dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) event->mouse.button = TUI_MB_LEFT;
-      else if (mer->dwButtonState & FROM_LEFT_2ND_BUTTON_PRESSED) event->mouse.button = TUI_MB_MIDDLE;
-      else if (mer->dwButtonState & FROM_LEFT_3RD_BUTTON_PRESSED) event->mouse.button = TUI_MB_RIGHT;
-
+      _ctx.mouse_pos.x = event->mouse.x;
+      _ctx.mouse_pos.y = event->mouse.y;
 
       if ((mer->dwControlKeyState & LEFT_ALT_PRESSED) || (mer->dwControlKeyState & RIGHT_ALT_PRESSED))
         event->mouse.modifiers |= TUI_MD_ALT;
@@ -1015,7 +1049,7 @@ static bool _readEvent(tui_Event * event) {
     case WINDOW_BUFFER_SIZE_EVENT: {
       WINDOW_BUFFER_SIZE_RECORD* wbs = &ir.Event.WindowBufferSizeEvent;
       event->type = TUI_ET_RESIZE;
-      tui_Vec2 newsize = tui_getSize();
+      tui_Vec2 newsize = tui_vec2(wbs->dwSize.X, wbs->dwSize.Y);
       if (_ctx.screensize.x == newsize.x && _ctx.screensize.y == newsize.y) return false;
       _ctx.screensize = newsize;
       event->resize = _ctx.screensize;
@@ -1027,7 +1061,7 @@ static bool _readEvent(tui_Event * event) {
       return false;
   }
 
-  return true;
+  return event->type != TUI_ET_UNKNOWN;
 }
 
 #elif defined(TUI_SYS_NIX)
@@ -1206,6 +1240,17 @@ void _parseEscapeSequence(const char* buff, uint32_t count, tui_Event * event) {
 }
 
 
+static void _buffShfit(tui_Buffer* buff, uint32_t count) {
+  assert(buff != NULL);
+  if (count < buff->count) {
+    memmove(buff->data, buff->data + count, buff->count - count);
+    buff->count -= count;
+  } else {
+    buff->count = 0;
+  }
+}
+
+
 static bool _readEvent(tui_Event * event) {
 
   memset(event, 0, sizeof(tui_Event));
@@ -1217,172 +1262,136 @@ static bool _readEvent(tui_Event * event) {
 
   buff->count += count;
 
+  // FIXME: Remove it. Temproary code to print the input.
+  // const char* c = buff->data + buff->count - count;
+  // for (int i = 0; i < count; i++, c++) {
+  //   if (!iscntrl(*c)) {
+  //     printf("%i (%c)\n", *c, *c);
+  //   } else {
+  //     printf("%i\n", *c);
+  //   }
+  // }
+
   int event_length = 1; // Num of character for the event in the buffer.
 
   if (buff->data[0] == '\x1b') {
     event_length = _escapeLength(buff->data + 1, buff->count - 1) + 1;
     _parseEscapeSequence(buff->data, event_length, event);
+    if (event->type == TUI_ET_MOUSE_MOVE) {
+      if (_ctx.mouse_pos.x == event->mouse.x && _ctx.mouse_pos.y == event->mouse.y) {
+        _buffShfit(buff, event_length); // Flush the event.
+        return false;
+      }
+      _ctx.mouse_pos.x = event->mouse.x;
+      _ctx.mouse_pos.y = event->mouse.y;
+    }
 
   } else {
     _keyEvent(buff->data[0], event);
   }
 
-  _buffSfhit(buff, event_length);
+  _buffShfit(buff, event_length);
 
-  return true;
+  return event->type != TUI_ET_UNKNOWN;
 
 }
 #endif
 
 
-void tui_run() {
+void tui_endLoop() {
+  _ctx.isdone = true;
+}
 
-  if (_ctx.config.callback == NULL) return;
 
-  while (true) {
+#if defined(TUI_SYS_NIX)
+
+#define _MAX_DBL_CLICK_WAIT .5 // 500 ms
+
+typedef struct {
+
+  // 0: initial state.
+  // 1: left button down.
+  // 2: left button up.
+  int state;
+
+  // time since state 2.
+  clock_t dt;
+
+} _dblClickStateMachine;
+
+static inline bool _dcsmUpdateState(_dblClickStateMachine* dcsm, tui_Event* event) {
+  switch (dcsm->state) {
+    case 0: { // 0: initial state.
+      if (event->type == TUI_ET_MOUSE_DOWN && event->mouse.button == TUI_MB_LEFT) {
+        dcsm->state = 1;
+        dcsm->dt = clock();
+      }
+    } break;
+
+    case 1: { // 1: left button down, waiting for the button up.
+      if (event->type == TUI_ET_MOUSE_UP && event->mouse.button == TUI_MB_LEFT) {
+        if (((double)(clock() - dcsm->dt) / CLOCKS_PER_SEC) > _MAX_DBL_CLICK_WAIT) {
+          dcsm->state = 0;
+        } else {
+          dcsm->state = 2;
+          dcsm->dt = clock();
+        }
+      } else {
+        dcsm->state = 0;
+      }
+    } break;
+
+    case 2: { // 2: left button up, waiting for the second click.
+      if (event->type == TUI_ET_MOUSE_DOWN && event->mouse.button == TUI_MB_LEFT) {
+        dcsm->state = 1;
+        if (((double) (clock() - dcsm->dt) / CLOCKS_PER_SEC) <= _MAX_DBL_CLICK_WAIT) {
+          dcsm->state = 0;
+          return true;
+        }
+      } else {
+        dcsm->state = 0;
+      }
+
+    } break;
+  }
+
+  return false;
+}
+#undef _MAX_DBL_CLICK_WAIT
+
+#endif // Double click state machine.
+
+void tui_run(tui_Config* config) {
+  _initialize(config);
+
+  if (_ctx.config.event_callback == NULL) return;
+
+#if defined(TUI_SYS_NIX)
+  _dblClickStateMachine dcsm = { 0 };
+#endif
+
+  while (!_ctx.isdone) {
     tui_Event event;
     if (_readEvent(&event)) {
-      if (event.type == TUI_ET_UNKNOWN) continue;
+
+#if defined(TUI_SYS_NIX)
+      if (_dcsmUpdateState(&dcsm, &event)) {
+        event.type = TUI_ET_DOUBLE_CLICK;
+      }
+#endif
+
+#if defined(TUI_SYS_WINDOWS)
       // On windows resizeing the window makes the cursor re appear.
       if (_ctx.config.hide_cursor) tui_hideCursor(NULL);
-      _ctx.config.callback(&event);
+#endif
+
+      _ctx.config.event_callback(&event);
     }
   }
+
+  _finalize();
 }
 
+#endif // TUI_IMPL
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void test_syntax_highlight() {
-
-  tui_setTitle("color text test");
-
-  const char* bg = "#232533";
-  const char* blue = "#6272a4";
-  const char* lblue = "#8be9fd";
-  const char* pink = "#ff79c6";
-  const char* yellow = "#EAD869";
-  const char* green = "#50fa7b";
-
-
-  tui_Buffer b, *buff = &b;
-  tui_bufferInit(buff);
-
-  tui_colorBgBegin(buff, tui_colorHex(bg));
-  tui_Vec2 size = tui_getSize();
-  tui_setPosition(buff, tui_vec2(size.x - 1, size.y - 1));
-  tui_clear(buff);
-
-  static int  x = 0; x++;
-  tui_fmt(buff, "refresh count = %i\n", x);
-  tui_endLine(buff); tui_char(buff, '\n');
-
-
-
-  tui_colorBegin(buff, tui_colorHex(blue)); tui_string(buff, "  // Package cli provides tool to create commands that support advanced configuration features,");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_string(buff, "  // sub-commands, and allowing configuration from command-line flags, configuration files, and environment variables.");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_colorBegin(buff, tui_colorHex(pink)); tui_string(buff, "  package ");
-  tui_white(buff); tui_string(buff, "cli");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_colorBegin(buff, tui_colorHex(pink)); tui_string(buff, "  import (\n");
-  tui_colorBegin(buff, tui_colorHex(yellow));
-  tui_string(buff, "           \"fmt\"\n");
-  tui_string(buff, "           \"io\"\n");
-  tui_string(buff, "           \"os\"\n");
-  tui_string(buff, "           \"path/filepath\"\n ");
-  tui_colorBegin(buff, tui_colorHex(pink)); tui_char(buff, ')');
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_colorBegin(buff, tui_colorHex(blue)); tui_string(buff, "  // Command structure contains program/command information (command name and description).");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_colorBegin(buff, tui_colorHex(pink)); tui_string(buff, "  type ");
-  tui_colorBegin(buff, tui_colorHex(lblue)); tui_string(buff, "Command ");
-  tui_colorBegin(buff, tui_colorHex(pink)); tui_string(buff, "struct {");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_white(buff); tui_string(buff, "           Name          ");
-  tui_colorBegin(buff, tui_colorHex(lblue)); tui_string(buff, "string");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_white(buff); tui_string(buff, "           Description   ");
-  tui_colorBegin(buff, tui_colorHex(lblue)); tui_string(buff, "string");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_white(buff); tui_string(buff, "           Configuration ");
-  tui_colorBegin(buff, tui_colorHex(pink)); tui_string(buff, "interface");
-  tui_colorBegin(buff, tui_colorHex(green)); tui_string(buff, "{}");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_white(buff); tui_string(buff, "           Resources     ");
-  tui_colorBegin(buff, tui_colorHex(lblue)); tui_string(buff, "ResourceLoader");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_white(buff);  tui_string(buff, "           Run           ");
-  tui_colorBegin(buff, tui_colorHex(lblue)); tui_string(buff, "func");
-  tui_colorBegin(buff, tui_colorHex(green)); tui_char(buff, '(');
-  tui_colorBegin(buff, tui_colorHex(lblue)); tui_string(buff, "string");
-  tui_colorBegin(buff, tui_colorHex(green)); tui_char(buff, ')');
-  tui_colorBegin(buff, tui_colorHex(lblue)); tui_string(buff, " error");
-  tui_endLine(buff); tui_char(buff, '\n');
-
-  tui_colorBegin(buff, tui_colorHex(pink)); tui_string(buff, "  }");
-  tui_colorBgEnd(buff);
-
-  if (buff) tui_flush(buff);
-
-  tui_bufferClean(buff);
-}
-
-
-void _eventCallback(tui_Event * event) {
-  if (event->type == TUI_ET_KEY_DOWN && event->key.keycode == TUI_KC_Q) {
-    if (event->key.modifiers & TUI_MD_CTRL) exit(0);
-  }
-
-  test_syntax_highlight();
-}
-
-
-int main() {
-
-  tui_Config config = tui_newConfig();
-  config.use_alternative_buffer = true;
-  config.capture_input_events = true;
-  config.hide_cursor = true;
-  config.callback = _eventCallback;
-
-  tui_initialize(&config);
-  tui_run();
-  tui_finalize();
-
-
-
-  return 0;
-}
+#endif // TUI_H
